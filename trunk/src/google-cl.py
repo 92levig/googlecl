@@ -1,9 +1,26 @@
-"""Main function for the Google command line utility."""
+"""Main function for the Google command line utility.
+
+Some terminology in use:
+client -- the end user.
+service -- the Google service being accessed (Picasa, translate, YouTube, etc.)
+task -- what the client wants done by the service.
+
+"""
 import gdata.photos.service
 import getpass
+import glob
 import optparse
 
 
+def is_supported_service(service):
+    """Check to see if a service is supported."""
+    print service.lower()
+    if service.lower() == 'picasa':
+        return True
+    else:
+        return False
+    
+    
 def print_help():
     """Print a help message."""
     print 'Welcome to the google-cl super alpha'
@@ -13,15 +30,33 @@ def print_help():
            ' Enter ''quit'' to exit.') 
 
        
-def run_interactive():
+def requires_login(task):
+    """Check if a task requires a client login.
+    
+    Keyword arguments:
+    task -- the task to be performed.
+    
+    """
+    login_tasks = ['create', 'add', 'insert']
+    if task in login_tasks:
+        return True
+    else:
+        return False
+           
+           
+def run_interactive(parser):
     """Run an interactive shell for the google commands."""
     command = ''
     while not command == 'quit': 
-        command = raw_input('> ')
-        if command == 'picasa':
-            run_once({}, [])
-        elif command == '?' or command == 'help':
+        command_string = raw_input('> ')
+        command_list = command_string.split()
+        (options, args) = parser.parse_args(command_list)
+        if is_supported_service(command_list[0]):
+            run_once(options, args)
+        elif command_string == '?' or command_string == 'help':
             print_help()
+        else:
+            print '> Enter "?" or "help" to print the help menu'
  
             
 def run_once(options, args):
@@ -32,18 +67,21 @@ def run_once(options, args):
     args -- the arguments to google-cl, also as returned by optparse.
     
 	"""
-    client = gdata.photos.service.PhotosService() 
-    loggedOn = try_login(client)
-    
-    if not loggedOn:
-        print 'Failed to log on, exiting'
-        exit()
+    service = args[0]
+    task = args[1]
+    client = gdata.photos.service.PhotosService()
+     
+    if requires_login(task):
+        loggedOn = try_login(client)
+        if not loggedOn:
+            print 'Failed to log on, exiting'
+            exit()
         
-    albums = client.GetUserFeed()
-    
-    print 'Here are your albums:'
-    for album in albums.entry:
-        print album.title.text
+    if task == 'create':
+        print options.title
+        print options.summary
+        print client.email
+        album = client.InsertAlbum(title=options.title, summary=options.summary)
         
         
 def try_login(client):
@@ -73,15 +111,38 @@ def try_login(client):
         return True
 
 
-if __name__ == '__main__':
-    parser = optparse.OptionParser()
+def main():
+    usage = "usage: %prog service [options]"
+    parser = optparse.OptionParser(usage=usage)
+    parser.add_option('-a', '--album', dest='title', 
+                      default='Boring Album Title',
+                      help='Title of the album')
+    parser.add_option('-d', '--date', dest='date',
+                      help='Date of the album (if omitted, uses today).')
+    parser.add_option('-s', '--summary', dest='summary', 
+                      default='I am too lazy to summarize this album.',
+                      help=('Description of the album, ' + 
+                            'or file containing the description.'))
+    parser.add_option('-t', '--title', dest='title',
+                      help='Title of the album')
+    
     (options, args) = parser.parse_args()
     
     if not args:
         try:
-            run_interactive()
+            run_interactive(parser)
         except KeyboardInterrupt:
             print ''
             print 'Quit via keyboard interrupt'
     else:
-       run_once(options, args)
+        if is_supported_service(args[0]):
+            try:
+                run_once(options, args)
+            except KeyboardInterrupt:
+                print ''
+        else:
+            print 'Unsupported service:', args[0]
+       
+       
+if __name__ == '__main__':
+    main()
