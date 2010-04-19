@@ -10,11 +10,13 @@ import gdata.photos.service
 import getpass
 import glob
 import optparse
+import os
+import pickle
+import stat
 
 
 def is_supported_service(service):
     """Check to see if a service is supported."""
-    print service.lower()
     if service.lower() == 'picasa':
         return True
     else:
@@ -78,9 +80,6 @@ def run_once(options, args):
             exit()
         
     if task == 'create':
-        print options.title
-        print options.summary
-        print client.email
         album = client.InsertAlbum(title=options.title, summary=options.summary)
         
         
@@ -93,13 +92,38 @@ def try_login(client):
 	Returns: True if login was successful, False otherwise.
 	
 	"""
+    cred_directory = os.path.expanduser('~/.googlecl')
+    if not os.path.exists(cred_directory):
+        os.makedirs(cred_directory)
+        
+    cred_filename = os.path.join(cred_directory, 'creds')
+    used_auth_from_file = False
+    if os.path.exists(cred_filename):
+        with open(cred_filename, 'r') as cred_file:
+            try:
+                (email, password) = pickle.load(cred_file)
+            except EOFError:
+                cred_file.close()
+                os.remove(cred_filename)
+            else:
+                used_auth_from_file = True
+    
+    if not used_auth_from_file:
+        email = raw_input('Enter your username: ')
+        password = getpass.getpass('Enter your password: ')
+        with open(cred_filename, 'w') as cred_file:
+            os.chmod(cred_filename, stat.S_IRUSR | stat.S_IWUSR)
+            pickle.dump((email, password), cred_file)
+        
+    client.email = email
+    client.password = password
+    client.source = 'google-cl'
     try:
-        client.email = raw_input('Enter your username: ')
-        client.password = getpass.getpass('Enter your password: ')
-        client.source = 'google-cl'
         client.ProgrammaticLogin()
     except gdata.service.BadAuthentication as e:
         print e
+        if used_auth_from_file:
+            os.remove(cred_filename)
         try_login()
     except gdata.service.CaptchaRequired:
         print 'Too many false logins; Captcha required.'
