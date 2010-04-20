@@ -6,38 +6,13 @@ service -- the Google service being accessed (Picasa, translate, YouTube, etc.)
 task -- what the client wants done by the service.
 
 """
-import gdata.photos.service
+import photos.service
 import getpass
 import glob
 import myparser
 import os
 import pickle
 import stat
-
-
-def get_albums(client, user='default', title=None):
-    """Get albums from a user.
-    
-    Keyword arguments:
-    client -- the gdata.photos.service.PhotosService() object.
-    user -- the user whose albums are being retrieved. (Default 'default')
-    title -- title that the album should have. (Default None, for all albums)
-    
-    Returns: list of albums that match parameters, or [] if none do.
-    
-    """
-    wanted_albums = []
-    feed = client.GetUserFeed(user=user)
-    for album in feed.entry:
-        if not title or album.title.text == title:
-            wanted_albums.append(album)
-    return wanted_albums
-
-
-def insert_photos(client, album_url, filelist):
-    for file in filelist:
-        print 'Loading file', file
-        photo = client.InsertPhotoSimple(album_url, file, '', file)
 
 
 def is_supported_service(service):
@@ -102,7 +77,7 @@ def run_once(options, args):
         return
     
     task = args[1]
-    client = gdata.photos.service.PhotosService()
+    client = photos.service.PhotosService()
      
     if requires_login(task):
         loggedOn = try_login(client)
@@ -111,24 +86,12 @@ def run_once(options, args):
             exit()
             
     if task == 'create':
-        album = client.InsertAlbum(title=options.title, summary=options.summary)
         if len(args) >= 3:
-            album_url = ('/data/feed/api/user/%s/albumid/%s' % 
-                         ('default', album.gphoto_id.text))
-            if len(args) == 3:
-                insert_photos(client, album_url, glob.glob(args[2]))
-            elif len(args) > 3:
-                insert_photos(client, album_url, args[2:])    
+            client.CreateAlbum(options.title, options.summary, args[2:])
+        else:      
+            client.CreateAlbum(options.title, options.summary, [])
     elif task == 'delete':
-        albums = get_albums(client, title=options.title)
-        if not albums:
-            print 'No albums with title', options.title
-        for album in albums:
-            delete = raw_input('Are you sure you want to delete album ' + 
-                               album.title.text + 
-                               '? (Y/n): ')
-            if not delete or delete.lower() == 'y':
-                client.Delete(album)
+        client.DeleteAlbum(options.title)
     else:
         print ('Sorry, task "%s" is currently unsupported for %s.' % 
                (task, service))
@@ -148,42 +111,14 @@ def try_login(client):
         os.makedirs(cred_directory)
         
     cred_filename = os.path.join(cred_directory, 'creds')
-    used_auth_from_file = False
-    if os.path.exists(cred_filename):
-        with open(cred_filename, 'r') as cred_file:
-            try:
-                (email, password) = pickle.load(cred_file)
-            except EOFError:
-                cred_file.close()
-                os.remove(cred_filename)
-            else:
-                used_auth_from_file = True
-    
-    if not used_auth_from_file:
-        email = raw_input('Enter your username: ')
-        password = getpass.getpass('Enter your password: ')
-        with open(cred_filename, 'w') as cred_file:
+    (email, password, used_file) = client.Login(cred_filename)
+    if used_file and not email:
+        os.remove(cred_filename)
+    if email and password and not used_file:
+        with open(credentials_path, 'w') as cred_file:
             os.chmod(cred_filename, stat.S_IRUSR | stat.S_IWUSR)
             pickle.dump((email, password), cred_file)
-        
-    client.email = email
-    client.password = password
-    client.source = 'google-cl'
-    try:
-        client.ProgrammaticLogin()
-    except gdata.service.BadAuthentication as e:
-        print e
-        if used_auth_from_file:
-            os.remove(cred_filename)
-        try_login()
-    except gdata.service.CaptchaRequired:
-        print 'Too many false logins; Captcha required.'
-        return False
-    except Exception as e:
-        print 'Unexpected exception: ', e
-        return False
-    else:
-        return True
+    return bool(email) and bool(password)    
 
 
 def main():
@@ -201,9 +136,7 @@ def main():
     parser.add_option('-t', '--title', dest='title',
                       help='Title of the album')
     
-    
     (options, args) = parser.parse_args()
-    
     if not args:
         try:
             run_interactive(parser)
