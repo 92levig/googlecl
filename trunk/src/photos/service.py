@@ -47,14 +47,14 @@ class PhotosService(object):
                     (Default False)
         
         """
-        albums = self.GetAlbum(title=title)
+        albums = self.GetAlbum(title=title, regex=regex)
         if not albums:
             print 'No albums with title', title
         for album in albums:
-            delete = raw_input('Are you sure you want to delete album ' + 
+            delete = raw_input('Are you SURE you want to delete album ' + 
                                album.title.text + 
-                               '? (Y/n): ')
-            if not delete or delete.lower() == 'y':
+                               '? (y/N): ')
+            if delete and delete.lower() == 'y':
                 self.client.Delete(album)
                 
     def GetAlbum(self, user='default', title=None, regex=False):
