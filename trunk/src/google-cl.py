@@ -14,6 +14,7 @@ import os
 import pickle
 import stat
 
+
 def get_albums(client, user='default', title=None):
     """Get albums from a user.
     
@@ -31,6 +32,12 @@ def get_albums(client, user='default', title=None):
         if not title or album.title.text == title:
             wanted_albums.append(album)
     return wanted_albums
+
+
+def insert_photos(client, album_url, filelist):
+    for file in filelist:
+        print 'Loading file', file
+        photo = client.InsertPhotoSimple(album_url, file, '', file)
 
 
 def is_supported_service(service):
@@ -105,13 +112,13 @@ def run_once(options, args):
             
     if task == 'create':
         album = client.InsertAlbum(title=options.title, summary=options.summary)
-        if len(args) == 3:
-            file_glob = args[2]
+        if len(args) >= 3:
             album_url = ('/data/feed/api/user/%s/albumid/%s' % 
                          ('default', album.gphoto_id.text))
-            for file in glob.glob(file_glob):
-                print 'Loading file', file
-                photo = client.InsertPhotoSimple(album_url, file, '', file)
+            if len(args) == 3:
+                insert_photos(client, album_url, glob.glob(args[2]))
+            elif len(args) > 3:
+                insert_photos(client, album_url, args[2:])    
     elif task == 'delete':
         albums = get_albums(client, title=options.title)
         if not albums:
