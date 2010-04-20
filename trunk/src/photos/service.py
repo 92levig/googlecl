@@ -38,11 +38,13 @@ class PhotosService(object):
             else:
                 self.InsertPhotos(album, photo_list)
                 
-    def DeleteAlbum(self, title):
+    def DeleteAlbum(self, title, regex=False):
         """Delete album(s).
         
         Keyword arguments:
         title -- albums matching this title should be deleted.
+        regex -- indicates if regular expressions should be used in the title. 
+                    (Default False)
         
         """
         albums = self.GetAlbum(title=title)
@@ -63,7 +65,7 @@ class PhotosService(object):
                     (Default 'default')
         title -- title that the album should have. 
                     (Default None, for all albums)
-        regex -- indicates if the title includes regular expressions. 
+        regex -- indicates if regular expressions should be used in the title. 
                     (Default False)
                     
         Returns: list of albums that match parameters, or [] if none do.
@@ -74,8 +76,8 @@ class PhotosService(object):
         if not title:
             return feed.entry
         for album in feed.entry:
-            if (not regex and album.title.text == title or 
-                regex and re.match(title, album.title.text)):
+            if ((regex and re.match(title, album.title.text)) or 
+                (not regex and album.title.text == title)):
                 wanted_albums.append(album)
         return wanted_albums
     

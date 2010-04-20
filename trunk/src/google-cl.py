@@ -6,6 +6,7 @@ service -- the Google service being accessed (Picasa, translate, YouTube, etc.)
 task -- what the client wants done by the service.
 
 """
+import ConfigParser
 import photos.service
 import getpass
 import glob
@@ -13,6 +14,11 @@ import myparser
 import os
 import pickle
 import stat
+
+_google_cl_dir = os.path.expanduser('~/.googlecl')
+_preferences_filename = 'prefs'
+_login_filename = 'creds'
+_config = ConfigParser.ConfigParser()
 
 
 def is_supported_service(service):
@@ -23,6 +29,23 @@ def is_supported_service(service):
         return False
     
     
+def load_preferences():
+    """Load preferences / configuration file.
+    
+    Sets up the global ConfigParser.ConfigParser, _config.
+    
+    """
+    if not os.path.exists(_google_cl_dir):
+        os.makedirs(_google_cl_dir)
+    pref_path = os.path.join(_google_cl_dir, _preferences_filename)
+    if os.path.exists(pref_path):
+        _config.read(pref_path)
+    else:
+        _config.set('DEFAULT', 'regex', False)
+        with open(pref_path, 'w') as pref_file:
+            _config.write(pref_file)
+            
+                
 def print_help():
     """Print a help message."""
     print 'Welcome to the google-cl super alpha'
@@ -91,10 +114,13 @@ def run_once(options, args):
         else:      
             client.CreateAlbum(options.title, options.summary, [])
     elif task == 'delete':
-        client.DeleteAlbum(options.title)
+        client.DeleteAlbum(options.title, 
+                           regex=_config.getboolean('DEFAULT', 'regex'))
     elif task == 'list':
         user = raw_input('Enter a username to get albums for: ')
-        entries = client.GetAlbum(user=user, title=options.title, regex=True)
+        entries = client.GetAlbum(user=user, 
+                                  title=options.title, 
+                                  regex=_config.getboolean('DEFAULT', 'regex'))
         for album in entries:
             print album.title.text
     else:
@@ -102,31 +128,12 @@ def run_once(options, args):
                (task, service))
         
         
-def try_login(client):
-    """Try to use programmatic login to log into Picasa.
+def setup_parser():
+    """Set up the parser.
     
-    Keyword arguments:
-	client -- client for the Picasa service.
-	
-	Returns: True if login was successful, False otherwise.
-	
-	"""
-    cred_directory = os.path.expanduser('~/.googlecl')
-    if not os.path.exists(cred_directory):
-        os.makedirs(cred_directory)
-        
-    cred_filename = os.path.join(cred_directory, 'creds')
-    (email, password, used_file) = client.Login(cred_filename)
-    if used_file and not email:
-        os.remove(cred_filename)
-    if email and password and not used_file:
-        with open(credentials_path, 'w') as cred_file:
-            os.chmod(cred_filename, stat.S_IRUSR | stat.S_IWUSR)
-            pickle.dump((email, password), cred_file)
-    return bool(email) and bool(password)    
-
-
-def main():
+    Returns: myparser.MyParser with options configured.
+    
+    """
     usage = "usage: %prog service [options]"
     parser = myparser.MyParser(usage=usage)
     parser.add_option('-a', '--album', dest='title', 
@@ -140,7 +147,33 @@ def main():
                             'or file containing the description.'))
     parser.add_option('-t', '--title', dest='title',
                       help='Title of the album')
+    return parser
+
+
+def try_login(client):
+    """Try to use programmatic login to log into Picasa.
     
+    Keyword arguments:
+	client -- client for the Picasa service.
+	
+	Returns: True if login was successful, False otherwise.
+	
+	"""
+    cred_path = os.path.join(_google_cl_dir, _login_filename)
+    (email, password, used_file) = client.Login(cred_path)
+    if used_file and not email:
+        os.remove(cred_path)
+    if email and password and not used_file:
+        with open(cred_path, 'w') as cred_file:
+            os.chmod(cred_filename, stat.S_IRUSR | stat.S_IWUSR)
+            pickle.dump((email, password), cred_file)
+    return bool(email) and bool(password)    
+
+
+def main():
+    load_preferences()
+    parser = setup_parser()
+      
     (options, args) = parser.parse_args()
     if not args:
         try:
