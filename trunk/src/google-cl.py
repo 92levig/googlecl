@@ -92,6 +92,11 @@ def run_once(options, args):
             client.CreateAlbum(options.title, options.summary, [])
     elif task == 'delete':
         client.DeleteAlbum(options.title)
+    elif task == 'list':
+        user = raw_input('Enter a username to get albums for: ')
+        entries = client.GetAlbum(user=user, title=options.title, regex=True)
+        for album in entries:
+            print album.title.text
     else:
         print ('Sorry, task "%s" is currently unsupported for %s.' % 
                (task, service))

@@ -12,6 +12,7 @@ import getpass
 import glob
 import os
 import pickle
+import re
 
 class PhotosService(object):
     """Wrapper class for gdata.photos.service.PhotosService()."""
@@ -54,20 +55,27 @@ class PhotosService(object):
             if not delete or delete.lower() == 'y':
                 self.client.Delete(album)
                 
-    def GetAlbum(self, user='default', title=None):
+    def GetAlbum(self, user='default', title=None, regex=False):
         """Get albums from a user feed.
         
         Keyword arguments:
-        user -- the user whose albums are being retrieved. (Default 'default')
-        title -- title that the album should have. (Default None, for all albums)
-        
+        user -- the user whose albums are being retrieved. 
+                    (Default 'default')
+        title -- title that the album should have. 
+                    (Default None, for all albums)
+        regex -- indicates if the title includes regular expressions. 
+                    (Default False)
+                    
         Returns: list of albums that match parameters, or [] if none do.
         
         """
         wanted_albums = []
         feed = self.client.GetUserFeed(user=user)
+        if not title:
+            return feed.entry
         for album in feed.entry:
-            if not title or album.title.text == title:
+            if (not regex and album.title.text == title or 
+                regex and re.match(title, album.title.text)):
                 wanted_albums.append(album)
         return wanted_albums
     
