@@ -15,6 +15,7 @@ import os
 import pickle
 import stat
 
+
 _google_cl_dir = os.path.expanduser('~/.googlecl')
 _preferences_filename = 'prefs'
 _login_filename = 'creds'
@@ -62,7 +63,7 @@ def requires_login(task):
   task -- the task to be performed.
   
   """
-  login_tasks = ['create', 'delete']
+  login_tasks = ['create', 'delete', 'post']
   if task in login_tasks:
     return True
   else:
@@ -113,16 +114,31 @@ def run_once(options, args):
       client.CreateAlbum(options.title, options.summary, args[2:])
     else:    
       client.CreateAlbum(options.title, options.summary, [])
+      
   elif task == 'delete':
     client.DeleteAlbum(options.title, 
                regex=_config.getboolean('DEFAULT', 'regex'))
+    
   elif task == 'list':
     user = raw_input('Enter a username to get albums for: ')
-    entries = client.GetAlbum(user=user, 
-                  title=options.title, 
-                  regex=_config.getboolean('DEFAULT', 'regex'))
+    entries = client.GetAlbum(user=user,
+                              title=options.title,
+                              regex=_config.getboolean('DEFAULT', 'regex'))
     for album in entries:
       print album.title.text
+      
+  elif task == 'post' and len(args) >= 3:
+    albums = client.GetAlbum(title=options.title, 
+                             regex=_config.getboolean('DEFAULT', 'regex'))
+    if albums:
+      if len(args[2:]) == 1:
+        photo_list = glob.glob(args[2])
+      else:
+        photo_list = args[2:]
+      client.InsertPhotos(albums[0], args[2:])
+    else:
+      print 'No albums found that match %s' % options.title
+    
   else:
     print ('Sorry, task "%s" is currently unsupported for %s.' % 
          (task, service))

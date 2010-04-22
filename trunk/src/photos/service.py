@@ -9,7 +9,6 @@ class.
 """
 import gdata.photos.service
 import getpass
-import glob
 import os
 import pickle
 import re
@@ -33,9 +32,6 @@ class PhotosService(object):
     """
     album = self.client.InsertAlbum(title=title, summary=summary)
     if photo_list:
-      if len(photo_list) == 1:
-        self.InsertPhotos(album, glob.glob(photo_list))
-      else:
         self.InsertPhotos(album, photo_list)
         
   def DeleteAlbum(self, title, regex=False):
@@ -92,7 +88,10 @@ class PhotosService(object):
                  ('default', album.gphoto_id.text))
     for file in photo_list:
       print 'Loading file', file
-      self.client.InsertPhotoSimple(album_url, file, '', file)
+      try:
+        self.client.InsertPhotoSimple(album_url, file, '', file)
+      except gdata.photos.service.GooglePhotosException as e:
+        print 'Failed to upload %s. (%s -- %s)' % (file, e.reason, e.body)
       
   def Login(self, credentials_path=None):
     """Try to use programmatic login to log into Picasa.
