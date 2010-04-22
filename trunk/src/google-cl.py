@@ -10,7 +10,7 @@ import ConfigParser
 import photos.service
 import getpass
 import glob
-import myparser
+import optparse
 import os
 import pickle
 import stat
@@ -22,6 +22,89 @@ _login_filename = 'creds'
 _config = ConfigParser.ConfigParser()
 
 
+def expand_as_command_line(command_string):
+  """Expand a string as if it was entered at the command line.
+  
+  Mimics the shell expansion of '~', file globbing, and quotation marks.
+  For example, 'picasa post -a "My album" ~/photos/*.png' will return
+  ['picasa', 'post', '-a', 'My album', '$HOME/photos/myphoto1.png', etc.]
+  It will not treat apostrophes specially, or handle environment variables.
+  
+  Keyword arguments:
+  command_string -- the string to be expanded.
+  
+  Returns: A list of strings that (mostly) matches sys.argv if command_string
+    was entered on the command line.
+  
+  """ 
+  def do_globbing(args, final_args_list):
+    """Do filename expansion.
+    
+    Uses glob.glob to expand the default special characters of bash. Note that
+    the command line will leave in arguments that do not expand to anything,
+    unlike glob.glob. For example, entering 'myprogram.py total_nonsense*.txt'
+    will pass through 'total_nonsense*.txt' as sys.argv[1].
+    
+    Keyword arguments:
+    args -- list of strings, or string, to be expanded.
+    final_args_list -- list that expanded arguments should be added to.
+    
+    Returns: Nothing, though final_args_list is modified.
+    
+    """
+    if isinstance(args, basestring):
+      expanded_str = glob.glob(args)
+      if expanded_str:
+        final_args_list.extend(expanded_str)
+      else:
+        final_args_list.append(args)
+    else:
+      for arg in args:
+        expanded_arg = glob.glob(arg)
+        if expanded_arg:
+          final_args_list.extend(expanded_arg)
+        else:
+          final_args_list.append(arg)
+        
+  # End of do_globbing, begin expand_as_command_line
+  if not command_string:
+    return []
+  
+  # Sub in the home path.
+  home_path = os.path.expanduser('~/')
+  command_string = command_string.replace( ' ~/', ' ' + home_path)
+  
+  # Look for quotation marks
+  quote_index = command_string.find('"')
+  if quote_index == -1:
+    args_list = command_string.split()
+    final_args_list = []
+    do_globbing(args_list, final_args_list)
+    
+  else:
+    final_args_list = []
+    while quote_index != -1:
+      start = quote_index
+      end = command_string.find('"', start+1)
+      quoted_arg = command_string[start+1:end] 
+      non_quoted_args = command_string[:start].split()
+      
+      # Only do filename expansion on non-quoted args!
+      # do_globbing will modify final_args_list appropriately
+      do_globbing(non_quoted_args, final_args_list) 
+      final_args_list.append(quoted_arg)
+      
+      command_string = command_string[end+1:]
+      if command_string:
+        quote_index = command_string.find('"')
+      else:
+        quote_index = -1
+        
+    do_globbing(command_string.strip(), final_args_list)
+    
+  return final_args_list
+      
+      
 def is_supported_service(service):
   """Check to see if a service is supported."""
   if service.lower() == 'picasa':
@@ -77,8 +160,8 @@ def run_interactive(parser):
     command_string = raw_input('> ')
     if not command_string:
       continue
-    command_list = command_string.split()
-    (options, args) = parser.parse_args(command_list)
+    args_list = expand_as_command_line(command_string)
+    (options, args) = parser.parse_args(args_list)
     if is_supported_service(args[0]):
       run_once(options, args)
     elif command_string == '?' or command_string == 'help':
@@ -127,14 +210,14 @@ def run_once(options, args):
     for album in entries:
       print album.title.text
       
-  elif task == 'post' and len(args) >= 3:
+  elif task == 'post':
+    if len(args) < 3:
+      print 'Must provide photos to post!'
+      return
+     
     albums = client.GetAlbum(title=options.title, 
                              regex=_config.getboolean('DEFAULT', 'regex'))
     if albums:
-      if len(args[2:]) == 1:
-        photo_list = glob.glob(args[2])
-      else:
-        photo_list = args[2:]
       client.InsertPhotos(albums[0], args[2:])
     else:
       print 'No albums found that match %s' % options.title
@@ -147,11 +230,11 @@ def run_once(options, args):
 def setup_parser():
   """Set up the parser.
   
-  Returns: myparser.MyParser with options configured.
+  Returns: optparse.OptionParser with options configured.
   
   """
   usage = "usage: %prog service [options]"
-  parser = myparser.MyParser(usage=usage)
+  parser = optparse.OptionParser(usage=usage)
   parser.add_option('-a', '--album', dest='title',
                     default='Boring Album Title',
                     help='Title of the album')
