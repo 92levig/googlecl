@@ -31,7 +31,7 @@ class PhotosService(object):
     """
     album = self.client.InsertAlbum(title=title, summary=summary)
     if photo_list:
-        self.insert_photos(album, photo_list)
+        self.InsertPhotos(album, photo_list)
         
   def DeleteAlbum(self, title, regex=False):
     """Delete album(s).

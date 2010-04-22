@@ -100,7 +100,8 @@ def expand_as_command_line(command_string):
       else:
         quote_index = -1
         
-    do_globbing(command_string.strip(), final_args_list)
+    if command_string:
+      do_globbing(command_string.strip(), final_args_list)
     
   return final_args_list
       
@@ -187,23 +188,31 @@ def run_once(options, args):
   client = photos.service.PhotosService()
    
   if requires_login(task) and not client.logged_in:
-    loggedOn = try_login(client)
+    loggedOn = try_login(client, options.user, options.password)
     if not loggedOn:
-      print 'Failed to log on, exiting'
-      exit()
+      print 'Failed to log on!'
+      return
       
   if task == 'create':
+    if not options.title:
+      title = raw_input('Enter a name for the album: ')
+    else:
+      title = options.title
+      
     if len(args) >= 3:
-      client.CreateAlbum(options.title, options.summary, args[2:])
+      client.CreateAlbum(title, options.summary, args[2:])
     else:    
-      client.CreateAlbum(options.title, options.summary, [])
+      client.CreateAlbum(title, options.summary, [])
       
   elif task == 'delete':
     client.DeleteAlbum(options.title,
                        regex=_config.getboolean('DEFAULT', 'regex'))
     
   elif task == 'list':
-    user = raw_input('Enter a username to get albums for: ')
+    if not options.user:
+      user = raw_input('Enter a username to get albums for: ')
+    else:
+      user = options.user
     entries = client.GetAlbum(user=user,
                               title=options.title,
                               regex=_config.getboolean('DEFAULT', 'regex'))
@@ -236,36 +245,55 @@ def setup_parser():
   usage = "usage: %prog service [options]"
   parser = optparse.OptionParser(usage=usage)
   parser.add_option('-a', '--album', dest='title',
-                    default='Boring Album Title',
+                    default='',
                     help='Title of the album')
   parser.add_option('-d', '--date', dest='date',
                     help='Date of the album (if omitted, uses today).')
+  parser.add_option('-p', '--password', dest='password',
+                    default='',
+                    help='Password for the username specifed via -u option.')
   parser.add_option('-s', '--summary', dest='summary', 
                     default='I am too lazy to summarize this album.',
                     help=('Description of the album, ' +
                           'or file containing the description.'))
   parser.add_option('-t', '--title', dest='title',
                     help='Title of the album')
+  parser.add_option('-u', '--user', dest='user',
+                    default='',
+                    help=('Username to use for the task. Exact application ' +
+                          'is task-dependent. If authentication is ' +
+                          'necessary, this will force the user to specify a ' +
+                          'password through a command line prompt or option.'))
+ 
   return parser
 
 
-def try_login(client):
+def try_login(client, email=None, password=None):
   """Try to use programmatic login to log into Picasa.
   
   Keyword arguments:
   client -- client for the Picasa service.
+  email -- email used to log in to Picasa. If '@my-mail.com' is not included,
+          '@gmail.com' is inferred. (Default None - will first check for a file
+          containing email/password, or prompt for one)  
+  password -- password used to authenticate the account given by 'email'.
+          (Default None - will first check for a file containing email/password,
+          or prompt for one) 
   
   Returns: True if login was successful, False otherwise.
   
   """
   cred_path = os.path.join(_google_cl_dir, _login_filename)
-  if os.path.exists(cred_path):
+  if os.path.exists(cred_path) and not email:
     logged_in = client.Login(credentials_path=cred_path)
     if not logged_in:
       os.remove(cred_path)
   else:
-    email = raw_input('Enter your username: ')
-    password = getpass.getpass('Enter your password: ')
+    if not email:
+      email = raw_input('Enter your username: ')
+    if not password:
+      password = getpass.getpass('Enter your password: ')
+      
     logged_in = client.Login(email=email, password=password)
     if logged_in:
       with open(cred_path, 'w') as cred_file:
