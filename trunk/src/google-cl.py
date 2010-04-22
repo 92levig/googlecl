@@ -186,7 +186,7 @@ def run_once(options, args):
   task = args[1]
   client = photos.service.PhotosService()
    
-  if requires_login(task):
+  if requires_login(task) and not client.logged_in:
     loggedOn = try_login(client)
     if not loggedOn:
       print 'Failed to log on, exiting'
@@ -199,8 +199,8 @@ def run_once(options, args):
       client.CreateAlbum(options.title, options.summary, [])
       
   elif task == 'delete':
-    client.DeleteAlbum(options.title, 
-               regex=_config.getboolean('DEFAULT', 'regex'))
+    client.DeleteAlbum(options.title,
+                       regex=_config.getboolean('DEFAULT', 'regex'))
     
   elif task == 'list':
     user = raw_input('Enter a username to get albums for: ')
@@ -259,14 +259,20 @@ def try_login(client):
   
   """
   cred_path = os.path.join(_google_cl_dir, _login_filename)
-  (email, password, used_file) = client.Login(cred_path)
-  if used_file and not email:
-    os.remove(cred_path)
-  if email and password and not used_file:
-    with open(cred_path, 'w') as cred_file:
-      os.chmod(cred_filename, stat.S_IRUSR | stat.S_IWUSR)
-      pickle.dump((email, password), cred_file)
-  return bool(email) and bool(password)  
+  if os.path.exists(cred_path):
+    logged_in = client.Login(credentials_path=cred_path)
+    if not logged_in:
+      os.remove(cred_path)
+  else:
+    email = raw_input('Enter your username: ')
+    password = getpass.getpass('Enter your password: ')
+    logged_in = client.Login(email=email, password=password)
+    if logged_in:
+      with open(cred_path, 'w') as cred_file:
+        os.chmod(cred_path, stat.S_IRUSR | stat.S_IWUSR)
+        pickle.dump((email, password), cred_file)
+  
+  return logged_in
 
 
 def main():
