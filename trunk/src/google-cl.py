@@ -200,9 +200,9 @@ def run_once(options, args):
       title = options.title
       
     if len(args) >= 3:
-      client.CreateAlbum(title, options.summary, args[2:])
+      client.CreateAlbum(title, options.summary, args[2:], options.date)
     else:    
-      client.CreateAlbum(title, options.summary, [])
+      client.CreateAlbum(title, options.summary, [], options.date)
       
   elif task == 'delete':
     client.DeleteAlbum(options.title,
@@ -242,13 +242,15 @@ def setup_parser():
   Returns: optparse.OptionParser with options configured.
   
   """
-  usage = "usage: %prog service [options]"
+  usage = "usage: %prog service task [options]"
   parser = optparse.OptionParser(usage=usage)
   parser.add_option('-a', '--album', dest='title',
                     default='',
                     help='Title of the album')
   parser.add_option('-d', '--date', dest='date',
-                    help='Date of the album (if omitted, uses today).')
+                    default='',
+                    help='Date of the album in MM/DD/YYYY format.' + 
+                    '(if omitted, uses today).')
   parser.add_option('-p', '--password', dest='password',
                     default='',
                     help='Password for the username specifed via -u option.')

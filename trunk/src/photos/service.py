@@ -10,6 +10,7 @@ class.
 import gdata.photos.service
 import pickle
 import re
+import time
 
 class PhotosService(object):
   """Wrapper class for gdata.photos.service.PhotosService()."""
@@ -20,16 +21,29 @@ class PhotosService(object):
     self.client = gdata.photos.service.PhotosService()
     self.logged_in = False
   
-  def CreateAlbum(self, title, summary, photo_list=None): 
+  def CreateAlbum(self, title, summary, photo_list, date): 
     """Create an album.
     
     Keyword arguments:
     title -- Title of the album.
     summary -- Summary of the album.
     photo_list -- List of filenames of photos on local host.
+    date -- the date of the album, in MM/DD/YYYY format (as a string)
     
     """
-    album = self.client.InsertAlbum(title=title, summary=summary)
+    timestamp_text = None
+    if date:
+      try:
+        timestamp = time.mktime(time.strptime(date, '%m/%d/%Y'))
+      except ValueError as e:
+        print e
+      else:
+        # I have no idea why the timestamp gets made like this, but this is how
+        # it's done...
+        timestamp_text = '%i' % (timestamp * 1000)
+    
+    album = self.client.InsertAlbum(title=title, summary=summary, 
+                                    timestamp=timestamp_text)
     if photo_list:
         self.InsertPhotos(album, photo_list)
         
