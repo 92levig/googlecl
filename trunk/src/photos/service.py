@@ -108,6 +108,10 @@ class PhotosService(object):
         wanted_albums.append(album)
     return wanted_albums
   
+  def GetFeed(self, uri):
+    """Direct line to the original PhotosService.GetFeed()."""
+    return self.client.GetFeed(uri)
+    
   def InsertPhotos(self, album, photo_list):
     """Insert photos into an album.
     

@@ -15,6 +15,7 @@ import optparse
 import os
 import pickle
 import stat
+import urllib
 
 
 _google_cl_dir = os.path.expanduser('~/.googlecl')
@@ -263,6 +264,44 @@ def run_once(options, args):
     else:
       print 'No albums found that match %s' % options.title
     
+  elif task == 'get':
+    if len(args) < 3:
+      print 'Must provide destination of album(s)!'
+      return
+    base_path = args[2]
+    
+    if not options.user:
+      user = raw_input('Enter a username to get albums for: ')
+    else:
+      user = options.user
+    entries = client.GetAlbum(user=user,
+                              title=options.title,
+                              regex=_config.getboolean('DEFAULT', 'regex'))
+    
+    for album in entries:
+      album_path = os.path.join(base_path, album.title.text)
+      album_concat = 1
+      if os.path.exists(album_path):
+        base_album_path = album_path
+        while os.path.exists(album_path):
+          album_path + base_album_path + '-%i' % album_concat
+          album_concat += 1
+      os.makedirs(album_path)
+      
+      #Need to write GetPhoto, or better GetFeed, or something.
+      f = client.GetFeed('/data/feed/api/user/%s/albumid/%s?kind=photo' %
+                         (user, album.gphoto_id.text))
+      
+      photo_concat = 1
+      for photo in f.entry:
+        photo_path = os.path.join(album_path, photo.title.text)
+        if os.path.exists(photo_path):
+          base_photo_path = photo_path
+          while os.path.exists(photo_path):
+            photo_path = base_photo_path + '-%i' % photo_concat
+            photo_concat += 1
+        print 'Downloading %s to %s' % (photo.title.text, photo_path)
+        urllib.urlretrieve(photo.content.src, photo_path)
   else:
     print ('Sorry, task "%s" is currently unsupported for %s.' % 
          (task, service))
