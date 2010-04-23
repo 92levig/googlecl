@@ -21,14 +21,16 @@ class PhotosService(object):
     self.client = gdata.photos.service.PhotosService()
     self.logged_in = False
   
-  def CreateAlbum(self, title, summary, photo_list, date): 
+  def CreateAlbum(self, title, summary, date='', photo_list=[]): 
     """Create an album.
     
     Keyword arguments:
     title -- Title of the album.
     summary -- Summary of the album.
+    date -- the date of the album, in MM/DD/YYYY format as a string.
+          (Default '')
     photo_list -- List of filenames of photos on local host.
-    date -- the date of the album, in MM/DD/YYYY format (as a string)
+          (Default [])
     
     """
     timestamp_text = None
@@ -47,22 +49,39 @@ class PhotosService(object):
     if photo_list:
         self.InsertPhotos(album, photo_list)
         
-  def DeleteAlbum(self, title, regex=False):
+  def DeleteAlbum(self, title, regex=False, delete_default=False, prompt=True):
     """Delete album(s).
     
     Keyword arguments:
     title -- albums matching this title should be deleted.
     regex -- indicates if regular expressions should be used in the title. 
           (Default False)
+    delete_default -- If the user is being prompted to confirm deletion, hitting
+          enter at the prompt will delete or keep the album if this is True or
+          False, respectively. (Default False)
+    prompt -- whether or not there should be a prompt confirming deletion.
+          (Default True)
     
     """
+    if delete_default and prompt:
+      prompt_str = '(Y/n)'
+    elif prompt:
+      prompt_str = '(y/N)'
     albums = self.GetAlbum(title=title, regex=regex)
     if not albums:
       print 'No albums with title', title
     for album in albums:
-      delete = raw_input('Are you SURE you want to delete album %s? (y/N):' % 
-                         album.title.text)
-      if delete and delete.lower() == 'y':
+      if prompt:
+        delete_str = raw_input('Are you SURE you want to delete album %s? %s:' % 
+                               (album.title.text, prompt_str))
+        if not delete_str:
+          delete = delete_default
+        else:
+          delete = delete_str.lower() == 'y'
+      else:
+        delete = True
+      
+      if delete:
         self.client.Delete(album)
         
   def GetAlbum(self, user='default', title=None, regex=False):

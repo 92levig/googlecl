@@ -1,3 +1,4 @@
+#!/usr/bin/python
 """Main function for the Google command line utility.
 
 Some terminology in use:
@@ -46,7 +47,7 @@ def expand_as_command_line(command_string):
     will pass through 'total_nonsense*.txt' as sys.argv[1].
     
     Keyword arguments:
-    args -- list of strings, or string, to be expanded.
+    args -- string, or list of strings, to be expanded.
     final_args_list -- list that expanded arguments should be added to.
     
     Returns: Nothing, though final_args_list is modified.
@@ -120,16 +121,43 @@ def load_preferences():
   Sets up the global ConfigParser.ConfigParser, _config.
   
   """
+  def set_options():
+    """Ensure the config file has all of the configuration options."""
+    made_changes = False
+    if not _config.has_option('DEFAULT', 'regex'):
+      _config.set('DEFAULT', 'regex', False)
+      made_changes = True
+    if not _config.has_option('DEFAULT', 'delete_by_default'):
+      _config.set('DEFAULT', 'delete_by_default', False)
+      made_changes = True
+    if not _config.has_option('DEFAULT', 'delete_prompt'):
+      _config.set('DEFAULT', 'delete_prompt', True)
+      made_changes = True
+    return made_changes
+  
+  def validate_options():
+    try:
+      _config.getboolean('DEFAULT', 'regex')
+      _config.getboolean('DEFAULT', 'delete_by_default')
+      _config.getboolean('DEFAULT', 'delete_prompt')
+    except Exception as e:
+      print 'Error in configuration file:', e
+      return False
+    else:
+      return True
+      
   if not os.path.exists(_google_cl_dir):
     os.makedirs(_google_cl_dir)
   pref_path = os.path.join(_google_cl_dir, _preferences_filename)
   if os.path.exists(pref_path):
     _config.read(pref_path)
-  else:
-    _config.set('DEFAULT', 'regex', False)
+      
+  made_changes = set_options()
+  if made_changes:
     with open(pref_path, 'w') as pref_file:
       _config.write(pref_file)
-      
+        
+  return validate_options()
         
 def print_help():
   """Print a help message."""
@@ -179,6 +207,9 @@ def run_once(options, args):
   args -- the arguments to google-cl, also as returned by optparse.
   
   """
+  if len(args) < 2:
+    print 'Must specify at least a service and a task!'
+    return
   service = args[0]
   if not is_supported_service(service):
     print 'Service %s is not supported' % service
@@ -199,14 +230,15 @@ def run_once(options, args):
     else:
       title = options.title
       
-    if len(args) >= 3:
-      client.CreateAlbum(title, options.summary, args[2:], options.date)
-    else:    
-      client.CreateAlbum(title, options.summary, [], options.date)
+    client.CreateAlbum(title, options.summary, 
+                       date=options.date, photo_list=args[2:])
       
   elif task == 'delete':
     client.DeleteAlbum(options.title,
-                       regex=_config.getboolean('DEFAULT', 'regex'))
+                       regex=_config.getboolean('DEFAULT', 'regex'),
+                       delete_default=_config.getboolean('DEFAULT', 
+                                                         'delete_by_default'),
+                       prompt=_config.getboolean('DEFAULT', 'delete_prompt'))
     
   elif task == 'list':
     if not options.user:
@@ -306,7 +338,10 @@ def try_login(client, email=None, password=None):
 
 
 def main():
-  load_preferences()
+  valid_prefs = load_preferences()
+  if not valid_prefs:
+    print 'Quitting...'
+    return -1
   parser = setup_parser()
     
   (options, args) = parser.parse_args()
