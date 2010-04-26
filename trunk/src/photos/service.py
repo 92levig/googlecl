@@ -121,11 +121,15 @@ class PhotosService(object):
       f = self.client.GetFeed('/data/feed/api/user/%s/albumid/%s?kind=photo' %
                               (user, album.gphoto_id.text))
       
-      photo_concat = 1
       for photo in f.entry:
         photo_path = os.path.join(album_path, photo.title.text)
+        # Check for a file extension, add it if it does not exist.
+        if photo_path.find('.') == -1:
+          t = photo.content.type
+          photo_path += '.' + t[t.find('/')+1:]
         if os.path.exists(photo_path):
           base_photo_path = photo_path
+          photo_concat = 1
           while os.path.exists(photo_path):
             photo_path = base_photo_path + '-%i' % photo_concat
             photo_concat += 1
