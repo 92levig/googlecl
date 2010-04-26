@@ -35,7 +35,8 @@ class PhotosService(object):
     self.prompt_for_tags = tags_prompt
     self.prompt_for_delete = delete_prompt
   
-  def CreateAlbum(self, title, summary, date='', photo_list=[], tags=''): 
+  def CreateAlbum(self, title, summary, date='', photo_list=[], tags='', 
+                  access='public'): 
     """Create an album.
     
     Keyword arguments:
@@ -46,6 +47,11 @@ class PhotosService(object):
     photo_list -- List of filenames of photos on local host.
           (Default [])
     tags -- Text of the tags to be added to each photo, e.g. 'Islands, Vacation'
+    access -- Access level of the album. Should be one of:
+            'public' for "Public" sharing setting.
+            'private' for "Unlisted" sharing setting.
+            'protected' for "Sign-in required" sharing setting.
+            (Default 'public')
     
     """
     timestamp_text = None
@@ -59,6 +65,7 @@ class PhotosService(object):
         timestamp_text = '%i' % (timestamp * 1000)
     
     album = self.client.InsertAlbum(title=title, summary=summary, 
+                                    access=access,
                                     timestamp=timestamp_text)
     if photo_list:
         self.InsertPhotos(album, photo_list=photo_list, tags=tags)

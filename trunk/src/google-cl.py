@@ -137,14 +137,20 @@ def load_preferences():
     if not _config.has_option('DEFAULT', 'tags_prompt'):
       _config.set('DEFAULT', 'tags_prompt', False)
       made_changes = True
+    if not _config.has_option('DEFAULT', 'access'):
+      _config.set('DEFAULT', 'access', 'public')
+      made_changes = True
     return made_changes
   
   def validate_options():
+    pub_values = ['public', 'private', 'protected']
     try:
       _config.getboolean('DEFAULT', 'regex')
       _config.getboolean('DEFAULT', 'delete_by_default')
       _config.getboolean('DEFAULT', 'delete_prompt')
       _config.getboolean('DEFAULT', 'tags_prompt')
+      if not _config.get('DEFAULT', 'access') in pub_values: 
+        raise ValueError('access must be one of %s' % pub_values)
     except Exception as e:
       print 'Error in configuration file:', e
       return False
@@ -245,7 +251,8 @@ def run_once(options, args):
       title = options.title
       
     client.CreateAlbum(title, options.summary, 
-                       date=options.date, photo_list=args[2:])
+                       date=options.date, photo_list=args[2:], 
+                       access=_config.get('DEFAULT', 'access'))
       
   elif task == 'delete':
     client.DeleteAlbum(options.title,
