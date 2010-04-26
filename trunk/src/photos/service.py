@@ -8,18 +8,28 @@ class.
 
 """
 import gdata.photos.service
+import os
 import pickle
 import re
 import time
+import urllib
 
 class PhotosService(object):
   """Wrapper class for gdata.photos.service.PhotosService()."""
   client = None
+  use_regex = False
   
-  def __init__(self):
-    """Constructor.""" 
+  def __init__(self, regex=False):
+    """Constructor.
+    
+    Keyword arguments:
+    regex -- indicates if regular expressions should be used for matching
+            strings, such as album titles. (Default False)
+            
+    """ 
     self.client = gdata.photos.service.PhotosService()
     self.logged_in = False
+    self.use_regex = regex
   
   def CreateAlbum(self, title, summary, date='', photo_list=[]): 
     """Create an album.
@@ -49,13 +59,11 @@ class PhotosService(object):
     if photo_list:
         self.InsertPhotos(album, photo_list)
         
-  def DeleteAlbum(self, title, regex=False, delete_default=False, prompt=True):
+  def DeleteAlbum(self, title, delete_default=False, prompt=True):
     """Delete album(s).
     
     Keyword arguments:
     title -- albums matching this title should be deleted.
-    regex -- indicates if regular expressions should be used in the title. 
-          (Default False)
     delete_default -- If the user is being prompted to confirm deletion, hitting
           enter at the prompt will delete or keep the album if this is True or
           False, respectively. (Default False)
@@ -67,7 +75,7 @@ class PhotosService(object):
       prompt_str = '(Y/n)'
     elif prompt:
       prompt_str = '(y/N)'
-    albums = self.GetAlbum(title=title, regex=regex)
+    albums = self.GetAlbum(title=title)
     if not albums:
       print 'No albums with title', title
     for album in albums:
@@ -84,17 +92,51 @@ class PhotosService(object):
       if delete:
         self.client.Delete(album)
         
-  def GetAlbum(self, user='default', title=None, regex=False):
+  def DownloadAlbum(self, base_path, user='default', title=None):
+    """Download an album to the client.
+    
+    Keyword arguments:
+    base_path -- the path on the filesystem to copy albums to. Each album will
+                 be stored in base_path/<album title>. If base_path does not
+                 exist, it and each non-existent parent directory will be
+                 created. 
+    user -- the user whose albums are being retrieved. (Default 'default')
+    title -- title that the album should have. (Default None, for all albums)
+       
+    """
+    entries = self.GetAlbum(user=user, title=title)
+    
+    for album in entries:
+      album_path = os.path.join(base_path, album.title.text)
+      album_concat = 1
+      if os.path.exists(album_path):
+        base_album_path = album_path
+        while os.path.exists(album_path):
+          album_path + base_album_path + '-%i' % album_concat
+          album_concat += 1
+      os.makedirs(album_path)
+      
+      f = self.client.GetFeed('/data/feed/api/user/%s/albumid/%s?kind=photo' %
+                              (user, album.gphoto_id.text))
+      
+      photo_concat = 1
+      for photo in f.entry:
+        photo_path = os.path.join(album_path, photo.title.text)
+        if os.path.exists(photo_path):
+          base_photo_path = photo_path
+          while os.path.exists(photo_path):
+            photo_path = base_photo_path + '-%i' % photo_concat
+            photo_concat += 1
+        print 'Downloading %s to %s' % (photo.title.text, photo_path)
+        urllib.urlretrieve(photo.content.src, photo_path)
+        
+  def GetAlbum(self, user='default', title=None):
     """Get albums from a user feed.
     
     Keyword arguments:
-    user -- the user whose albums are being retrieved.
-            (Default 'default')
-    title -- title that the album should have. 
-             (Default None, for all albums)
-    regex -- indicates if regular expressions should be used in the title. 
-             (Default False)
-          
+    user -- the user whose albums are being retrieved. (Default 'default')
+    title -- title that the album should have. (Default None, for all albums)
+       
     Returns: list of albums that match parameters, or [] if none do.
     
     """
@@ -103,8 +145,8 @@ class PhotosService(object):
     if not title:
       return feed.entry
     for album in feed.entry:
-      if ((regex and re.match(title, album.title.text)) or
-          (not regex and album.title.text == title)):
+      if ((self.use_regex and re.match(title, album.title.text)) or
+          (not self.use_regex and album.title.text == title)):
         wanted_albums.append(album)
     return wanted_albums
   

@@ -217,7 +217,7 @@ def run_once(options, args):
     return
   
   task = args[1]
-  client = photos.service.PhotosService()
+  client = photos.service.PhotosService(_config.getboolean('DEFAULT', 'regex'))
    
   if requires_login(task) and not client.logged_in:
     loggedOn = try_login(client, options.user, options.password)
@@ -236,7 +236,6 @@ def run_once(options, args):
       
   elif task == 'delete':
     client.DeleteAlbum(options.title,
-                       regex=_config.getboolean('DEFAULT', 'regex'),
                        delete_default=_config.getboolean('DEFAULT', 
                                                          'delete_by_default'),
                        prompt=_config.getboolean('DEFAULT', 'delete_prompt'))
@@ -246,9 +245,7 @@ def run_once(options, args):
       user = raw_input('Enter a username to get albums for: ')
     else:
       user = options.user
-    entries = client.GetAlbum(user=user,
-                              title=options.title,
-                              regex=_config.getboolean('DEFAULT', 'regex'))
+    entries = client.GetAlbum(user=user, title=options.title)
     for album in entries:
       print album.title.text
       
@@ -257,8 +254,7 @@ def run_once(options, args):
       print 'Must provide photos to post!'
       return
      
-    albums = client.GetAlbum(title=options.title, 
-                             regex=_config.getboolean('DEFAULT', 'regex'))
+    albums = client.GetAlbum(title=options.title)
     if albums:
       client.InsertPhotos(albums[0], args[2:])
     else:
@@ -274,34 +270,9 @@ def run_once(options, args):
       user = raw_input('Enter a username to get albums for: ')
     else:
       user = options.user
-    entries = client.GetAlbum(user=user,
-                              title=options.title,
-                              regex=_config.getboolean('DEFAULT', 'regex'))
+      
+    client.DownloadAlbum(base_path, user=user, title=options.title)
     
-    for album in entries:
-      album_path = os.path.join(base_path, album.title.text)
-      album_concat = 1
-      if os.path.exists(album_path):
-        base_album_path = album_path
-        while os.path.exists(album_path):
-          album_path + base_album_path + '-%i' % album_concat
-          album_concat += 1
-      os.makedirs(album_path)
-      
-      #Need to write GetPhoto, or better GetFeed, or something.
-      f = client.GetFeed('/data/feed/api/user/%s/albumid/%s?kind=photo' %
-                         (user, album.gphoto_id.text))
-      
-      photo_concat = 1
-      for photo in f.entry:
-        photo_path = os.path.join(album_path, photo.title.text)
-        if os.path.exists(photo_path):
-          base_photo_path = photo_path
-          while os.path.exists(photo_path):
-            photo_path = base_photo_path + '-%i' % photo_concat
-            photo_concat += 1
-        print 'Downloading %s to %s' % (photo.title.text, photo_path)
-        urllib.urlretrieve(photo.content.src, photo_path)
   else:
     print ('Sorry, task "%s" is currently unsupported for %s.' % 
          (task, service))
