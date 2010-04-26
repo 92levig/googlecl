@@ -234,6 +234,10 @@ def run_once(options, args):
       print 'Failed to log on!'
       return
       
+  if options.summary and os.path.exists(os.path.expanduser(options.summary)):
+    with open(options.summary, 'r') as summary_file:
+      options.summary = summary_file.read()
+      
   if task == 'create':
     if not options.title:
       title = raw_input('Enter a name for the album: ')
@@ -313,7 +317,7 @@ def setup_parser():
                     default='',
                     help='Password for the username specifed via -u option.')
   parser.add_option('-s', '--summary', dest='summary', 
-                    default='I am too lazy to summarize this album.',
+                    default='',
                     help=('Description of the album, ' +
                           'or file containing the description.'))
   parser.add_option('-t',  '--tag', dest='tags',
