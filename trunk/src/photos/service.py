@@ -16,22 +16,26 @@ import urllib
 
 class PhotosService(object):
   """Wrapper class for gdata.photos.service.PhotosService()."""
-  client = None
-  use_regex = False
   
-  def __init__(self, regex=False):
+  def __init__(self, regex=False, tags_prompt=False, delete_prompt=True):
     """Constructor.
     
     Keyword arguments:
     regex -- indicates if regular expressions should be used for matching
             strings, such as album titles. (Default False)
+    tags_prompt -- indicates if while inserting photos, code
+            should prompt for tags. (Default False)
+    delete_prompt -- indicates if PhotosService object should prompt user before
+            deleting an album or photo. (Default True)
             
     """ 
     self.client = gdata.photos.service.PhotosService()
     self.logged_in = False
     self.use_regex = regex
+    self.prompt_for_tags = tags_prompt
+    self.prompt_for_delete = delete_prompt
   
-  def CreateAlbum(self, title, summary, date='', photo_list=[]): 
+  def CreateAlbum(self, title, summary, date='', photo_list=[], tags=''): 
     """Create an album.
     
     Keyword arguments:
@@ -41,6 +45,7 @@ class PhotosService(object):
           (Default '')
     photo_list -- List of filenames of photos on local host.
           (Default [])
+    tags -- Text of the tags to be added to each photo, e.g. 'Islands, Vacation'
     
     """
     timestamp_text = None
@@ -50,16 +55,15 @@ class PhotosService(object):
       except ValueError as e:
         print e
       else:
-        # I have no idea why the timestamp gets made like this, but this is how
-        # it's done...
+        # Timestamp needs to be in milliseconds before the epoch
         timestamp_text = '%i' % (timestamp * 1000)
     
     album = self.client.InsertAlbum(title=title, summary=summary, 
                                     timestamp=timestamp_text)
     if photo_list:
-        self.InsertPhotos(album, photo_list)
+        self.InsertPhotos(album, photo_list=photo_list, tags=tags)
         
-  def DeleteAlbum(self, title, delete_default=False, prompt=True):
+  def DeleteAlbum(self, title, delete_default=False):
     """Delete album(s).
     
     Keyword arguments:
@@ -67,19 +71,17 @@ class PhotosService(object):
     delete_default -- If the user is being prompted to confirm deletion, hitting
           enter at the prompt will delete or keep the album if this is True or
           False, respectively. (Default False)
-    prompt -- whether or not there should be a prompt confirming deletion.
-          (Default True)
     
     """
-    if delete_default and prompt:
+    if delete_default and self.prompt_for_delete:
       prompt_str = '(Y/n)'
-    elif prompt:
+    elif self.prompt_for_delete:
       prompt_str = '(y/N)'
     albums = self.GetAlbum(title=title)
     if not albums:
       print 'No albums with title', title
     for album in albums:
-      if prompt:
+      if self.prompt_for_delete:
         delete_str = raw_input('Are you SURE you want to delete album %s? %s:' % 
                                (album.title.text, prompt_str))
         if not delete_str:
@@ -154,20 +156,25 @@ class PhotosService(object):
     """Direct line to the original PhotosService.GetFeed()."""
     return self.client.GetFeed(uri)
     
-  def InsertPhotos(self, album, photo_list):
+  def InsertPhotos(self, album, photo_list, tags=''):
     """Insert photos into an album.
     
     Keyword arguments:
     album -- The album entry of the album getting the photos.
     photo_list -- a list of paths, each path a picture on the local host.
+    tags -- Text of the tags to be added to each photo, e.g. 'Islands, Vacation'
     
     """
     album_url = ('/data/feed/api/user/%s/albumid/%s' %
                  ('default', album.gphoto_id.text))
+    keywords = tags
     for file in photo_list:
-      print 'Loading file', file
+      if not tags and self.prompt_for_tags:
+        keywords = raw_input('Enter tags for photo %s: ' % file)
+      print 'Loading file %s to album %s' % (file, album.title.text)
       try:
-        self.client.InsertPhotoSimple(album_url, file, '', file)
+        self.client.InsertPhotoSimple(album_url, file, '', file, 
+                                      keywords=keywords)
       except gdata.photos.service.GooglePhotosException as e:
         print 'Failed to upload %s. (%s -- %s)' % (file, e.reason, e.body)    
   

@@ -134,6 +134,9 @@ def load_preferences():
     if not _config.has_option('DEFAULT', 'delete_prompt'):
       _config.set('DEFAULT', 'delete_prompt', True)
       made_changes = True
+    if not _config.has_option('DEFAULT', 'tags_prompt'):
+      _config.set('DEFAULT', 'tags_prompt', False)
+      made_changes = True
     return made_changes
   
   def validate_options():
@@ -141,6 +144,7 @@ def load_preferences():
       _config.getboolean('DEFAULT', 'regex')
       _config.getboolean('DEFAULT', 'delete_by_default')
       _config.getboolean('DEFAULT', 'delete_prompt')
+      _config.getboolean('DEFAULT', 'tags_prompt')
     except Exception as e:
       print 'Error in configuration file:', e
       return False
@@ -159,6 +163,7 @@ def load_preferences():
       _config.write(pref_file)
         
   return validate_options()
+        
         
 def print_help():
   """Print a help message."""
@@ -217,7 +222,11 @@ def run_once(options, args):
     return
   
   task = args[1]
-  client = photos.service.PhotosService(_config.getboolean('DEFAULT', 'regex'))
+  client = photos.service.PhotosService(_config.getboolean('DEFAULT', 'regex'),
+                                        _config.getboolean('DEFAULT', 
+                                                           'tags_prompt'),
+                                        _config.getboolean('DEFAULT', 
+                                                           'delete_prompt'))
    
   if requires_login(task) and not client.logged_in:
     loggedOn = try_login(client, options.user, options.password)
@@ -237,8 +246,7 @@ def run_once(options, args):
   elif task == 'delete':
     client.DeleteAlbum(options.title,
                        delete_default=_config.getboolean('DEFAULT', 
-                                                         'delete_by_default'),
-                       prompt=_config.getboolean('DEFAULT', 'delete_prompt'))
+                                                         'delete_by_default'))
     
   elif task == 'list':
     if not options.user:
@@ -255,8 +263,16 @@ def run_once(options, args):
       return
      
     albums = client.GetAlbum(title=options.title)
-    if albums:
-      client.InsertPhotos(albums[0], args[2:])
+    if len(albums) == 1:
+      client.InsertPhotos(albums[0], args[2:], tags=options.tags)
+    elif len(albums) > 1:
+      print 'More than one album matches %s' % options.title
+      upload_all = raw_input('Would you like to upload photos ' + 
+                             'to each album? (Y/n) ')
+      if not upload_all or upload_all.lower() == 'y':
+        for album in albums:
+          client.InsertPhotos(album, args[2:], tags=options.tags)
+      
     else:
       print 'No albums found that match %s' % options.title
     
@@ -300,8 +316,9 @@ def setup_parser():
                     default='I am too lazy to summarize this album.',
                     help=('Description of the album, ' +
                           'or file containing the description.'))
-  parser.add_option('-t', '--title', dest='title',
-                    help='Title of the album')
+  parser.add_option('-t',  '--tag', dest='tags',
+                    default='',
+                    help='Tags for photos, e.g. "Sunsets, Earth Day"')
   parser.add_option('-u', '--user', dest='user',
                     default='',
                     help=('Username to use for the task. Exact application ' +
