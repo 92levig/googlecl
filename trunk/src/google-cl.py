@@ -140,6 +140,9 @@ def load_preferences():
     if not _config.has_option('DEFAULT', 'access'):
       _config.set('DEFAULT', 'access', 'public')
       made_changes = True
+    if not _config.has_option('DEFAULT', 'use_default_username'):
+      _config.set('DEFAULT', 'use_default_username', False)
+      made_changes = True
     return made_changes
   
   def validate_options():
@@ -149,8 +152,9 @@ def load_preferences():
       _config.getboolean('DEFAULT', 'delete_by_default')
       _config.getboolean('DEFAULT', 'delete_prompt')
       _config.getboolean('DEFAULT', 'tags_prompt')
+      _config.getboolean('DEFAULT', 'use_default_username')
       if not _config.get('DEFAULT', 'access') in pub_values: 
-        raise ValueError('access must be one of %s' % pub_values)
+        raise ValueError('"access" must be one of %s' % pub_values)
     except Exception as e:
       print 'Error in configuration file:', e
       return False
@@ -234,12 +238,18 @@ def run_once(options, args):
                                         _config.getboolean('DEFAULT', 
                                                            'delete_prompt'))
    
-  if requires_login(task) and not client.logged_in:
-    loggedOn = try_login(client, options.user, options.password)
-    if not loggedOn:
+  if requires_login(task):
+    try_login(client, options.user, options.password)
+    if not client.logged_in:
       print 'Failed to log on!'
       return
-      
+  
+  if (not client.logged_in and not options.user and 
+      _config.getboolean('DEFAULT', 'use_default_username')):
+    cred_path = os.path.join(_google_cl_dir, _login_filename)
+    (email, password) = client.LoadCreds(cred_path)
+    options.user = email
+    
   if options.summary and os.path.exists(os.path.expanduser(options.summary)):
     with open(options.summary, 'r') as summary_file:
       options.summary = summary_file.read()
@@ -319,7 +329,7 @@ def setup_parser():
   parser.add_option('-d', '--date', dest='date',
                     default='',
                     help='Date of the album in MM/DD/YYYY format.' + 
-                    '(if omitted, uses today).')
+                    ' If omitted, uses today.')
   parser.add_option('-p', '--password', dest='password',
                     default='',
                     help='Password for the username specifed via -u option.')
@@ -357,8 +367,8 @@ def try_login(client, email=None, password=None):
   """
   cred_path = os.path.join(_google_cl_dir, _login_filename)
   if os.path.exists(cred_path) and not email:
-    logged_in = client.Login(credentials_path=cred_path)
-    if not logged_in:
+    client.Login(credentials_path=cred_path)
+    if not client.logged_in:
       os.remove(cred_path)
   else:
     if not email:
@@ -366,13 +376,11 @@ def try_login(client, email=None, password=None):
     if not password:
       password = getpass.getpass('Enter your password: ')
       
-    logged_in = client.Login(email=email, password=password)
-    if logged_in:
+    client.Login(email=email, password=password)
+    if client.logged_in:
       with open(cred_path, 'w') as cred_file:
         os.chmod(cred_path, stat.S_IRUSR | stat.S_IWUSR)
         pickle.dump((email, password), cred_file)
-  
-  return logged_in
 
 
 def main():

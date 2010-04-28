@@ -196,6 +196,13 @@ class PhotosService(object):
       except gdata.photos.service.GooglePhotosException as e:
         print 'Failed to upload %s. (%s -- %s)' % (file, e.reason, e.body)    
   
+  def LoadCreds(self, credentials_path):
+    """Return the email/password found in the credentials file."""
+    with open(credentials_path, 'r') as cred_file:
+      (email, password) = pickle.load(cred_file)
+          
+    return (email, password)
+  
   def Login(self, email=None, password=None, credentials_path=None):
     """Try to use programmatic login to log into Picasa.
     
@@ -209,22 +216,15 @@ class PhotosService(object):
     credentials_path -- absolute path to file that contains email/password
       for Picasa Web.
     
-    Returns: True if login was successful, False otherwise.
+    Returns: Nothing, but sets self.logged_in to True if login was a success.
     
     """
     if credentials_path:
-      with open(credentials_path, 'r') as cred_file:
-        try:
-          (email, password) = pickle.load(cred_file)
-        except Exception as e:
-          self.logged_in = False
+      (email, password) = self.LoadCreds(credentials_path)
     elif not (email and password):
       print ('You must give an email/password combo to log in with, '
              'or a file where they can be found!')
       self.logged_in = False
-      return self.logged_in
-    
-    if email == self.client.email and password == self.client.password:
       return self.logged_in
     
     self.client.email = email
@@ -239,9 +239,5 @@ class PhotosService(object):
     except gdata.service.CaptchaRequired:
       print 'Too many false logins; Captcha required.'
       self.logged_in = False
-    except Exception as e:
-      raise
     else:
       self.logged_in = True
-      
-    return self.logged_in
