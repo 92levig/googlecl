@@ -121,7 +121,7 @@ class PhotosService(object):
       if os.path.exists(album_path):
         base_album_path = album_path
         while os.path.exists(album_path):
-          album_path + base_album_path + '-%i' % album_concat
+          album_path = base_album_path + '-%i' % album_concat
           album_concat += 1
       os.makedirs(album_path)
       
@@ -129,7 +129,9 @@ class PhotosService(object):
                               (user, album.gphoto_id.text))
       
       for photo in f.entry:
-        photo_path = os.path.join(album_path, photo.title.text)
+        #TODO: Test on Windows (upload from one OS, download from another)
+        photo_name = os.path.split(photo.title.text)[1]
+        photo_path = os.path.join(album_path, photo_name)
         # Check for a file extension, add it if it does not exist.
         if photo_path.find('.') == -1:
           t = photo.content.type
@@ -141,7 +143,9 @@ class PhotosService(object):
             photo_path = base_photo_path + '-%i' % photo_concat
             photo_concat += 1
         print 'Downloading %s to %s' % (photo.title.text, photo_path)
-        urllib.urlretrieve(photo.content.src, photo_path)
+        url = photo.content.src
+        high_res_url = url[:url.rfind('/')+1]+'d'+url[url.rfind('/'):]
+        urllib.urlretrieve(high_res_url, photo_path)
         
   def GetAlbum(self, user='default', title=None):
     """Get albums from a user feed.
@@ -184,7 +188,10 @@ class PhotosService(object):
         keywords = raw_input('Enter tags for photo %s: ' % file)
       print 'Loading file %s to album %s' % (file, album.title.text)
       try:
-        self.client.InsertPhotoSimple(album_url, file, '', file, 
+        self.client.InsertPhotoSimple(album_url, 
+                                      title=os.path.split(file)[1], 
+                                      summary='',
+                                      filename_or_handle=file, 
                                       keywords=keywords)
       except gdata.photos.service.GooglePhotosException as e:
         print 'Failed to upload %s. (%s -- %s)' % (file, e.reason, e.body)    
