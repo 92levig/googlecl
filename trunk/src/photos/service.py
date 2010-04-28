@@ -158,7 +158,7 @@ class PhotosService(object):
     
     """
     wanted_albums = []
-    feed = self.client.GetUserFeed(user=user)
+    feed = self.client.GetUserFeed(user=user, kind='album')
     if not title:
       return feed.entry
     for album in feed.entry:

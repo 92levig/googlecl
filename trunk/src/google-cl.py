@@ -249,11 +249,11 @@ def run_once(options, args):
     cred_path = os.path.join(_google_cl_dir, _login_filename)
     (email, password) = client.LoadCreds(cred_path)
     options.user = email
-    
+  
   if options.summary and os.path.exists(os.path.expanduser(options.summary)):
     with open(options.summary, 'r') as summary_file:
       options.summary = summary_file.read()
-      
+  
   if task == 'create':
     if not options.title:
       title = raw_input('Enter a name for the album: ')
@@ -274,9 +274,17 @@ def run_once(options, args):
       user = raw_input('Enter a username to get albums for: ')
     else:
       user = options.user
-    entries = client.GetAlbum(user=user, title=options.title)
-    for album in entries:
-      print album.title.text
+      
+    if options.query:
+      if options.title:
+        print 'Cannot use both a query and an album title. Ignoring the album.'
+      uri = '/data/feed/api/user/%s?kind=photo&q=%s' % (user, options.query)
+      entries = client.GetFeed(uri).entry
+    else:
+      entries = client.GetAlbum(user=user, title=options.title)
+      
+    for item in entries:
+      print item.title.text
       
   elif task == 'post':
     if len(args) < 3:
@@ -333,6 +341,10 @@ def setup_parser():
   parser.add_option('-p', '--password', dest='password',
                     default='',
                     help='Password for the username specifed via -u option.')
+  parser.add_option('-q', '--query', dest='query',
+                    default='',
+                    help=('Web-style full text query string for getting data.'
+                          + ' Only valid for listing photos.'))
   parser.add_option('-s', '--summary', dest='summary', 
                     default='',
                     help=('Description of the album, ' +
