@@ -249,8 +249,9 @@ def run_once(options, args):
   if (not client.logged_in and not options.user and 
       _config.getboolean('DEFAULT', 'use_default_username')):
     cred_path = os.path.join(_google_cl_dir, _login_filename)
-    (email, password) = read_creds(cred_path)
-    options.user = email
+    if os.path.exists(cred_path):
+      (email, password) = read_creds(cred_path)
+      options.user = email
   
   if options.summary and os.path.exists(os.path.expanduser(options.summary)):
     with open(options.summary, 'r') as summary_file:
