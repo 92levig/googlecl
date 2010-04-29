@@ -7,15 +7,18 @@ class.
 @author: Tom Miller
 
 """
-import gdata.photos.service
+from gdata.photos.service import PhotosService, GooglePhotosException
+from gdata.service import BadAuthentication, CaptchaRequired
 import os
 import pickle
 import re
-import time
 import urllib
 
-class PhotosService(object):
-  """Wrapper class for gdata.photos.service.PhotosService()."""
+class PhotosServiceCL(PhotosService):
+  """Extends gdata.photos.service.PhotosService for the command line.
+  
+  This class adds some features focused on using Picasa in an installed app
+  running on a local host."""
   
   def __init__(self, regex=False, tags_prompt=False, delete_prompt=True):
     """Constructor.
@@ -29,44 +32,11 @@ class PhotosService(object):
                      deleting an album or photo. (Default True)
               
     """ 
-    self.client = gdata.photos.service.PhotosService()
+    PhotosService.__init__(self)
     self.logged_in = False
     self.use_regex = regex
     self.prompt_for_tags = tags_prompt
     self.prompt_for_delete = delete_prompt
-  
-  def CreateAlbum(self, title, summary, date='', photo_list=[], tags='', 
-                  access='public'): 
-    """Create an album.
-    
-    Keyword arguments:
-      title: Title of the album.
-      summary: Summary of the album.
-      date: Date of the album, in MM/DD/YYYY format as a string. (Default '')
-      photo_list: List of filenames of photos on local host. (Default [])
-      tags: Text of the tags to be added to each photo, e.g. 'Islands, Vacation'
-      access: Access level of the album. Should be one of:
-              'public' for "Public" sharing setting.
-              'private' for "Unlisted" sharing setting.
-              'protected' for "Sign-in required" sharing setting.
-              (Default 'public')
-    
-    """
-    timestamp_text = None
-    if date:
-      try:
-        timestamp = time.mktime(time.strptime(date, '%m/%d/%Y'))
-      except ValueError as e:
-        print e
-      else:
-        # Timestamp needs to be in milliseconds after the epoch
-        timestamp_text = '%i' % (timestamp * 1000)
-    
-    album = self.client.InsertAlbum(title=title, summary=summary, 
-                                    access=access,
-                                    timestamp=timestamp_text)
-    if photo_list:
-        self.InsertPhotos(album, photo_list=photo_list, tags=tags)
         
   def Delete(self, title='', query='', delete_default=False):
     """Delete album(s) or photo(s).
@@ -88,7 +58,7 @@ class PhotosService(object):
       if title:
         print 'Cannot specify an album and a query. Ignoring the album.'
       uri = '/data/feed/api/user/default?kind=photo&q=%s' % query
-      entries = self.client.GetFeed(uri).entry
+      entries = self.GetFeed(uri).entry
       entry_type = 'photo'
       search_string = query
     elif title:
@@ -109,7 +79,7 @@ class PhotosService(object):
         delete = True
       
       if delete:
-        self.client.Delete(item)
+        PhotosService.Delete(self, item)
         
   def DownloadAlbum(self, base_path, user='default', title=None):
     """Download an album to the client.
@@ -135,8 +105,8 @@ class PhotosService(object):
           album_concat += 1
       os.makedirs(album_path)
       
-      f = self.client.GetFeed('/data/feed/api/user/%s/albumid/%s?kind=photo' %
-                              (user, album.gphoto_id.text))
+      f = self.GetFeed(self, ('/data/feed/api/user/%s/albumid/%s?kind=photo' % 
+                              (user, album.gphoto_id.text)))
       
       for photo in f.entry:
         #TODO: Test on Windows (upload from one OS, download from another)
@@ -169,7 +139,7 @@ class PhotosService(object):
     
     """
     wanted_albums = []
-    feed = self.client.GetUserFeed(user=user, kind='album')
+    feed = self.GetUserFeed(user=user, kind='album')
     if not title:
       return feed.entry
     for album in feed.entry:
@@ -178,17 +148,13 @@ class PhotosService(object):
         wanted_albums.append(album)
     return wanted_albums
   
-  def GetFeed(self, uri):
-    """Direct line to the original PhotosService.GetFeed()."""
-    return self.client.GetFeed(uri)
-    
-  def InsertPhotos(self, album, photo_list, tags=''):
+  def InsertPhotoList(self, album, photo_list, tags=''):
     """Insert photos into an album.
     
     Keyword arguments:
-    album: The album entry of the album getting the photos.
-    photo_list: a list of paths, each path a picture on the local host.
-    tags: Text of the tags to be added to each photo, e.g. 'Islands, Vacation'
+      album: The album entry of the album getting the photos.
+      photo_list: A list of paths, each path a picture on the local host.
+      tags: Text of the tags to be added to each photo, e.g. 'Islands, Vacation'
     
     """
     album_url = ('/data/feed/api/user/%s/albumid/%s' %
@@ -199,55 +165,41 @@ class PhotosService(object):
         keywords = raw_input('Enter tags for photo %s: ' % file)
       print 'Loading file %s to album %s' % (file, album.title.text)
       try:
-        self.client.InsertPhotoSimple(album_url, 
-                                      title=os.path.split(file)[1], 
-                                      summary='',
-                                      filename_or_handle=file, 
-                                      keywords=keywords)
-      except gdata.photos.service.GooglePhotosException as e:
+        self.InsertPhotoSimple(album_url, 
+                               title=os.path.split(file)[1], 
+                               summary='',
+                               filename_or_handle=file, 
+                               keywords=keywords)
+      except GooglePhotosException as e:
         print 'Failed to upload %s. (%s: %s)' % (file, e.reason, e.body)    
   
-  def LoadCreds(self, credentials_path):
-    """Return the email/password found in the credentials file."""
-    with open(credentials_path, 'r') as cred_file:
-      (email, password) = pickle.load(cred_file)
-          
-    return (email, password)
-  
-  def Login(self, email=None, password=None, credentials_path=None):
+  def Login(self, email, password):
     """Try to use programmatic login to log into Picasa.
     
-    Either email and password must both be defined, or credentials_path must
-    be defined. If all three arguments are defined, the data in credentials_path
-    is used.
-    
     Keyword arguments:
-    email: the email to log in with.
-    password: the password to log in with.
-    credentials_path: absolute path to file that contains email/password
-      for Picasa Web.
+      email: Email account to log in with. If no domain is specified, gmail.com
+             is inferred.
+      password: Un-encrypted password to log in with.
     
-    Returns: Nothing, but sets self.logged_in to True if login was a success.
+    Returns:
+      Nothing, but sets self.logged_in to True if login was a success.
     
     """
-    if credentials_path:
-      (email, password) = self.LoadCreds(credentials_path)
-    elif not (email and password):
+    if not (email and password):
       print ('You must give an email/password combo to log in with, '
              'or a file where they can be found!')
       self.logged_in = False
-      return self.logged_in
     
-    self.client.email = email
-    self.client.password = password
-    self.client.source = 'google-cl'
+    self.email = email
+    self.password = password
+    self.source = 'google-cl'
     
     try:
-      self.client.ProgrammaticLogin()
-    except gdata.service.BadAuthentication as e:
+      self.ProgrammaticLogin()
+    except BadAuthentication as e:
       print e
       self.logged_in = False
-    except gdata.service.CaptchaRequired:
+    except CaptchaRequired:
       print 'Too many false logins; Captcha required.'
       self.logged_in = False
     else:

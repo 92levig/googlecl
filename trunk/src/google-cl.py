@@ -7,14 +7,15 @@ service -- the Google service being accessed (Picasa, translate, YouTube, etc.)
 task -- what the client wants done by the service.
 
 """
+from photos.service import PhotosServiceCL
 import ConfigParser
-import photos.service
 import getpass
 import glob
 import optparse
 import os
 import pickle
 import stat
+import time
 import urllib
 
 
@@ -235,11 +236,9 @@ def run_once(options, args):
     return
   
   task = args[1]
-  client = photos.service.PhotosService(_config.getboolean('DEFAULT', 'regex'),
-                                        _config.getboolean('DEFAULT', 
-                                                           'tags_prompt'),
-                                        _config.getboolean('DEFAULT', 
-                                                           'delete_prompt'))
+  client = PhotosServiceCL(_config.getboolean('DEFAULT', 'regex'),
+                           _config.getboolean('DEFAULT', 'tags_prompt'),
+                           _config.getboolean('DEFAULT', 'delete_prompt'))
    
   if requires_login(task):
     try_login(client, options.user, options.password)
@@ -250,7 +249,7 @@ def run_once(options, args):
   if (not client.logged_in and not options.user and 
       _config.getboolean('DEFAULT', 'use_default_username')):
     cred_path = os.path.join(_google_cl_dir, _login_filename)
-    (email, password) = client.LoadCreds(cred_path)
+    (email, password) = read_creds(cred_path)
     options.user = email
   
   if options.summary and os.path.exists(os.path.expanduser(options.summary)):
@@ -259,20 +258,33 @@ def run_once(options, args):
   
   if task == 'create':
     if not options.title:
-      title = raw_input('Enter a name for the album: ')
-    else:
-      title = options.title
+      options.title = raw_input('Enter a name for the album: ')
       
-    client.CreateAlbum(title, options.summary, 
-                       date=options.date, photo_list=args[2:], 
-                       access=_config.get('DEFAULT', 'access'))
+    if options.date:
+      try:
+        timestamp = time.mktime(time.strptime(options.date, '%m/%d/%Y'))
+      except ValueError as e:
+        print e
+        print 'Ignoring date option, using today'
+        options.date = ''
+      else:
+        # Timestamp needs to be in milliseconds after the epoch
+        options.date = '%i' % (timestamp * 1000)
+    
+    album = client.InsertAlbum(title=options.title, summary=options.summary, 
+                               access=_config.get('DEFAULT', 'access'),
+                               timestamp=options.date)
+    if args[2:]:
+        client.InsertPhotoList(album, photo_list=args[2:], tags=options.tags)
       
   elif task == 'delete':
     if options.query:
       client.Delete(query=urllib.quote_plus(options.query),
                     delete_default=_config.getboolean('DEFAULT', 
                                                       'delete_by_default'))
-    elif options.title:
+    else:
+      if not options.title:
+        options.title = raw_input('Enter the title of the album to delete: ')
       client.Delete(title=options.title,
                     delete_default=_config.getboolean('DEFAULT', 
                                                       'delete_by_default'))
@@ -302,14 +314,14 @@ def run_once(options, args):
      
     albums = client.GetAlbum(title=options.title)
     if len(albums) == 1:
-      client.InsertPhotos(albums[0], args[2:], tags=options.tags)
+      client.InsertPhotoList(albums[0], args[2:], tags=options.tags)
     elif len(albums) > 1:
       print 'More than one album matches %s' % options.title
       upload_all = raw_input('Would you like to upload photos ' + 
                              'to each album? (Y/n) ')
       if not upload_all or upload_all.lower() == 'y':
         for album in albums:
-          client.InsertPhotos(album, args[2:], tags=options.tags)
+          client.InsertPhotoList(album, args[2:], tags=options.tags)
       
     else:
       print 'No albums found that match %s' % options.title
@@ -332,6 +344,14 @@ def run_once(options, args):
          (task, service))
     
     
+def read_creds(credentials_path):
+  """Return the email/password found in the credentials file."""
+  with open(credentials_path, 'r') as cred_file:
+    (email, password) = pickle.load(cred_file)
+        
+  return (email, password)
+
+
 def setup_parser():
   """Set up the parser.
   
@@ -390,22 +410,27 @@ def try_login(client, email=None, password=None):
   """
   cred_path = os.path.join(_google_cl_dir, _login_filename)
   if os.path.exists(cred_path) and not email:
-    client.Login(credentials_path=cred_path)
-    if not client.logged_in:
-      os.remove(cred_path)
+    (email, password) = read_creds(cred_path)
   else:
     if not email:
       email = raw_input('Enter your username: ')
     if not password:
       password = getpass.getpass('Enter your password: ')
       
-    client.Login(email=email, password=password)
-    if client.logged_in:
-      with open(cred_path, 'w') as cred_file:
-        os.chmod(cred_path, stat.S_IRUSR | stat.S_IWUSR)
-        pickle.dump((email, password), cred_file)
-
-
+  client.Login(email, password)
+  if os.path.exists(cred_path) and not client.logged_in:
+    os.remove(cred_path)
+  elif not os.path.exists(cred_path) and client.logged_in:
+    write_creds(email, password, cred_path)
+    
+    
+def write_creds(email, password, cred_path):
+  """Write the email/password to the credentials file."""
+  with open(cred_path, 'w') as cred_file:
+    os.chmod(cred_path, stat.S_IRUSR | stat.S_IWUSR)
+    pickle.dump((email, password), cred_file)
+  
+  
 def main():
   valid_prefs = load_preferences()
   if not valid_prefs:
