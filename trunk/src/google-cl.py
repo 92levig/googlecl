@@ -33,9 +33,10 @@ def expand_as_command_line(command_string):
   It will not treat apostrophes specially, or handle environment variables.
   
   Keyword arguments:
-  command_string -- the string to be expanded.
+    command_string: The string to be expanded.
   
-  Returns: A list of strings that (mostly) matches sys.argv if command_string
+  Returns: 
+    A list of strings that (mostly) matches sys.argv as if command_string
     was entered on the command line.
   
   """ 
@@ -48,10 +49,11 @@ def expand_as_command_line(command_string):
     will pass through 'total_nonsense*.txt' as sys.argv[1].
     
     Keyword arguments:
-    args -- string, or list of strings, to be expanded.
-    final_args_list -- list that expanded arguments should be added to.
+      args: String, or list of strings, to be expanded.
+      final_args_list: The list that expanded arguments should be added to.
     
-    Returns: Nothing, though final_args_list is modified.
+    Returns:
+      Nothing, though final_args_list is modified.
     
     """
     if isinstance(args, basestring):
@@ -68,7 +70,7 @@ def expand_as_command_line(command_string):
         else:
           final_args_list.append(arg)
         
-  # End of do_globbing, begin expand_as_command_line
+  # End of do_globbing(), begin expand_as_command_line()
   if not command_string:
     return []
   
@@ -146,6 +148,7 @@ def load_preferences():
     return made_changes
   
   def validate_options():
+    """Ensure that the config file's options are valid."""
     pub_values = ['public', 'private', 'protected']
     try:
       _config.getboolean('DEFAULT', 'regex')
@@ -185,12 +188,7 @@ def print_help():
 
 
 def requires_login(task):
-  """Check if a task requires a client login.
-  
-  Keyword arguments:
-  task -- the task to be performed.
-  
-  """
+  """Check if a task requires a client login."""
   login_tasks = ['create', 'delete', 'post']
   if task in login_tasks:
     return True
@@ -199,7 +197,12 @@ def requires_login(task):
        
        
 def run_interactive(parser):
-  """Run an interactive shell for the google commands."""
+  """Run an interactive shell for the google commands.
+  
+  Keyword arguments:
+    parser: Object capable of parsing a list of arguments via parse_args.
+    
+  """
   command_string = ''
   while not command_string == 'quit': 
     command_string = raw_input('> ')
@@ -219,8 +222,8 @@ def run_once(options, args):
   """Run one command.
   
   Keyword arguments:
-  options -- the options class as built and returned by optparse.
-  args -- the arguments to google-cl, also as returned by optparse.
+    options: The options class as built and returned by optparse.
+    args: The arguments to google-cl, also as returned by optparse.
   
   """
   if len(args) < 2:
@@ -283,7 +286,8 @@ def run_once(options, args):
     if options.query:
       if options.title:
         print 'Cannot use both a query and an album title. Ignoring the album.'
-      uri = '/data/feed/api/user/%s?kind=photo&q=%s' % (user, urllib.quote_plus(options.query))
+      uri = ('/data/feed/api/user/%s?kind=photo&q=%s' % 
+             (user, urllib.quote_plus(options.query)))
       entries = client.GetFeed(uri).entry
     else:
       entries = client.GetAlbum(user=user, title=options.title)
@@ -331,7 +335,8 @@ def run_once(options, args):
 def setup_parser():
   """Set up the parser.
   
-  Returns: optparse.OptionParser with options configured.
+  Returns:
+    optparse.OptionParser with options configured.
   
   """
   usage = "usage: %prog service task [options]"
@@ -371,15 +376,16 @@ def try_login(client, email=None, password=None):
   """Try to use programmatic login to log into Picasa.
   
   Keyword arguments:
-  client -- client for the Picasa service.
-  email -- email used to log in to Picasa. If '@my-mail.com' is not included,
+    client: Client for the Picasa service.
+    email: E-mail used to log in to Picasa. If '@my-mail.com' is not included,
           '@gmail.com' is inferred. (Default None - will first check for a file
           containing email/password, or prompt for one)  
-  password -- password used to authenticate the account given by 'email'.
+    password: Password used to authenticate the account given by 'email'.
           (Default None - will first check for a file containing email/password,
           or prompt for one) 
   
-  Returns: True if login was successful, False otherwise.
+  Returns:
+    True if login was successful, False otherwise.
   
   """
   cred_path = os.path.join(_google_cl_dir, _login_filename)

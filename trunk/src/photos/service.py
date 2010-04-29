@@ -21,13 +21,13 @@ class PhotosService(object):
     """Constructor.
     
     Keyword arguments:
-    regex -- indicates if regular expressions should be used for matching
-            strings, such as album titles. (Default False)
-    tags_prompt -- indicates if while inserting photos, code
-            should prompt for tags. (Default False)
-    delete_prompt -- indicates if PhotosService object should prompt user before
-            deleting an album or photo. (Default True)
-            
+      regex: Indicates if regular expressions should be used for matching
+             strings, such as album titles. (Default False)
+      tags_prompt: Indicates if while inserting photos, instance should prompt
+                   for tags for each photo. (Default False)
+      delete_prompt: Indicates if instance should prompt user before
+                     deleting an album or photo. (Default True)
+              
     """ 
     self.client = gdata.photos.service.PhotosService()
     self.logged_in = False
@@ -40,18 +40,16 @@ class PhotosService(object):
     """Create an album.
     
     Keyword arguments:
-    title -- Title of the album.
-    summary -- Summary of the album.
-    date -- the date of the album, in MM/DD/YYYY format as a string.
-          (Default '')
-    photo_list -- List of filenames of photos on local host.
-          (Default [])
-    tags -- Text of the tags to be added to each photo, e.g. 'Islands, Vacation'
-    access -- Access level of the album. Should be one of:
-            'public' for "Public" sharing setting.
-            'private' for "Unlisted" sharing setting.
-            'protected' for "Sign-in required" sharing setting.
-            (Default 'public')
+      title: Title of the album.
+      summary: Summary of the album.
+      date: Date of the album, in MM/DD/YYYY format as a string. (Default '')
+      photo_list: List of filenames of photos on local host. (Default [])
+      tags: Text of the tags to be added to each photo, e.g. 'Islands, Vacation'
+      access: Access level of the album. Should be one of:
+              'public' for "Public" sharing setting.
+              'private' for "Unlisted" sharing setting.
+              'protected' for "Sign-in required" sharing setting.
+              (Default 'public')
     
     """
     timestamp_text = None
@@ -74,11 +72,11 @@ class PhotosService(object):
     """Delete album(s) or photo(s).
     
     Keyword arguments:
-    title -- albums matching this title should be deleted.
-    query -- photos matching this url-encoded query should be deleted.
-    delete_default -- If the user is being prompted to confirm deletion, hitting
-          enter at the prompt will delete or keep the album if this is True or
-          False, respectively. (Default False)
+      title: Albums matching this title should be deleted.
+      query: Photos matching this url-encoded query should be deleted.
+      delete_default: If the user is being prompted to confirm deletion, hitting
+            enter at the prompt will delete or keep the album if this is True or
+            False, respectively. (Default False)
     
     """
     if delete_default and self.prompt_for_delete:
@@ -117,12 +115,12 @@ class PhotosService(object):
     """Download an album to the client.
     
     Keyword arguments:
-    base_path -- the path on the filesystem to copy albums to. Each album will
+      base_path: Path on the filesystem to copy albums to. Each album will
                  be stored in base_path/<album title>. If base_path does not
                  exist, it and each non-existent parent directory will be
                  created. 
-    user -- the user whose albums are being retrieved. (Default 'default')
-    title -- title that the album should have. (Default None, for all albums)
+      user: User whose albums are being retrieved. (Default 'default')
+      title: Title that the album should have. (Default None, for all albums)
        
     """
     entries = self.GetAlbum(user=user, title=title)
@@ -145,9 +143,9 @@ class PhotosService(object):
         photo_name = os.path.split(photo.title.text)[1]
         photo_path = os.path.join(album_path, photo_name)
         # Check for a file extension, add it if it does not exist.
-        if photo_path.find('.') == -1:
-          t = photo.content.type
-          photo_path += '.' + t[t.find('/')+1:]
+        if not '.' in photo_path:
+          type = photo.content.type
+          photo_path += '.' + type[type.find('/')+1:]
         if os.path.exists(photo_path):
           base_photo_path = photo_path
           photo_concat = 1
@@ -163,10 +161,11 @@ class PhotosService(object):
     """Get albums from a user feed.
     
     Keyword arguments:
-    user -- the user whose albums are being retrieved. (Default 'default')
-    title -- title that the album should have. (Default None, for all albums)
-       
-    Returns: list of albums that match parameters, or [] if none do.
+      user: The user whose albums are being retrieved. (Default 'default')
+      title: Title that the album should have. (Default None, for all albums)
+         
+    Returns:
+      List of albums that match parameters, or [] if none do.
     
     """
     wanted_albums = []
@@ -187,9 +186,9 @@ class PhotosService(object):
     """Insert photos into an album.
     
     Keyword arguments:
-    album -- The album entry of the album getting the photos.
-    photo_list -- a list of paths, each path a picture on the local host.
-    tags -- Text of the tags to be added to each photo, e.g. 'Islands, Vacation'
+    album: The album entry of the album getting the photos.
+    photo_list: a list of paths, each path a picture on the local host.
+    tags: Text of the tags to be added to each photo, e.g. 'Islands, Vacation'
     
     """
     album_url = ('/data/feed/api/user/%s/albumid/%s' %
@@ -206,7 +205,7 @@ class PhotosService(object):
                                       filename_or_handle=file, 
                                       keywords=keywords)
       except gdata.photos.service.GooglePhotosException as e:
-        print 'Failed to upload %s. (%s -- %s)' % (file, e.reason, e.body)    
+        print 'Failed to upload %s. (%s: %s)' % (file, e.reason, e.body)    
   
   def LoadCreds(self, credentials_path):
     """Return the email/password found in the credentials file."""
@@ -223,9 +222,9 @@ class PhotosService(object):
     is used.
     
     Keyword arguments:
-    email -- the email to log in with.
-    password -- the password to log in with.
-    credentials_path -- absolute path to file that contains email/password
+    email: the email to log in with.
+    password: the password to log in with.
+    credentials_path: absolute path to file that contains email/password
       for Picasa Web.
     
     Returns: Nothing, but sets self.logged_in to True if login was a success.
