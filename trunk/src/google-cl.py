@@ -265,9 +265,14 @@ def run_once(options, args):
                        access=_config.get('DEFAULT', 'access'))
       
   elif task == 'delete':
-    client.DeleteAlbum(options.title,
-                       delete_default=_config.getboolean('DEFAULT', 
-                                                         'delete_by_default'))
+    if options.query:
+      client.Delete(query=urllib.quote_plus(options.query),
+                    delete_default=_config.getboolean('DEFAULT', 
+                                                      'delete_by_default'))
+    elif options.title:
+      client.Delete(title=options.title,
+                    delete_default=_config.getboolean('DEFAULT', 
+                                                      'delete_by_default'))
     
   elif task == 'list':
     if not options.user:
@@ -278,7 +283,7 @@ def run_once(options, args):
     if options.query:
       if options.title:
         print 'Cannot use both a query and an album title. Ignoring the album.'
-      uri = '/data/feed/api/user/%s?kind=photo&q=%s' % (user, options.query)
+      uri = '/data/feed/api/user/%s?kind=photo&q=%s' % (user, urllib.quote_plus(options.query))
       entries = client.GetFeed(uri).entry
     else:
       entries = client.GetAlbum(user=user, title=options.title)

@@ -61,7 +61,7 @@ class PhotosService(object):
       except ValueError as e:
         print e
       else:
-        # Timestamp needs to be in milliseconds before the epoch
+        # Timestamp needs to be in milliseconds after the epoch
         timestamp_text = '%i' % (timestamp * 1000)
     
     album = self.client.InsertAlbum(title=title, summary=summary, 
@@ -70,11 +70,12 @@ class PhotosService(object):
     if photo_list:
         self.InsertPhotos(album, photo_list=photo_list, tags=tags)
         
-  def DeleteAlbum(self, title, delete_default=False):
-    """Delete album(s).
+  def Delete(self, title='', query='', delete_default=False):
+    """Delete album(s) or photo(s).
     
     Keyword arguments:
     title -- albums matching this title should be deleted.
+    query -- photos matching this url-encoded query should be deleted.
     delete_default -- If the user is being prompted to confirm deletion, hitting
           enter at the prompt will delete or keep the album if this is True or
           False, respectively. (Default False)
@@ -84,13 +85,24 @@ class PhotosService(object):
       prompt_str = '(Y/n)'
     elif self.prompt_for_delete:
       prompt_str = '(y/N)'
-    albums = self.GetAlbum(title=title)
-    if not albums:
-      print 'No albums with title', title
-    for album in albums:
+    
+    if query:
+      if title:
+        print 'Cannot specify an album and a query. Ignoring the album.'
+      uri = '/data/feed/api/user/default?kind=photo&q=%s' % query
+      entries = self.client.GetFeed(uri).entry
+      entry_type = 'photo'
+      search_string = query
+    elif title:
+      entries = self.GetAlbum(title=title)
+      entry_type = 'album'
+      search_string = title
+    if not entries:
+      print 'No %ss matching %s' % (entry_type, search_string)
+    for item in entries:
       if self.prompt_for_delete:
-        delete_str = raw_input('Are you SURE you want to delete album %s? %s:' % 
-                               (album.title.text, prompt_str))
+        delete_str = raw_input('Are you SURE you want to delete %s %s? %s:' % 
+                               (entry_type, item.title.text, prompt_str))
         if not delete_str:
           delete = delete_default
         else:
@@ -99,7 +111,7 @@ class PhotosService(object):
         delete = True
       
       if delete:
-        self.client.Delete(album)
+        self.client.Delete(item)
         
   def DownloadAlbum(self, base_path, user='default', title=None):
     """Download an album to the client.
