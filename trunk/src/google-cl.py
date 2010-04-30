@@ -7,7 +7,7 @@ service -- the Google service being accessed (Picasa, translate, YouTube, etc.)
 task -- what the client wants done by the service.
 
 """
-from photos.service import PhotosServiceCL
+import photos.service
 import ConfigParser
 import getpass
 import glob
@@ -110,7 +110,28 @@ def expand_as_command_line(command_string):
     
   return final_args_list
       
-      
+
+def fill_out_options(task, options, logged_in):
+  if not logged_in and task.requires('user'):
+    if _config.getboolean('DEFAULT', 'use_default_username'):
+      cred_path = os.path.join(_google_cl_dir, _login_filename)
+      if os.path.exists(cred_path):
+        (email, password) = read_creds(cred_path)
+        options.user = email
+    if not options.user:
+      options.user = raw_input('Enter a username: ')
+  
+  if options.summary and os.path.exists(os.path.expanduser(options.summary)):
+    with open(options.summary, 'r') as summary_file:
+      options.summary = summary_file.read()
+
+  if task.requires('title', options):
+    options.title = raw_input('Enter a name for the album: ')
+  if task.requires('query', options):  
+    options.query = raw_input('Enter a query for photos: ')
+  if task.requires('tags', options):
+    options.tags = raw_input('Enter tags for the photos: ')
+          
 def is_supported_service(service):
   """Check to see if a service is supported."""
   if service.lower() == 'picasa':
@@ -187,15 +208,6 @@ def print_help():
   print ('Quitting also works, despite what your parents told you.',
        ' Enter ''quit'' to exit.') 
 
-
-def requires_login(task):
-  """Check if a task requires a client login."""
-  login_tasks = ['create', 'delete', 'post']
-  if task in login_tasks:
-    return True
-  else:
-    return False
-       
        
 def run_interactive(parser):
   """Run an interactive shell for the google commands.
@@ -227,40 +239,39 @@ def run_once(options, args):
     args: The arguments to google-cl, also as returned by optparse.
   
   """
-  if len(args) < 2:
+  try:
+    service = args.pop(0)
+    task_name = args.pop(0)
+    task = photos.service.tasks[task_name]
+  except IndexError as e:
+    print e
     print 'Must specify at least a service and a task!'
     return
-  service = args[0]
+  except KeyError:
+    print ('Did not recognize task %s, please use one of %s' %
+           (task, photos.service.tasks.keys()))
+    return
+
   if not is_supported_service(service):
     print 'Service %s is not supported' % service
     return
   
-  task = args[1]
-  client = PhotosServiceCL(_config.getboolean('DEFAULT', 'regex'),
-                           _config.getboolean('DEFAULT', 'tags_prompt'),
-                           _config.getboolean('DEFAULT', 'delete_prompt'))
+  client = photos.service.PhotosServiceCL(_config.getboolean('DEFAULT',
+                                                             'regex'),
+                                          _config.getboolean('DEFAULT',
+                                                             'tags_prompt'),
+                                          _config.getboolean('DEFAULT',
+                                                             'delete_prompt'))
    
-  if requires_login(task):
+  if task.login_required:
     try_login(client, options.user, options.password)
     if not client.logged_in:
       print 'Failed to log on!'
       return
   
-  if (not client.logged_in and not options.user and 
-      _config.getboolean('DEFAULT', 'use_default_username')):
-    cred_path = os.path.join(_google_cl_dir, _login_filename)
-    if os.path.exists(cred_path):
-      (email, password) = read_creds(cred_path)
-      options.user = email
+  fill_out_options(task, options, client.logged_in)
   
-  if options.summary and os.path.exists(os.path.expanduser(options.summary)):
-    with open(options.summary, 'r') as summary_file:
-      options.summary = summary_file.read()
-  
-  if task == 'create':
-    if not options.title:
-      options.title = raw_input('Enter a name for the album: ')
-      
+  if task_name == 'create':
     if options.date:
       try:
         timestamp = time.mktime(time.strptime(options.date, '%m/%d/%Y'))
@@ -275,27 +286,20 @@ def run_once(options, args):
     album = client.InsertAlbum(title=options.title, summary=options.summary, 
                                access=_config.get('DEFAULT', 'access'),
                                timestamp=options.date)
-    if args[2:]:
-        client.InsertPhotoList(album, photo_list=args[2:], tags=options.tags)
+    if args:
+      client.InsertPhotoList(album, photo_list=args, tags=options.tags)
       
-  elif task == 'delete':
+  elif task_name == 'delete':
     if options.query:
       client.Delete(query=urllib.quote_plus(options.query),
                     delete_default=_config.getboolean('DEFAULT', 
                                                       'delete_by_default'))
     else:
-      if not options.title:
-        options.title = raw_input('Enter the title of the album to delete: ')
       client.Delete(title=options.title,
                     delete_default=_config.getboolean('DEFAULT', 
                                                       'delete_by_default'))
     
-  elif task == 'list':
-    if not options.user:
-      user = raw_input('Enter a username to get albums for: ')
-    else:
-      user = options.user
-      
+  elif task_name == 'list':
     if options.query:
       if options.title:
         print 'Cannot use both a query and an album title. Ignoring the album.'
@@ -303,13 +307,13 @@ def run_once(options, args):
              (user, urllib.quote_plus(options.query)))
       entries = client.GetFeed(uri).entry
     else:
-      entries = client.GetAlbum(user=user, title=options.title)
+      entries = client.GetAlbum(user=options.user, title=options.title)
       
     for item in entries:
       print item.title.text
       
-  elif task == 'post':
-    if len(args) < 3:
+  elif task_name == 'post':
+    if not args:
       print 'Must provide photos to post!'
       return
      
@@ -317,7 +321,7 @@ def run_once(options, args):
     if len(albums) == 1:
       client.InsertPhotoList(albums[0], args[2:], tags=options.tags)
     elif len(albums) > 1:
-      print 'More than one album matches %s' % options.title
+      print 'More than one album matches "%s"' % options.title
       upload_all = raw_input('Would you like to upload photos ' + 
                              'to each album? (Y/n) ')
       if not upload_all or upload_all.lower() == 'y':
@@ -327,22 +331,17 @@ def run_once(options, args):
     else:
       print 'No albums found that match %s' % options.title
     
-  elif task == 'get':
-    if len(args) < 3:
+  elif task_name == 'get':
+    if not args:
       print 'Must provide destination of album(s)!'
       return
-    base_path = args[2]
-    
-    if not options.user:
-      user = raw_input('Enter a username to get albums for: ')
-    else:
-      user = options.user
+    base_path = args[0]
       
-    client.DownloadAlbum(base_path, user=user, title=options.title)
+    client.DownloadAlbum(base_path, user=options.user, title=options.title)
     
   else:
     print ('Sorry, task "%s" is currently unsupported for %s.' % 
-         (task, service))
+         (task_name, service))
     
     
 def read_creds(credentials_path):
