@@ -7,12 +7,15 @@ service -- the Google service being accessed (Picasa, translate, YouTube, etc.)
 task -- what the client wants done by the service.
 
 """
-import photos.service
+
+from gdata.media import Group, Keywords
+
 import ConfigParser
 import getpass
 import glob
 import optparse
 import os
+import photos.service
 import pickle
 import stat
 import time
@@ -131,6 +134,7 @@ def fill_out_options(task, options, logged_in):
     options.query = raw_input('Enter a query for photos: ')
   if task.requires('tags', options):
     options.tags = raw_input('Enter tags for the photos: ')
+          
           
 def is_supported_service(service):
   """Check to see if a service is supported."""
@@ -304,7 +308,7 @@ def run_once(options, args):
       if options.title:
         print 'Cannot use both a query and an album title. Ignoring the album.'
       uri = ('/data/feed/api/user/%s?kind=photo&q=%s' % 
-             (user, urllib.quote_plus(options.query)))
+             (options.user, urllib.quote_plus(options.query)))
       entries = client.GetFeed(uri).entry
     else:
       entries = client.GetAlbum(user=options.user, title=options.title)
@@ -338,6 +342,30 @@ def run_once(options, args):
     base_path = args[0]
       
     client.DownloadAlbum(base_path, user=options.user, title=options.title)
+    
+  elif task_name == 'tag':
+    if options.query:
+      uri = ('/data/feed/api/user/default?kind=photo&q=%s' % 
+             (urllib.quote_plus(options.query)))
+      photo_entries = client.GetFeed(uri).entry
+    else:
+      album_entries = client.GetAlbum(title=options.title)
+      photo_entries = []
+      for album in album_entries:
+        uri = ('/data/feed/api/user/default/albumid/%s?kind=photo&q=%s' % 
+               (album.gphoto_id.text, urllib.quote_plus(options.query)))
+        photo_feed = client.GetFeed(uri)
+        photo_feed.entry
+        photo_entries.extend(photo_feed.entry)
+        
+    for photo in photo_entries:
+      if not photo.media:
+        photo.media = Group()
+      if not photo.media.keywords:
+        photo.media.keywords = Keywords()
+      photo.media.keywords.text = options.tags
+      client.UpdatePhotoMetadata(photo)
+      
     
   else:
     print ('Sorry, task "%s" is currently unsupported for %s.' % 

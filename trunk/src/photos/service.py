@@ -88,7 +88,8 @@ tasks = {'create': Task('title', 'summary'),
          'post': Task('title', 'tags'), 
          'delete': Task([['title', 'query']]),
          'list': Task('user', ['title', 'query'], login_required=False),
-         'get': Task('user', ['title', 'query'], False)}
+         'get': Task('user', ['title', 'query'], login_required=False),
+         'tag': Task(['tags', ['title', 'query']])}
 
 
 class PhotosServiceCL(PhotosService):
