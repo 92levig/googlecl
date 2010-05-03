@@ -12,6 +12,7 @@ from gdata.service import BadAuthentication, CaptchaRequired
 import os
 import re
 import urllib
+import util
 
 
 class Task(object):
@@ -163,7 +164,7 @@ class PhotosServiceCL(PhotosService):
       if delete:
         PhotosService.Delete(self, item)
         
-  def DownloadAlbum(self, base_path, user='default', title=None):
+  def DownloadAlbum(self, base_path, user, title=None):
     """Download an album to the client.
     
     Keyword arguments:
@@ -175,6 +176,8 @@ class PhotosServiceCL(PhotosService):
       title: Title that the album should have. (Default None, for all albums)
        
     """
+    if not user:
+      user = 'default'
     entries = self.GetAlbum(user=user, title=title)
     
     for album in entries:
@@ -187,8 +190,8 @@ class PhotosServiceCL(PhotosService):
           album_concat += 1
       os.makedirs(album_path)
       
-      f = self.GetFeed(self, ('/data/feed/api/user/%s/albumid/%s?kind=photo' % 
-                              (user, album.gphoto_id.text)))
+      f = self.GetFeed('/data/feed/api/user/%s/albumid/%s?kind=photo' %
+                       (user, album.gphoto_id.text))
       
       for photo in f.entry:
         #TODO: Test on Windows (upload from one OS, download from another)
@@ -284,3 +287,102 @@ class PhotosServiceCL(PhotosService):
       self.logged_in = False
     else:
       self.logged_in = True
+      
+
+def run_task(client, task_name, options, args):
+  if task_name == 'create':
+    if options.date:
+      import time
+      try:
+        timestamp = time.mktime(time.strptime(options.date, '%m/%d/%Y'))
+      except ValueError as e:
+        print e
+        print 'Ignoring date option, using today'
+        options.date = ''
+      else:
+        # Timestamp needs to be in milliseconds after the epoch
+        options.date = '%i' % (timestamp * 1000)
+    
+    album = client.InsertAlbum(title=options.title, summary=options.summary, 
+                               access=util.config.get('DEFAULT', 'access'),
+                               timestamp=options.date)
+    if args:
+      client.InsertPhotoList(album, photo_list=args, tags=options.tags)
+      
+  elif task_name == 'delete':
+    if options.query:
+      client.Delete(query=urllib.quote_plus(options.query),
+                    delete_default=util.config.getboolean('DEFAULT', 
+                                                      'delete_by_default'))
+    else:
+      client.Delete(title=options.title,
+                    delete_default=util.config.getboolean('DEFAULT', 
+                                                      'delete_by_default'))
+    
+  elif task_name == 'list':
+    if options.query:
+      if options.title:
+        print 'Cannot use both a query and an album title. Ignoring the album.'
+      uri = ('/data/feed/api/user/%s?kind=photo&q=%s' % 
+             (options.user, urllib.quote_plus(options.query)))
+      entries = client.GetFeed(uri).entry
+    else:
+      entries = client.GetAlbum(user=options.user, title=options.title)
+      
+    for item in entries:
+      print item.title.text
+      
+  elif task_name == 'post':
+    if not args:
+      print 'Must provide photos to post!'
+      return
+     
+    albums = client.GetAlbum(title=options.title)
+    if len(albums) == 1:
+      client.InsertPhotoList(albums[0], args, tags=options.tags)
+    elif len(albums) > 1:
+      print 'More than one album matches "%s"' % options.title
+      upload_all = raw_input('Would you like to upload photos ' + 
+                             'to each album? (Y/n) ')
+      if not upload_all or upload_all.lower() == 'y':
+        for album in albums:
+          client.InsertPhotoList(album, args, tags=options.tags)
+      
+    else:
+      print 'No albums found that match %s' % options.title
+    
+  elif task_name == 'get':
+    if not args:
+      print 'Must provide destination of album(s)!'
+      return
+    base_path = args[0]
+      
+    client.DownloadAlbum(base_path, user=options.user, title=options.title)
+    
+  elif task_name == 'tag':
+    from gdata.media import Group, Keywords
+    if options.title:
+      album_entries = client.GetAlbum(title=options.title)
+      photo_entries = []
+      for album in album_entries:
+        uri = ('/data/feed/api/user/default/albumid/%s?kind=photo' % 
+               album.gphoto_id.text)
+        if options.query:
+          uri += '&q=%s' %urllib.quote_plus(options.query)
+        photo_feed = client.GetFeed(uri)
+        photo_entries.extend(photo_feed.entry)
+    else:
+      uri = ('/data/feed/api/user/default?kind=photo&q=%s' % 
+             (urllib.quote_plus(options.query)))
+      photo_entries = client.GetFeed(uri).entry
+      
+    for photo in photo_entries:
+      if not photo.media:
+        photo.media = Group()
+      if not photo.media.keywords:
+        photo.media.keywords = Keywords()
+      photo.media.keywords.text = options.tags
+      client.UpdatePhotoMetadata(photo)
+      
+  else:
+    print 'Sorry, task "%s" is currently unsupported for picasa.' % task_name

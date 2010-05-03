@@ -7,119 +7,19 @@ service -- the Google service being accessed (Picasa, translate, YouTube, etc.)
 task -- what the client wants done by the service.
 
 """
-
-from gdata.media import Group, Keywords
-
-import ConfigParser
-import getpass
-import glob
+import gdata.youtube.service
 import optparse
 import os
 import photos.service
-import pickle
-import stat
-import time
 import urllib
+import util
 
-
-_google_cl_dir = os.path.expanduser('~/.googlecl')
-_preferences_filename = 'prefs'
-_login_filename = 'creds'
-_config = ConfigParser.ConfigParser()
-
-
-def expand_as_command_line(command_string):
-  """Expand a string as if it was entered at the command line.
-  
-  Mimics the shell expansion of '~', file globbing, and quotation marks.
-  For example, 'picasa post -a "My album" ~/photos/*.png' will return
-  ['picasa', 'post', '-a', 'My album', '$HOME/photos/myphoto1.png', etc.]
-  It will not treat apostrophes specially, or handle environment variables.
-  
-  Keyword arguments:
-    command_string: The string to be expanded.
-  
-  Returns: 
-    A list of strings that (mostly) matches sys.argv as if command_string
-    was entered on the command line.
-  
-  """ 
-  def do_globbing(args, final_args_list):
-    """Do filename expansion.
-    
-    Uses glob.glob to expand the default special characters of bash. Note that
-    the command line will leave in arguments that do not expand to anything,
-    unlike glob.glob. For example, entering 'myprogram.py total_nonsense*.txt'
-    will pass through 'total_nonsense*.txt' as sys.argv[1].
-    
-    Keyword arguments:
-      args: String, or list of strings, to be expanded.
-      final_args_list: The list that expanded arguments should be added to.
-    
-    Returns:
-      Nothing, though final_args_list is modified.
-    
-    """
-    if isinstance(args, basestring):
-      expanded_str = glob.glob(args)
-      if expanded_str:
-        final_args_list.extend(expanded_str)
-      else:
-        final_args_list.append(args)
-    else:
-      for arg in args:
-        expanded_arg = glob.glob(arg)
-        if expanded_arg:
-          final_args_list.extend(expanded_arg)
-        else:
-          final_args_list.append(arg)
-        
-  # End of do_globbing(), begin expand_as_command_line()
-  if not command_string:
-    return []
-  
-  # Sub in the home path.
-  home_path = os.path.expanduser('~/')
-  command_string = command_string.replace( ' ~/', ' ' + home_path)
-  
-  # Look for quotation marks
-  quote_index = command_string.find('"')
-  if quote_index == -1:
-    args_list = command_string.split()
-    final_args_list = []
-    do_globbing(args_list, final_args_list)
-    
-  else:
-    final_args_list = []
-    while quote_index != -1:
-      start = quote_index
-      end = command_string.find('"', start+1)
-      quoted_arg = command_string[start+1:end] 
-      non_quoted_args = command_string[:start].split()
-      
-      # Only do filename expansion on non-quoted args!
-      # do_globbing will modify final_args_list appropriately
-      do_globbing(non_quoted_args, final_args_list) 
-      final_args_list.append(quoted_arg)
-      
-      command_string = command_string[end+1:]
-      if command_string:
-        quote_index = command_string.find('"')
-      else:
-        quote_index = -1
-        
-    if command_string:
-      do_globbing(command_string.strip(), final_args_list)
-    
-  return final_args_list
-      
 
 def fill_out_options(task, options, logged_in):
   if not logged_in and task.requires('user') and not options.user:
-    if _config.getboolean('DEFAULT', 'use_default_username'):
-      cred_path = os.path.join(_google_cl_dir, _login_filename)
-      if os.path.exists(cred_path):
-        (email, password) = read_creds(cred_path)
+    if util.config.getboolean('DEFAULT', 'use_default_username'):
+      email, password = util.read_creds()
+      if email:
         options.user = email
     if not options.user:
       options.user = raw_input('Enter a username: ')
@@ -134,76 +34,16 @@ def fill_out_options(task, options, logged_in):
     options.query = raw_input('Please specify a photos query: ')
   if task.requires('tags', options):
     options.tags = raw_input('Please specify photo tags: ')
-          
-          
+
+
 def is_supported_service(service):
   """Check to see if a service is supported."""
   if service.lower() == 'picasa':
     return True
   else:
     return False
-  
-  
-def load_preferences():
-  """Load preferences / configuration file.
-  
-  Sets up the global ConfigParser.ConfigParser, _config.
-  
-  """
-  def set_options():
-    """Ensure the config file has all of the configuration options."""
-    made_changes = False
-    if not _config.has_option('DEFAULT', 'regex'):
-      _config.set('DEFAULT', 'regex', False)
-      made_changes = True
-    if not _config.has_option('DEFAULT', 'delete_by_default'):
-      _config.set('DEFAULT', 'delete_by_default', False)
-      made_changes = True
-    if not _config.has_option('DEFAULT', 'delete_prompt'):
-      _config.set('DEFAULT', 'delete_prompt', True)
-      made_changes = True
-    if not _config.has_option('DEFAULT', 'tags_prompt'):
-      _config.set('DEFAULT', 'tags_prompt', False)
-      made_changes = True
-    if not _config.has_option('DEFAULT', 'access'):
-      _config.set('DEFAULT', 'access', 'public')
-      made_changes = True
-    if not _config.has_option('DEFAULT', 'use_default_username'):
-      _config.set('DEFAULT', 'use_default_username', False)
-      made_changes = True
-    return made_changes
-  
-  def validate_options():
-    """Ensure that the config file's options are valid."""
-    pub_values = ['public', 'private', 'protected']
-    try:
-      _config.getboolean('DEFAULT', 'regex')
-      _config.getboolean('DEFAULT', 'delete_by_default')
-      _config.getboolean('DEFAULT', 'delete_prompt')
-      _config.getboolean('DEFAULT', 'tags_prompt')
-      _config.getboolean('DEFAULT', 'use_default_username')
-      if not _config.get('DEFAULT', 'access') in pub_values: 
-        raise ValueError('"access" must be one of %s' % pub_values)
-    except Exception as e:
-      print 'Error in configuration file:', e
-      return False
-    else:
-      return True
-      
-  if not os.path.exists(_google_cl_dir):
-    os.makedirs(_google_cl_dir)
-  pref_path = os.path.join(_google_cl_dir, _preferences_filename)
-  if os.path.exists(pref_path):
-    _config.read(pref_path)
-      
-  made_changes = set_options()
-  if made_changes:
-    with open(pref_path, 'w') as pref_file:
-      _config.write(pref_file)
-        
-  return validate_options()
-        
-        
+
+
 def print_help():
   """Print a help message."""
   print 'Welcome to the google-cl super alpha'
@@ -225,7 +65,7 @@ def run_interactive(parser):
     command_string = raw_input('> ')
     if not command_string:
       continue
-    args_list = expand_as_command_line(command_string)
+    args_list = util.expand_as_command_line(command_string)
     (options, args) = parser.parse_args(args_list)
     if is_supported_service(args[0]):
       run_once(options, args)
@@ -246,138 +86,41 @@ def run_once(options, args):
   try:
     service = args.pop(0)
     task_name = args.pop(0)
-    task = photos.service.tasks[task_name]
   except IndexError as e:
     print e
     print 'Must specify at least a service and a task!'
     return
-  except KeyError:
-    print ('Did not recognize task %s, please use one of %s' %
-           (task, photos.service.tasks.keys()))
-    return
-
-  if not is_supported_service(service):
+  
+  if service == 'youtube':
+    tasks = youtube.service.tasks
+    client = gdata.youtube.service.YouTubeService()
+    run_task = youtube.service.run_task
+  elif service == 'picasa':
+    tasks = photos.service.tasks
+    regex = util.config.getboolean('DEFAULT', 'regex')
+    tags_prompt = util.config.getboolean('DEFAULT', 'tags_prompt')
+    delete_prompt = util.config.getboolean('DEFAULT', 'delete_prompt')
+    client = photos.service.PhotosServiceCL(regex, tags_prompt, delete_prompt)
+    run_task = photos.service.run_task
+  else:
     print 'Service %s is not supported' % service
     return
+  try:
+    task = tasks[task_name]
+  except KeyError:
+    print ('Did not recognize task %s, please use one of %s' %
+           (task, tasks.keys()))
+    return
   
-  client = photos.service.PhotosServiceCL(_config.getboolean('DEFAULT',
-                                                             'regex'),
-                                          _config.getboolean('DEFAULT',
-                                                             'tags_prompt'),
-                                          _config.getboolean('DEFAULT',
-                                                             'delete_prompt'))
-   
   if task.login_required:
-    try_login(client, options.user, options.password)
+    util.try_login(client, options.user, options.password)
     if not client.logged_in:
       print 'Failed to log on!'
       return
   
   fill_out_options(task, options, client.logged_in)
   
-  if task_name == 'create':
-    if options.date:
-      try:
-        timestamp = time.mktime(time.strptime(options.date, '%m/%d/%Y'))
-      except ValueError as e:
-        print e
-        print 'Ignoring date option, using today'
-        options.date = ''
-      else:
-        # Timestamp needs to be in milliseconds after the epoch
-        options.date = '%i' % (timestamp * 1000)
-    
-    album = client.InsertAlbum(title=options.title, summary=options.summary, 
-                               access=_config.get('DEFAULT', 'access'),
-                               timestamp=options.date)
-    if args:
-      client.InsertPhotoList(album, photo_list=args, tags=options.tags)
-      
-  elif task_name == 'delete':
-    if options.query:
-      client.Delete(query=urllib.quote_plus(options.query),
-                    delete_default=_config.getboolean('DEFAULT', 
-                                                      'delete_by_default'))
-    else:
-      client.Delete(title=options.title,
-                    delete_default=_config.getboolean('DEFAULT', 
-                                                      'delete_by_default'))
-    
-  elif task_name == 'list':
-    if options.query:
-      if options.title:
-        print 'Cannot use both a query and an album title. Ignoring the album.'
-      uri = ('/data/feed/api/user/%s?kind=photo&q=%s' % 
-             (options.user, urllib.quote_plus(options.query)))
-      entries = client.GetFeed(uri).entry
-    else:
-      entries = client.GetAlbum(user=options.user, title=options.title)
-      
-    for item in entries:
-      print item.title.text
-      
-  elif task_name == 'post':
-    if not args:
-      print 'Must provide photos to post!'
-      return
-     
-    albums = client.GetAlbum(title=options.title)
-    if len(albums) == 1:
-      client.InsertPhotoList(albums[0], args[2:], tags=options.tags)
-    elif len(albums) > 1:
-      print 'More than one album matches "%s"' % options.title
-      upload_all = raw_input('Would you like to upload photos ' + 
-                             'to each album? (Y/n) ')
-      if not upload_all or upload_all.lower() == 'y':
-        for album in albums:
-          client.InsertPhotoList(album, args[2:], tags=options.tags)
-      
-    else:
-      print 'No albums found that match %s' % options.title
-    
-  elif task_name == 'get':
-    if not args:
-      print 'Must provide destination of album(s)!'
-      return
-    base_path = args[0]
-      
-    client.DownloadAlbum(base_path, user=options.user, title=options.title)
-    
-  elif task_name == 'tag':
-    if options.query:
-      uri = ('/data/feed/api/user/default?kind=photo&q=%s' % 
-             (urllib.quote_plus(options.query)))
-      photo_entries = client.GetFeed(uri).entry
-    else:
-      album_entries = client.GetAlbum(title=options.title)
-      photo_entries = []
-      for album in album_entries:
-        uri = ('/data/feed/api/user/default/albumid/%s?kind=photo&q=%s' % 
-               (album.gphoto_id.text, urllib.quote_plus(options.query)))
-        photo_feed = client.GetFeed(uri)
-        photo_feed.entry
-        photo_entries.extend(photo_feed.entry)
-        
-    for photo in photo_entries:
-      if not photo.media:
-        photo.media = Group()
-      if not photo.media.keywords:
-        photo.media.keywords = Keywords()
-      photo.media.keywords.text = options.tags
-      client.UpdatePhotoMetadata(photo)
-      
-    
-  else:
-    print ('Sorry, task "%s" is currently unsupported for %s.' % 
-         (task_name, service))
-    
-    
-def read_creds(credentials_path):
-  """Return the email/password found in the credentials file."""
-  with open(credentials_path, 'r') as cred_file:
-    (email, password) = pickle.load(cred_file)
-        
-  return (email, password)
+  run_task(client, task_name, options, args)
 
 
 def setup_parser():
@@ -413,49 +156,10 @@ def setup_parser():
   return parser
 
 
-def try_login(client, email=None, password=None):
-  """Try to use programmatic login to log into Picasa.
-  
-  Keyword arguments:
-    client: Client for the Picasa service.
-    email: E-mail used to log in to Picasa. If '@my-mail.com' is not included,
-          '@gmail.com' is inferred. (Default None - will first check for a file
-          containing email/password, or prompt for one)  
-    password: Password used to authenticate the account given by 'email'.
-          (Default None - will first check for a file containing email/password,
-          or prompt for one) 
-  
-  Returns:
-    True if login was successful, False otherwise.
-  
-  """
-  cred_path = os.path.join(_google_cl_dir, _login_filename)
-  if os.path.exists(cred_path) and not email:
-    (email, password) = read_creds(cred_path)
-  else:
-    if not email:
-      email = raw_input('Enter your username: ')
-    if not password:
-      password = getpass.getpass('Enter your password: ')
-      
-  client.Login(email, password)
-  if os.path.exists(cred_path) and not client.logged_in:
-    os.remove(cred_path)
-  elif not os.path.exists(cred_path) and client.logged_in:
-    write_creds(email, password, cred_path)
-    
-    
-def write_creds(email, password, cred_path):
-  """Write the email/password to the credentials file."""
-  with open(cred_path, 'w') as cred_file:
-    os.chmod(cred_path, stat.S_IRUSR | stat.S_IWUSR)
-    pickle.dump((email, password), cred_file)
-  
-  
 def main():
-  valid_prefs = load_preferences()
-  if not valid_prefs:
-    print 'Quitting...'
+  
+  if not util.load_preferences():
+    print 'Invalid preferences, quitting...'
     return -1
   parser = setup_parser()
     
