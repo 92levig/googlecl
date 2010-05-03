@@ -72,16 +72,20 @@ class Task(object):
     """
     # Get a list of all the sublists that contain attribute
     choices = [sublist for sublist in self.required if isinstance(sublist, list) and attribute in sublist]
-    if attribute in self.required:
-      return True
-    elif options and choices:
-      for sublist in choices:
-        for item in sublist:
-          if getattr(options, item):
-            return False
-      return True
-    
-    return choices
+    if options:
+      if attribute in self.required:
+        return not bool(getattr(options, attribute))
+      if choices:
+        for sublist in choices:
+          for item in sublist:
+            if getattr(options, item):
+              return False
+        return True
+    else:
+      if attribute in self.required:
+        return True
+      else:
+        return choices
 
 
 tasks = {'create': Task('title', 'summary'), 
@@ -216,15 +220,13 @@ class PhotosServiceCL(PhotosService):
       List of albums that match parameters, or [] if none do.
     
     """
-    wanted_albums = []
     feed = self.GetUserFeed(user=user, kind='album')
     if not title:
       return feed.entry
-    for album in feed.entry:
-      if ((self.use_regex and re.match(title, album.title.text)) or
-          (not self.use_regex and album.title.text == title)):
-        wanted_albums.append(album)
-    return wanted_albums
+    elif self.use_regex:
+      return [album for album in feed.entry if re.match(title, album.title.text)]
+    else:
+      return [album for album in feed.entry if title == album.title.text]
   
   def InsertPhotoList(self, album, photo_list, tags=''):
     """Insert photos into an album.

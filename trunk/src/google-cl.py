@@ -115,7 +115,7 @@ def expand_as_command_line(command_string):
       
 
 def fill_out_options(task, options, logged_in):
-  if not logged_in and task.requires('user'):
+  if not logged_in and task.requires('user') and not options.user:
     if _config.getboolean('DEFAULT', 'use_default_username'):
       cred_path = os.path.join(_google_cl_dir, _login_filename)
       if os.path.exists(cred_path):
@@ -129,11 +129,11 @@ def fill_out_options(task, options, logged_in):
       options.summary = summary_file.read()
 
   if task.requires('title', options):
-    options.title = raw_input('Enter a name for the album: ')
+    options.title = raw_input('Please specify an album title: ')
   if task.requires('query', options):  
-    options.query = raw_input('Enter a query for photos: ')
+    options.query = raw_input('Please specify a photos query: ')
   if task.requires('tags', options):
-    options.tags = raw_input('Enter tags for the photos: ')
+    options.tags = raw_input('Please specify photo tags: ')
           
           
 def is_supported_service(service):
@@ -390,28 +390,21 @@ def setup_parser():
   usage = "usage: %prog service task [options]"
   parser = optparse.OptionParser(usage=usage)
   parser.add_option('-a', '--album', dest='title',
-                    default='',
                     help='Title of the album')
   parser.add_option('-d', '--date', dest='date',
-                    default='',
                     help='Date of the album in MM/DD/YYYY format.' + 
                     ' If omitted, uses today.')
   parser.add_option('-p', '--password', dest='password',
-                    default='',
                     help='Password for the username specifed via -u option.')
   parser.add_option('-q', '--query', dest='query',
-                    default='',
-                    help=('Web-style full text query string for getting data.'
-                          + ' Only valid for listing photos.'))
+                    help=('Full text query string for specifying photos.'
+                          + ' Searches on titles, captions, and tags.'))
   parser.add_option('-s', '--summary', dest='summary', 
-                    default='',
                     help=('Description of the album, ' +
                           'or file containing the description.'))
   parser.add_option('-t',  '--tag', dest='tags',
-                    default='',
                     help='Tags for photos, e.g. "Sunsets, Earth Day"')
   parser.add_option('-u', '--user', dest='user',
-                    default='',
                     help=('Username to use for the task. Exact application ' +
                           'is task-dependent. If authentication is ' +
                           'necessary, this will force the user to specify a ' +
