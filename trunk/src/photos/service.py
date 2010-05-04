@@ -243,6 +243,7 @@ class PhotosServiceCL(PhotosService):
     album_url = ('/data/feed/api/user/%s/albumid/%s' %
                  ('default', album.gphoto_id.text))
     keywords = tags
+    failures = []
     for file in photo_list:
       if not tags and self.prompt_for_tags:
         keywords = raw_input('Enter tags for photo %s: ' % file)
@@ -254,7 +255,9 @@ class PhotosServiceCL(PhotosService):
                                filename_or_handle=file, 
                                keywords=keywords)
       except GooglePhotosException as e:
-        print 'Failed to upload %s. (%s: %s)' % (file, e.reason, e.body)    
+        print 'Failed to upload %s. (%s: %s)' % (file, e.reason, e.body) 
+        failures.append(file)   
+    return failures
   
   def Login(self, email, password):
     """Try to use programmatic login to log into Picasa.
