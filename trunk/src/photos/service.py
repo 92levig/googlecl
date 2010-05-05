@@ -15,86 +15,12 @@ import urllib
 import util
 
 
-class Task(object):
-  """A container of requirements.
-  
-  Each requirement matches up with one of the attributes of the option parser
-  used to parse command line arguments. Requirements are given as lists.
-  For example, if a task needs to have attr1 and attr2 and either attr3 or 4,
-  the list would look like ['attr1', 'attr2', ['attr3', 'attr4']]
-  
-  """
-  def __init__(self, required=[], optional=[], login_required=True):
-    """Constructor.
-    
-    Keyword arguments:
-      required: The required attributes for the task. (Default [])
-      optional: The optional attributes for the task. Currently unused. 
-                (Default [])
-      login_required: If logging in with a username is required to do this task.
-                If True, can typically ignore 'user' as a required attribute. 
-                (Default True)
-      
-    """
-    if isinstance(required, basestring):
-      required = [required]
-    if isinstance(optional, basestring):
-      optional = [optional]
-    self.required = required
-    self.optional = optional
-    self.login_required = login_required
-    
-  def mentions(self, attribute):
-    """See if an attribute is optional or required."""
-    return self.is_optional(attribute) or self.requires(attribute)
-  
-  def is_optional(self, attribute):
-    """See if an attribute is optional"""
-    # No list of lists in the optional fields
-    if attribute in self.optional:
-      return True
-    return False
-  
-  def requires(self, attribute, options=None):
-    """See if a attribute is required.
-    
-    Keyword arguments:
-      attribute: Attribute in question.
-      options: Object with attributes to check for. If provided, this function
-               will intelligently check if the attribute is necessary given the
-               attributes already in options. (Default None)
-    Returns:
-      True if the attribute is required.
-      False or [] if the attribute is never required
-      A list of lists, where each sublist contains the name of the 
-        attribute that is required. For example, if either 'title' or 'query' is
-        required, will return [['title','query']] 
-    
-    """
-    # Get a list of all the sublists that contain attribute
-    choices = [sublist for sublist in self.required if isinstance(sublist, list) and attribute in sublist]
-    if options:
-      if attribute in self.required:
-        return not bool(getattr(options, attribute))
-      if choices:
-        for sublist in choices:
-          for item in sublist:
-            if getattr(options, item):
-              return False
-        return True
-    else:
-      if attribute in self.required:
-        return True
-      else:
-        return choices
-
-
-tasks = {'create': Task('title', 'summary'), 
-         'post': Task('title', 'tags'), 
-         'delete': Task([['title', 'query']]),
-         'list': Task('user', ['title', 'query'], login_required=False),
-         'get': Task('user', ['title', 'query'], login_required=False),
-         'tag': Task(['tags', ['title', 'query']])}
+tasks = {'create': util.Task('title', 'summary'), 
+         'post': util.Task('title', 'tags'), 
+         'delete': util.Task([['title', 'query']]),
+         'list': util.Task('user', ['title', 'query'], login_required=False),
+         'get': util.Task('user', ['title', 'query'], login_required=False),
+         'tag': util.Task(['tags', ['title', 'query']])}
 
 
 class PhotosServiceCL(PhotosService):

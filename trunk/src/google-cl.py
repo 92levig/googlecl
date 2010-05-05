@@ -11,6 +11,7 @@ import gdata.youtube.service
 import optparse
 import os
 import photos.service
+import youtube.service
 import urllib
 import util
 
@@ -38,7 +39,7 @@ def fill_out_options(task, options, logged_in):
 
 def is_supported_service(service):
   """Check to see if a service is supported."""
-  if service.lower() == 'picasa':
+  if service.lower() in ['picasa', 'youtube']:
     return True
   else:
     return False
@@ -93,7 +94,7 @@ def run_once(options, args):
   
   if service == 'youtube':
     tasks = youtube.service.tasks
-    client = gdata.youtube.service.YouTubeService()
+    client = youtube.service.YouTubeServiceCL()
     run_task = youtube.service.run_task
   elif service == 'picasa':
     tasks = photos.service.tasks
@@ -132,21 +133,21 @@ def setup_parser():
   """
   usage = "usage: %prog service task [options]"
   parser = optparse.OptionParser(usage=usage)
-  parser.add_option('-a', '--album', dest='title',
-                    help='Title of the album')
   parser.add_option('-d', '--date', dest='date',
                     help='Date of the album in MM/DD/YYYY format.' + 
                     ' If omitted, uses today.')
+  parser.add_option('-n', '--name', dest='title',
+                    help='Title of the item')
   parser.add_option('-p', '--password', dest='password',
                     help='Password for the username specifed via -u option.')
   parser.add_option('-q', '--query', dest='query',
-                    help=('Full text query string for specifying photos.'
+                    help=('Full text query string for specifying items.'
                           + ' Searches on titles, captions, and tags.'))
   parser.add_option('-s', '--summary', dest='summary', 
-                    help=('Description of the album, ' +
+                    help=('Description of the upload, ' +
                           'or file containing the description.'))
   parser.add_option('-t',  '--tag', dest='tags',
-                    help='Tags for photos, e.g. "Sunsets, Earth Day"')
+                    help='Tags for item, e.g. "Sunsets, Earth Day"')
   parser.add_option('-u', '--user', dest='user',
                     help=('Username to use for the task. Exact application ' +
                           'is task-dependent. If authentication is ' +
