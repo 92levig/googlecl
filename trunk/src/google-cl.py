@@ -10,6 +10,7 @@ task -- what the client wants done by the service.
 import gdata.youtube.service
 import optparse
 import os
+import blogger.service
 import photos.service
 import youtube.service
 import urllib
@@ -39,7 +40,7 @@ def fill_out_options(task, options, logged_in):
 
 def is_supported_service(service):
   """Check to see if a service is supported."""
-  if service.lower() in ['picasa', 'youtube']:
+  if service.lower() in ['picasa', 'blogger']:
     return True
   else:
     return False
@@ -92,7 +93,12 @@ def run_once(options, args):
     print 'Must specify at least a service and a task!'
     return
   
-  if service == 'youtube':
+  if service == 'blogger':
+    regex = util.config.getboolean('DEFAULT', 'regex')
+    tasks = blogger.service.tasks
+    client = blogger.service.BloggerServiceCL(regex)
+    run_task = blogger.service.run_task
+  elif service == 'youtube':
     tasks = youtube.service.tasks
     client = youtube.service.YouTubeServiceCL()
     run_task = youtube.service.run_task
@@ -109,8 +115,7 @@ def run_once(options, args):
   try:
     task = tasks[task_name]
   except KeyError:
-    print ('Did not recognize task %s, please use one of %s' %
-           (task, tasks.keys()))
+    print 'Did not recognize task, please use one of %s' % tasks.keys()
     return
   
   if task.login_required:
