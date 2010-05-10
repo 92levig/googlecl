@@ -4,12 +4,84 @@ import glob
 import os
 import pickle
 import stat
+from gdata.service import GDataService, BadAuthentication, CaptchaRequired
 
 
 config = ConfigParser.ConfigParser()
 _google_cl_dir = os.path.expanduser('~/.googlecl')
 _preferences_filename = 'prefs'
 _login_filename = 'creds'
+
+
+class BaseServiceCL(GDataService):
+  """Small extension of the GDataService."""
+  def set_params(self, regex=False, tags_prompt=False, delete_prompt=True):
+    """Set constructor and basic parameters.
+    
+    Keyword arguments:
+      regex: Indicates if regular expressions should be used for matching
+             strings, such as album titles. (Default False)
+      tags_prompt: Indicates if while inserting items, instance should prompt
+                   for tags on each item. (Default False)
+      delete_prompt: Indicates if instance should prompt user before
+                     deleting an item. (Default True)
+              
+    """
+    self.source = 'GoogleCL'
+    
+    self.logged_in = False
+    self.use_regex = regex
+    self.prompt_for_tags = tags_prompt
+    self.prompt_for_delete = delete_prompt
+    
+  def Delete(self, entries, entry_type, delete_default):
+    if delete_default and self.prompt_for_delete:
+      prompt_str = '(Y/n)'
+    elif self.prompt_for_delete:
+      prompt_str = '(y/N)'
+    for item in entries:
+      if self.prompt_for_delete:
+        delete_str = raw_input('Are you SURE you want to delete %s "%s"? %s: ' % 
+                               (entry_type, item.title.text, prompt_str))
+        if not delete_str:
+          delete = delete_default
+        else:
+          delete = delete_str.lower() == 'y'
+      else:
+        delete = True
+      
+      if delete:
+        GDataService.Delete(self, item.GetEditLink().href)
+        
+  def Login(self, email, password):
+    """Try to use programmatic login to log into a service.
+    
+    Keyword arguments:
+      email: Email account to log in with. If no domain is specified, gmail.com
+             is inferred.
+      password: Un-encrypted password to log in with.
+    
+    Returns:
+      Sets self.logged_in to True if login was a success. Otherwise, sets it
+      to False.
+    
+    """
+    self.logged_in = False
+    if not (email and password):
+      print ('You must give an email/password combo to log in with.')
+      return
+    
+    self.email = email
+    self.password = password
+    
+    try:
+      self.ProgrammaticLogin()
+    except BadAuthentication as e:
+      print e
+    except CaptchaRequired:
+      print 'Too many failed logins; Captcha required.'
+    else:
+      self.logged_in = True
 
 
 class Task(object):

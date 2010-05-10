@@ -8,7 +8,6 @@ class.
 
 """
 from gdata.photos.service import PhotosService, GooglePhotosException
-from gdata.service import BadAuthentication, CaptchaRequired
 import os
 import re
 import urllib
@@ -23,7 +22,7 @@ tasks = {'create': util.Task('title', 'summary'),
          'tag': util.Task(['tags', ['title', 'query']])}
 
 
-class PhotosServiceCL(PhotosService):
+class PhotosServiceCL(PhotosService, util.BaseServiceCL):
   """Extends gdata.photos.service.PhotosService for the command line.
   
   This class adds some features focused on using Picasa in an installed app
@@ -42,10 +41,7 @@ class PhotosServiceCL(PhotosService):
               
     """ 
     PhotosService.__init__(self)
-    self.logged_in = False
-    self.use_regex = regex
-    self.prompt_for_tags = tags_prompt
-    self.prompt_for_delete = delete_prompt
+    util.BaseServiceCL.set_params(self, regex, tags_prompt, delete_prompt)
         
   def Delete(self, title='', query='', delete_default=False):
     """Delete album(s) or photo(s).
@@ -58,11 +54,6 @@ class PhotosServiceCL(PhotosService):
             False, respectively. (Default False)
     
     """
-    if delete_default and self.prompt_for_delete:
-      prompt_str = '(Y/n)'
-    elif self.prompt_for_delete:
-      prompt_str = '(y/N)'
-    
     if query:
       if title:
         print 'Cannot specify an album and a query. Ignoring the album.'
@@ -76,19 +67,8 @@ class PhotosServiceCL(PhotosService):
       search_string = title
     if not entries:
       print 'No %ss matching %s' % (entry_type, search_string)
-    for item in entries:
-      if self.prompt_for_delete:
-        delete_str = raw_input('Are you SURE you want to delete %s %s? %s:' % 
-                               (entry_type, item.title.text, prompt_str))
-        if not delete_str:
-          delete = delete_default
-        else:
-          delete = delete_str.lower() == 'y'
-      else:
-        delete = True
-      
-      if delete:
-        PhotosService.Delete(self, item)
+    util.BaseServiceCL.Delete(self, entries, entry_type, delete_default)
+    
         
   def DownloadAlbum(self, base_path, user, title=None):
     """Download an album to the client.
@@ -184,38 +164,6 @@ class PhotosServiceCL(PhotosService):
         print 'Failed to upload %s. (%s: %s)' % (file, e.reason, e.body) 
         failures.append(file)   
     return failures
-  
-  def Login(self, email, password):
-    """Try to use programmatic login to log into Picasa.
-    
-    Keyword arguments:
-      email: Email account to log in with. If no domain is specified, gmail.com
-             is inferred.
-      password: Un-encrypted password to log in with.
-    
-    Returns:
-      Nothing, but sets self.logged_in to True if login was a success.
-    
-    """
-    if not (email and password):
-      print ('You must give an email/password combo to log in with, '
-             'or a file where they can be found!')
-      self.logged_in = False
-    
-    self.email = email
-    self.password = password
-    self.source = 'google-cl'
-    
-    try:
-      self.ProgrammaticLogin()
-    except BadAuthentication as e:
-      print e
-      self.logged_in = False
-    except CaptchaRequired:
-      print 'Too many false logins; Captcha required.'
-      self.logged_in = False
-    else:
-      self.logged_in = True
       
 
 def run_task(client, task_name, options, args):
