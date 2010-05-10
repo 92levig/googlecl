@@ -45,6 +45,41 @@ class PhotosServiceCL(PhotosService, util.BaseServiceCL):
     PhotosService.__init__(self)
     util.BaseServiceCL.set_params(self, regex, tags_prompt, delete_prompt)
         
+  def build_entry_list(self, user='default', title=None, query=None):
+    """Build a list of entries of either photos or albums.
+    
+    If no title is specified, entries will be of photos matching the query.
+    If no query is specified, entries will be of albums matching the title.
+    If both title and query are specified, entries will be of photos matching
+      the query that are also in albums matching the title.
+      
+    Keyword arguments:
+      user: Username of the owner of the albums / photos (Default 'default').
+      title: Title of the album (Default None).
+      query: Query for photos, url-encoded (Default None).
+      
+    Returns:
+      A list of entries, as specified above.
+      
+    """
+    album_entry = []
+    if title or not(title or query):
+      album_entry = self.GetAlbum(user=user, title=title)
+    if query:
+      uri = '/data/feed/api/user/' + user
+      if not album_entry:
+        entries = self.GetFeed(uri + '?kind=photo&q=%s' % query).entry
+      else:
+        entries = []
+        for album in album_entry:
+          f = self.GetFeed(uri + '/albumid/%s?kind=photo&q=%s' % 
+                           (album.gphoto_id.text, query))
+          entries.extend(f.entry)
+    else:
+      entries = album_entry
+      
+    return entries
+  
   def Delete(self, title='', query='', delete_default=False):
     """Delete album(s) or photo(s).
     
@@ -56,21 +91,16 @@ class PhotosServiceCL(PhotosService, util.BaseServiceCL):
             False, respectively. (Default False)
     
     """
+    entries = self.build_entry_list(title, query)
     if query:
-      if title:
-        print 'Cannot specify an album and a query. Ignoring the album.'
-      uri = '/data/feed/api/user/default?kind=photo&q=%s' % query
-      entries = self.GetFeed(uri).entry
       entry_type = 'photo'
       search_string = query
-    elif title:
-      entries = self.GetAlbum(title=title)
+    else:
       entry_type = 'album'
       search_string = title
     if not entries:
       print 'No %ss matching %s' % (entry_type, search_string)
     util.BaseServiceCL.Delete(self, entries, entry_type, delete_default)
-    
         
   def DownloadAlbum(self, base_path, user, title=None):
     """Download an album to the local host.
@@ -198,25 +228,15 @@ def run_task(client, task_name, options, args):
       client.InsertPhotoList(album, photo_list=args, tags=options.tags)
       
   elif task_name == 'delete':
-    if options.query:
-      client.Delete(query=urllib.quote_plus(options.query),
-                    delete_default=util.config.getboolean('DEFAULT', 
-                                                      'delete_by_default'))
-    else:
-      client.Delete(title=options.title,
-                    delete_default=util.config.getboolean('DEFAULT', 
-                                                      'delete_by_default'))
+    client.Delete(title=options.title,
+                  query=options.encoded_query,
+                  delete_default=util.config.getboolean('DEFAULT',
+                                                        'delete_by_default'))
     
   elif task_name == 'list':
-    if options.query:
-      if options.title:
-        print 'Cannot use both a query and an album title. Ignoring the album.'
-      uri = ('/data/feed/api/user/%s?kind=photo&q=%s' % 
-             (options.user, urllib.quote_plus(options.query)))
-      entries = client.GetFeed(uri).entry
-    else:
-      entries = client.GetAlbum(user=options.user, title=options.title)
-      
+    entries = client.build_entry_list(user=options.user,
+                                      title=options.title,
+                                      query=options.encoded_query)
     for item in entries:
       print item.title.text
       
@@ -244,27 +264,23 @@ def run_task(client, task_name, options, args):
       print 'Must provide destination of album(s)!'
       return
     base_path = args[0]
-      
     client.DownloadAlbum(base_path, user=options.user, title=options.title)
     
   elif task_name == 'tag':
     from gdata.media import Group, Keywords
-    if options.title:
+    if options.query:
+      entries = client.build_entry_list(title=options.title,
+                                        query=options.encoded_query)
+    else:
       album_entries = client.GetAlbum(title=options.title)
-      photo_entries = []
+      entries = []
       for album in album_entries:
         uri = ('/data/feed/api/user/default/albumid/%s?kind=photo' % 
                album.gphoto_id.text)
-        if options.query:
-          uri += '&q=%s' %urllib.quote_plus(options.query)
         photo_feed = client.GetFeed(uri)
-        photo_entries.extend(photo_feed.entry)
-    else:
-      uri = ('/data/feed/api/user/default?kind=photo&q=%s' % 
-             (urllib.quote_plus(options.query)))
-      photo_entries = client.GetFeed(uri).entry
+        entries.extend(photo_feed.entry)
       
-    for photo in photo_entries:
+    for photo in entries:
       if not photo.media:
         photo.media = Group()
       if not photo.media.keywords:

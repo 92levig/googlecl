@@ -161,6 +161,10 @@ def run_once(options, args):
   
   fill_out_options(task, options, client.logged_in)
   
+  if options.query:
+    options.encoded_query = urllib.quote_plus(options.query)
+  else:
+    options.encoded_query = None
   run_task(client, task_name, options, args)
 
 
@@ -204,7 +208,6 @@ def setup_parser():
 
 
 def main():
-  
   if not util.load_preferences():
     print 'Invalid preferences, quitting...'
     return -1
