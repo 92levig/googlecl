@@ -51,11 +51,13 @@ def fill_out_options(task, options, logged_in):
     options.query = raw_input('Please specify a query: ')
   if task.requires('tags', options):
     options.tags = raw_input('Please specify some tags: ')
+  if task.requires('category', options):
+    options.category = raw_input('Please specify a category: ')
 
 
 def is_supported_service(service):
   """Check to see if a service is supported."""
-  if service.lower() in ['picasa', 'blogger']:
+  if service.lower() in ['picasa', 'blogger', 'youtube']:
     return True
   else:
     return False
@@ -108,20 +110,19 @@ def run_once(options, args):
     print 'Must specify at least a service and a task!'
     return
   
+  regex = util.config.getboolean('DEFAULT', 'regex')
+  tags_prompt = util.config.getboolean('DEFAULT', 'tags_prompt')
+  delete_prompt = util.config.getboolean('DEFAULT', 'delete_prompt')
   if service == 'blogger':
-    regex = util.config.getboolean('DEFAULT', 'regex')
     tasks = blogger.service.tasks
-    client = blogger.service.BloggerServiceCL(regex)
+    client = blogger.service.BloggerServiceCL(regex, tags_prompt, delete_prompt)
     run_task = blogger.service.run_task
   elif service == 'youtube':
     tasks = youtube.service.tasks
-    client = youtube.service.YouTubeServiceCL()
+    client = youtube.service.YouTubeServiceCL(regex)
     run_task = youtube.service.run_task
   elif service == 'picasa':
     tasks = photos.service.tasks
-    regex = util.config.getboolean('DEFAULT', 'regex')
-    tags_prompt = util.config.getboolean('DEFAULT', 'tags_prompt')
-    delete_prompt = util.config.getboolean('DEFAULT', 'delete_prompt')
     client = photos.service.PhotosServiceCL(regex, tags_prompt, delete_prompt)
     run_task = photos.service.run_task
   else:
@@ -153,6 +154,12 @@ def setup_parser():
   """
   usage = "usage: %prog service task [options]"
   parser = optparse.OptionParser(usage=usage)
+  parser.add_option('-c', '--category', dest='category',
+                    help='YouTube only - specify video categories' + 
+                    ' as a comma-separated list, e.g. "Film, Travel"')
+  parser.add_option('--devtag', dest='devtags',
+                    help='YouTube only - specify developer tags' +
+                    ' as a comma-separated list.')
   parser.add_option('-d', '--date', dest='date',
                     help='Date of the album in MM/DD/YYYY format.' + 
                     ' If omitted, uses today.')
