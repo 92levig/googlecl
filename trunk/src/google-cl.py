@@ -1,10 +1,29 @@
 #!/usr/bin/python
 """Main function for the Google command line tool.
 
-Some terminology in use:
-  service: The Google service being accessed (e.g. Picasa, translate, YouTube).
-  task: What the client wants done by the service (e.g. post, get, delete).
+This program provides some functionality for a number of Google services from
+the command line. 
 
+Example usage (omitting the initial "./google-cl.py"):
+  # Create a photo album with tags "Vermont" and name "Summer Vacation 2009"
+  picasa create -n "Summer Vacation 2009" -t Vermont ~/photos/vacation2009/*
+  
+  # Post photos to an existing album
+  picasa post -n "Summer Vacation 2008" ~/old_photos/*.jpg
+  
+  # Download another user's albums whose titles match a regular expression
+  picasa get --user my.friend.joe --name ".*computer.*" ~/photos/joes_computer
+  
+  # Delete some posts you accidentally put up
+  blogger delete -n "Silly post, number [0-9]*"
+  
+  # Post your latest film endeavor to YouTube
+  youtube post --category Film --tag "Jane Austen, zombies" ~/final_project.mp4
+  
+Some terminology in use:
+  service: The Google service being accessed (e.g. Picasa, Blogger, YouTube).
+  task: What the client wants done by the service (e.g. post, get, delete).
+  
 """
 import gdata.youtube.service
 import optparse
