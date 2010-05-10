@@ -1,3 +1,9 @@
+"""
+Utility functions for the Google command line tool
+
+@author: Tom Miller
+"""
+
 import ConfigParser
 import getpass
 import glob
@@ -14,27 +20,18 @@ _login_filename = 'creds'
 
 
 class BaseServiceCL(GDataService):
-  """Small extension of the GDataService."""
-  def set_params(self, regex=False, tags_prompt=False, delete_prompt=True):
-    """Set constructor and basic parameters.
+
+  """Small extension of gdata.GDataService specific to the command line."""
+
+  def Delete(self, entries, entry_type, delete_default):
+    """Extends Delete to handle a list of entries.
     
     Keyword arguments:
-      regex: Indicates if regular expressions should be used for matching
-             strings, such as album titles. (Default False)
-      tags_prompt: Indicates if while inserting items, instance should prompt
-                   for tags on each item. (Default False)
-      delete_prompt: Indicates if instance should prompt user before
-                     deleting an item. (Default True)
-              
+      entries: List of entries to delete.
+      entry_type: String describing the thing being deleted (e.g. album, post).
+      delete_default: Whether or not the default action should be deletion.
+      
     """
-    self.source = 'GoogleCL'
-    
-    self.logged_in = False
-    self.use_regex = regex
-    self.prompt_for_tags = tags_prompt
-    self.prompt_for_delete = delete_prompt
-    
-  def Delete(self, entries, entry_type, delete_default):
     if delete_default and self.prompt_for_delete:
       prompt_str = '(Y/n)'
     elif self.prompt_for_delete:
@@ -54,11 +51,10 @@ class BaseServiceCL(GDataService):
         GDataService.Delete(self, item.GetEditLink().href)
         
   def Login(self, email, password):
-    """Try to use programmatic login to log into a service.
+    """Extends programmatic login.
     
     Keyword arguments:
-      email: Email account to log in with. If no domain is specified, gmail.com
-             is inferred.
+      email: Email account to log in with.
       password: Un-encrypted password to log in with.
     
     Returns:
@@ -82,9 +78,29 @@ class BaseServiceCL(GDataService):
       print 'Too many failed logins; Captcha required.'
     else:
       self.logged_in = True
-
+  
+  def set_params(self, regex=False, tags_prompt=False, delete_prompt=True):
+    """Set constructor and basic parameters.
+    
+    Keyword arguments:
+      regex: Indicates if regular expressions should be used for matching
+             strings, such as album titles. (Default False)
+      tags_prompt: Indicates if while inserting items, instance should prompt
+                   for tags on each item. (Default False)
+      delete_prompt: Indicates if instance should prompt user before
+                     deleting an item. (Default True)
+              
+    """
+    self.source = 'GoogleCL'
+    
+    self.logged_in = False
+    self.use_regex = regex
+    self.prompt_for_tags = tags_prompt
+    self.prompt_for_delete = delete_prompt
+    
 
 class Task(object):
+  
   """A container of requirements.
   
   Each requirement matches up with one of the attributes of the option parser
@@ -93,6 +109,7 @@ class Task(object):
   the list would look like ['attr1', 'attr2', ['attr3', 'attr4']]
   
   """
+  
   def __init__(self, required=[], optional=[], login_required=True):
     """Constructor.
     
@@ -129,15 +146,15 @@ class Task(object):
     
     Keyword arguments:
       attribute: Attribute in question.
-      options: Object with attributes to check for. If provided, this function
-               will intelligently check if the attribute is necessary given the
-               attributes already in options. (Default None)
+      options: Object with attributes to check for. If provided, intelligently
+               checks if the attribute is necessary, given the attributes
+               already in options. (Default None)
     Returns:
       True if the attribute is required.
       False or [] if the attribute is never required
-      A list of lists, where each sublist contains the name of the 
-        attribute that is required. For example, if either 'title' or 'query' is
-        required, will return [['title','query']] 
+      If options is provided, a list of lists, where each sublist contains the
+        name of the attribute that is required. For example, if either 'title'
+        or 'query' is required, will return [['title','query']] 
     
     """
     # Get a list of all the sublists that contain attribute
@@ -167,7 +184,7 @@ def expand_as_command_line(command_string):
   It will not treat apostrophes specially, or handle environment variables.
   
   Keyword arguments:
-    command_string: The string to be expanded.
+    command_string: String to be expanded.
   
   Returns: 
     A list of strings that (mostly) matches sys.argv as if command_string
@@ -184,7 +201,7 @@ def expand_as_command_line(command_string):
     
     Keyword arguments:
       args: String, or list of strings, to be expanded.
-      final_args_list: The list that expanded arguments should be added to.
+      final_args_list: List that expanded arguments should be added to.
     
     Returns:
       Nothing, though final_args_list is modified.
@@ -207,18 +224,15 @@ def expand_as_command_line(command_string):
   # End of do_globbing(), begin expand_as_command_line()
   if not command_string:
     return []
-  
   # Sub in the home path.
   home_path = os.path.expanduser('~/')
   command_string = command_string.replace( ' ~/', ' ' + home_path)
-  
   # Look for quotation marks
   quote_index = command_string.find('"')
   if quote_index == -1:
     args_list = command_string.split()
     final_args_list = []
     do_globbing(args_list, final_args_list)
-    
   else:
     final_args_list = []
     while quote_index != -1:
@@ -317,20 +331,17 @@ def read_creds():
 
 
 def try_login(client, email=None, password=None):
-  """Try to use programmatic login to log into Picasa.
+  """Try to log into a service via the client.
   
   Keyword arguments:
-    client: Client for the Picasa service.
-    email: E-mail used to log in to Picasa. If '@my-mail.com' is not included,
-          '@gmail.com' is inferred. (Default None - will first check for a file
-          containing email/password, or prompt for one)  
+    client: Client for the service.
+    email: E-mail used to log in. If '@my-mail.com' is not included,
+           the domain is inferred. (Default None - will first check for a file
+           containing email/password, or prompt for one)  
     password: Password used to authenticate the account given by 'email'.
           (Default None - will first check for a file containing email/password,
           or prompt for one) 
-  
-  Returns:
-    True if login was successful, False otherwise.
-  
+
   """
   
   if not email:

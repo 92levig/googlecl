@@ -1,10 +1,9 @@
 #!/usr/bin/python
-"""Main function for the Google command line utility.
+"""Main function for the Google command line tool.
 
 Some terminology in use:
-client -- the end user.
-service -- the Google service being accessed (Picasa, translate, YouTube, etc.)
-task -- what the client wants done by the service.
+  service: The Google service being accessed (e.g. Picasa, translate, YouTube).
+  task: What the client wants done by the service (e.g. post, get, delete).
 
 """
 import gdata.youtube.service
@@ -18,6 +17,22 @@ import util
 
 
 def fill_out_options(task, options, logged_in):
+  """Fill out options via command line prompts.
+  
+  If there are any required fields missing for a task, prompt the user to enter
+  them at the command line. For example, if the service is Picasa and the task
+  is to create an album, ensure that an album title is known.
+  
+  Keyword arguments:
+    task: Requirements of the task (see class util.Task).
+    options: Contains attributes that have been specified already, typically
+             through options on the command line (see setup_parser()).
+    logged_in: If the client is logged in or not
+    
+  Returns:
+    Nothing, though options may be modified to hold the required fields.
+    
+  """
   if not logged_in and task.requires('user') and not options.user:
     if util.config.getboolean('DEFAULT', 'use_default_username'):
       email, password = util.read_creds()
@@ -31,11 +46,11 @@ def fill_out_options(task, options, logged_in):
       options.summary = summary_file.read()
 
   if task.requires('title', options):
-    options.title = raw_input('Please specify an album title: ')
+    options.title = raw_input('Please specify a title: ')
   if task.requires('query', options):  
-    options.query = raw_input('Please specify a photos query: ')
+    options.query = raw_input('Please specify a query: ')
   if task.requires('tags', options):
-    options.tags = raw_input('Please specify photo tags: ')
+    options.tags = raw_input('Please specify some tags: ')
 
 
 def is_supported_service(service):
@@ -81,8 +96,8 @@ def run_once(options, args):
   """Run one command.
   
   Keyword arguments:
-    options: The options class as built and returned by optparse.
-    args: The arguments to google-cl, also as returned by optparse.
+    options: Options instance as built and returned by optparse.
+    args: Arguments to google-cl, also as returned by optparse.
   
   """
   try:

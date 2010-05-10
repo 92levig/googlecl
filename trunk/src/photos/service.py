@@ -1,8 +1,7 @@
 """
-Created on Apr 20, 2010
+Service details and instances for the Picasa service.
 
-A more user-friendly wrapper around the gdata.photos.service.PhotosService 
-class.
+Created on Apr 20, 2010
 
 @author: Tom Miller
 
@@ -23,10 +22,13 @@ tasks = {'create': util.Task('title', 'summary'),
 
 
 class PhotosServiceCL(PhotosService, util.BaseServiceCL):
+  
   """Extends gdata.photos.service.PhotosService for the command line.
   
-  This class adds some features focused on using Picasa in an installed app
-  running on a local host."""
+  This class adds some features focused on using Picasa via an installed app
+  with a command line interface.
+  
+  """
   
   def __init__(self, regex=False, tags_prompt=False, delete_prompt=True):
     """Constructor.
@@ -71,7 +73,7 @@ class PhotosServiceCL(PhotosService, util.BaseServiceCL):
     
         
   def DownloadAlbum(self, base_path, user, title=None):
-    """Download an album to the client.
+    """Download an album to the local host.
     
     Keyword arguments:
       base_path: Path on the filesystem to copy albums to. Each album will
@@ -167,6 +169,15 @@ class PhotosServiceCL(PhotosService, util.BaseServiceCL):
       
 
 def run_task(client, task_name, options, args):
+  """Execute a particular task.
+  
+  Keyword arguments:
+    client: Client to the service being used.
+    task_name: String of the task (e.g. 'post', 'delete').
+    options: Contains all attributes required to perform a task
+    args: Additional arguments passed in on the command line
+    
+  """
   if task_name == 'create':
     if options.date:
       import time
@@ -262,4 +273,4 @@ def run_task(client, task_name, options, args):
       client.UpdatePhotoMetadata(photo)
       
   else:
-    print 'Sorry, task "%s" is currently unsupported for picasa.' % task_name
+    print 'Sorry, task "%s" is currently unsupported for Picasa.' % task_name

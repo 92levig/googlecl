@@ -17,12 +17,13 @@ tasks = {'delete': util.Task('title'),
 
 
 class BloggerServiceCL(util.BaseServiceCL):
-  """Wrapper for the Blogger Service.
   
-  This is merely a wrapper, since there doesn't seem to be an actual class for
-  Blogger. Code is based off gdata/samples/blogger/BloggerExampleV1.py
+  """Command-line-friendly service for the Blogger API. 
+  
+  Some of this is based off gdata/samples/blogger/BloggerExampleV1.py
   
   """
+  
   def __init__(self, regex=False, tags_prompt=False, delete_prompt=True):
     util.BaseServiceCL.__init__(self)
     self.service = 'blogger'
@@ -34,10 +35,10 @@ class BloggerServiceCL(util.BaseServiceCL):
     
     Keyword arguments:
       title: Title to give the post.
-      content: String to get posted.
+      content: String to get posted. This may be contents from a file, but NOT
+               the path itself!
       is_draft: If this content is a draft post or not. (Default False)
     
-    Returns:
     """
     entry = gdata.GDataEntry()
     entry.title = atom.Title(title_type='xhtml', text=title)
@@ -63,18 +64,7 @@ class BloggerServiceCL(util.BaseServiceCL):
                                 delete_default=delete_default)
     
   def Login(self, email, password):
-    """Try to use programmatic login to log into Blogger.
-    
-    Keyword arguments:
-      email: Email account to log in with. If no domain is specified, gmail.com
-             is inferred.
-      password: Un-encrypted password to log in with.
-    
-    Returns:
-      Sets self.logged_in to True if login was a success. Otherwise, sets it
-      to False.
-    
-    """
+    """Extends util.BaseServiceCL.Login to also set the blog ID."""
     util.BaseServiceCL.Login(self, email, password)
     
     if self.logged_in:
@@ -85,6 +75,15 @@ class BloggerServiceCL(util.BaseServiceCL):
 
     
 def run_task(client, task_name, options, args):
+  """Execute a particular task.
+  
+  Keyword arguments:
+    client: Client to the service being used.
+    task_name: String of the task (e.g. 'post', 'delete').
+    options: Contains all attributes required to perform a task
+    args: Additional arguments passed in on the command line
+    
+  """
   if task_name == 'post':
     for content_string in args:
       if os.path.exists(content_string):
@@ -93,6 +92,7 @@ def run_task(client, task_name, options, args):
       else:
         content = content_string
       client.AddPost(options.title, content)
-  
   elif task_name == 'delete':
     client.DeletePost(title=options.title)
+  else:
+    print 'Sorry, task "%s" is currently unsupported for Blogger.' % task_name
