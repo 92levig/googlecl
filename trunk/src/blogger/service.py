@@ -8,7 +8,6 @@ Created on May 5, 2010
 import atom
 import gdata
 import os
-import re
 import util
 
 
@@ -60,7 +59,7 @@ class BloggerServiceCL(util.BaseServiceCL):
                                 entry_type='post',
                                 delete_default=delete_default)
   
-  def GetPosts(self, title):
+  def GetPosts(self, title=None):
     """Get entries for posts that match a title.
     
     This will only get posts for the user that has logged in. It's apparently
@@ -74,14 +73,8 @@ class BloggerServiceCL(util.BaseServiceCL):
       List of posts that match parameters, or [] if none do.
       
     """
-    f = self.GetFeed('/feeds/' + self.blog_id + '/posts/default')
-    if not title:
-      return f.entry
-    if self.use_regex:
-      entries = [post for post in f.entry if re.match(title, post.title.text)]
-    else:
-      entries = [post for post in f.entry if title == post.title.text]
-    return entries
+    uri = '/feeds/' + self.blog_id + '/posts/default'
+    return self.GetEntries(uri, title)
   
   def Login(self, email, password):
     """Extends util.BaseServiceCL.Login to also set the blog ID."""

@@ -8,7 +8,6 @@ Created on Apr 20, 2010
 """
 from gdata.photos.service import PhotosService, GooglePhotosException
 import os
-import re
 import urllib
 import util
 
@@ -161,13 +160,8 @@ class PhotosServiceCL(PhotosService, util.BaseServiceCL):
       List of albums that match parameters, or [] if none do.
     
     """
-    feed = self.GetUserFeed(user=user, kind='album')
-    if not title:
-      return feed.entry
-    elif self.use_regex:
-      return [album for album in feed.entry if re.match(title, album.title.text)]
-    else:
-      return [album for album in feed.entry if title == album.title.text]
+    uri = '/data/feed/api/user/' + user + '?kind=album'
+    return self.GetEntries(uri, title)
   
   def InsertPhotoList(self, album, photo_list, tags=''):
     """Insert photos into an album.

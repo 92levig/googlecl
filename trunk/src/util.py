@@ -9,6 +9,7 @@ import getpass
 import glob
 import os
 import pickle
+import re
 import stat
 from gdata.service import GDataService, BadAuthentication, CaptchaRequired
 
@@ -50,6 +51,16 @@ class BaseServiceCL(GDataService):
       if delete:
         GDataService.Delete(self, item.GetEditLink().href)
         
+  def GetEntries(self, uri, title=None):
+    f = self.GetFeed(uri)
+    if not title:
+      return f.entry
+    if self.use_regex:
+      entries = [entry for entry in f.entry if re.match(title,entry.title.text)]
+    else:
+      entries = [entry for entry in f.entry if title == entry.title.text]
+    return entries
+  
   def Login(self, email, password):
     """Extends programmatic login.
     

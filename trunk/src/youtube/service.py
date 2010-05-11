@@ -12,7 +12,8 @@ import os
 import util
 
 
-tasks = {'post': util.Task('category', ['title', 'summary', 'tags'])}
+tasks = {'post': util.Task('category', ['title', 'summary', 'tags']),
+         'list': util.Task()}
 
 
 class YouTubeServiceCL(YouTubeService, util.BaseServiceCL):
@@ -38,6 +39,20 @@ class YouTubeServiceCL(YouTubeService, util.BaseServiceCL):
     """ 
     YouTubeService.__init__(self)
     util.BaseServiceCL.set_params(self, regex, tags_prompt, delete_prompt)
+    
+  def GetVideos(self, user='default', title=None):
+    """Get entries for videos uploaded by a user.
+    
+    Keyword arguments:
+      user: The user whose videos are being retrieved. (Default 'default')
+      title: Title that the videos should have. (Default None, for all videos)
+         
+    Returns:
+      List of videos that match parameters, or [] if none do.
+    
+    """
+    uri = 'http://gdata.youtube.com/feeds/api/users/' + user + '/uploads'
+    return self.GetEntries(uri, title)
   
   def Login(self, email, password):
     """Try to use programmatic login to log into Picasa.
@@ -74,7 +89,11 @@ def run_task(client, task_name, options, args):
     args: Additional arguments passed in on the command line
     
   """
-  if task_name == 'post':
+  if task_name == 'list':
+    entries = client.GetVideos(title=options.title)
+    for vid in entries:
+      print vid.title.text
+  elif task_name == 'post':
     if not args:
       print 'Must provide path to video to post!'
       return

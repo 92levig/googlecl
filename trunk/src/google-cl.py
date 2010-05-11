@@ -25,7 +25,6 @@ Some terminology in use:
   task: What the client wants done by the service (e.g. post, get, delete).
   
 """
-import gdata.youtube.service
 import optparse
 import os
 import blogger.service
