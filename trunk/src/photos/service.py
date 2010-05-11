@@ -197,6 +197,59 @@ class PhotosServiceCL(PhotosService, util.BaseServiceCL):
         failures.append(file)   
     return failures
       
+  def TagPhotos(self, photo_entries, tags):
+    """Add or remove tags on a list of photos.
+    
+    Keyword arguments:
+      photo_entries: List of photo entry objects. 
+      tags: Comma-separated list of tags. Tags with a '-' in front will be
+            removed from each photo. A tag of '--' will delete all tags.
+            A backslash in front of a '-' will keep the '-' in the tag.
+            Examples:
+              'tag1, tag2, tag3'      Add tag1, tag2, and tag3
+              '-tag1, tag4, \-tag5'   Remove tag1, add tag4 and -tag5
+              '--, tag6'              Remove all tags, then add tag6
+    
+    """
+    from gdata.media import Group, Keywords
+    
+    tags = tags.replace(', ', ',')
+    tagset = set(tags.split(','))
+    remove_set = set(tag[1:] for tag in tagset if tag[0] == '-')
+    if remove_set == set('-'):
+      replace_tags = True
+    else:
+      replace_tags = False
+    add_set = set()
+    if len(remove_set) != len(tagset):
+      # TODO: Can do this more cleanly with regular expressions?
+      for tag in tagset:
+        # Remove the escape '\' for calculation of 'add' set
+        if tag[:1] == '\-':
+          add_set.add(tag[1:])
+        # Don't add the tags that are being removed
+        elif tag[0] != '-':
+          add_set.add(tag)
+    
+    for photo in photo_entries:
+      if not photo.media:
+        photo.media = Group()
+      if not photo.media.keywords:
+        photo.media.keywords = Keywords()
+  
+      # No point removing tags if the photo has no keywords,
+      # or we're replacing the keywords.
+      if photo.media.keywords.text and not replace_tags:
+        current_tags = photo.media.keywords.text.replace(', ', ',')
+        current_set = set(current_tags.split(','))
+        photo.media.keywords.text = ','.join(current_set - remove_set)
+      
+      if replace_tags or not photo.media.keywords.text:
+        photo.media.keywords.text = ','.join(add_set)
+      elif add_set: 
+        photo.media.keywords.text += ',' + ','.join(add_set)
+ 
+      self.UpdatePhotoMetadata(photo)
 
 def run_task(client, task_name, options, args):
   """Execute a particular task.
@@ -267,7 +320,6 @@ def run_task(client, task_name, options, args):
     client.DownloadAlbum(base_path, user=options.user, title=options.title)
     
   elif task_name == 'tag':
-    from gdata.media import Group, Keywords
     if options.query:
       entries = client.build_entry_list(title=options.title,
                                         query=options.encoded_query)
@@ -279,14 +331,10 @@ def run_task(client, task_name, options, args):
                album.gphoto_id.text)
         photo_feed = client.GetFeed(uri)
         entries.extend(photo_feed.entry)
-      
-    for photo in entries:
-      if not photo.media:
-        photo.media = Group()
-      if not photo.media.keywords:
-        photo.media.keywords = Keywords()
-      photo.media.keywords.text = options.tags
-      client.UpdatePhotoMetadata(photo)
+    if entries:
+      client.TagPhotos(entries, options.tags)
+    else:
+      print 'No matches for the title and query you gave.'
       
   else:
     print 'Sorry, task "%s" is currently unsupported for Picasa.' % task_name
