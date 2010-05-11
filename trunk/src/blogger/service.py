@@ -13,7 +13,8 @@ import util
 
 
 tasks = {'delete': util.Task('title'),
-         'post': util.Task(optional='tags')}
+         'post': util.Task(optional='tags'),
+         'list': util.Task()}
 
 
 class BloggerServiceCL(util.BaseServiceCL):
@@ -50,25 +51,44 @@ class BloggerServiceCL(util.BaseServiceCL):
     self.Post(entry, '/feeds/' + self.blog_id + '/posts/default')
   
   def DeletePost(self, title, delete_default=False):
-    """Delete a post based on its title."""
-    f = self.GetFeed('/feeds/' + self.blog_id + '/posts/default')
-    if self.use_regex:
-      to_delete = [post for post in f.entry if re.match(title, post.title.text)]
-    else:
-      to_delete = [post for post in f.entry if title == post.title.text]
+    """Delete post(s) based on a title."""
+    to_delete = self.GetPosts(title)
     if not to_delete:
       print 'No matches found for title ' + title
     else: 
       util.BaseServiceCL.Delete(self, to_delete, 
                                 entry_type='post',
                                 delete_default=delete_default)
+  
+  def GetPosts(self, title):
+    """Get entries for posts that match a title.
     
+    This will only get posts for the user that has logged in. It's apparently
+    very difficult to obtain the profile ID that Blogger uses unless you have
+    logged in.
+    
+    Keyword arguments:
+      title: Title that the post should have. (Default None, for all posts)
+         
+    Returns:
+      List of posts that match parameters, or [] if none do.
+      
+    """
+    f = self.GetFeed('/feeds/' + self.blog_id + '/posts/default')
+    if not title:
+      return f.entry
+    if self.use_regex:
+      entries = [post for post in f.entry if re.match(title, post.title.text)]
+    else:
+      entries = [post for post in f.entry if title == post.title.text]
+    return entries
+  
   def Login(self, email, password):
     """Extends util.BaseServiceCL.Login to also set the blog ID."""
     util.BaseServiceCL.Login(self, email, password)
     
     if self.logged_in:
-      feed = self.Get('/feeds/default/blogs')
+      feed = self.Get('/feeds/default/blogs')    
       self_link = feed.entry[0].GetSelfLink()
       if self_link:
         self.blog_id = self_link.href.split('/')[-1]
@@ -97,5 +117,9 @@ def run_task(client, task_name, options, args):
       client.AddPost(options.title or title, content)
   elif task_name == 'delete':
     client.DeletePost(title=options.title)
+  elif task_name == 'list':
+    entries = client.GetPosts(options.title)
+    for entry in entries:
+      print entry.title.text
   else:
     print 'Sorry, task "%s" is currently unsupported for Blogger.' % task_name
