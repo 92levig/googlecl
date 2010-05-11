@@ -338,14 +338,16 @@ def try_login(client, email=None, password=None):
     email: E-mail used to log in. If '@my-mail.com' is not included,
            the domain is inferred. (Default None - will first check for a file
            containing email/password, or prompt for one)  
-    password: Password used to authenticate the account given by 'email'.
+    password: Password used to authenticate the account given by email.
           (Default None - will first check for a file containing email/password,
           or prompt for one) 
 
   """
-  
+  got_creds_from_file= False
   if not email:
     (email, password) = read_creds()
+    if email and password:
+      got_creds_from_file = True
   if not email:
     email = raw_input('Enter your username: ')
   if not password:
@@ -353,7 +355,7 @@ def try_login(client, email=None, password=None):
       
   client.Login(email, password)
   cred_path = os.path.join(_google_cl_dir, _login_filename)
-  if os.path.exists(cred_path) and not client.logged_in:
+  if got_creds_from_file and not client.logged_in:
     os.remove(cred_path)
   elif not os.path.exists(cred_path) and client.logged_in:
     write_creds(email, password, cred_path)
@@ -362,6 +364,7 @@ def try_login(client, email=None, password=None):
 def write_creds(email, password, cred_path):
   """Write the email/password to the credentials file."""
   with open(cred_path, 'w') as cred_file:
+    # Ensure only the owner of the file has read/write permission
     os.chmod(cred_path, stat.S_IRUSR | stat.S_IWUSR)
     pickle.dump((email, password), cred_file)
   
