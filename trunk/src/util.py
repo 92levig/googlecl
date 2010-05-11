@@ -253,7 +253,7 @@ def expand_as_command_line(command_string):
         quote_index = -1
         
     if command_string:
-      do_globbing(command_string.strip(), final_args_list)
+      do_globbing(command_string.strip().split(), final_args_list)
     
   return final_args_list
 
