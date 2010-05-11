@@ -13,7 +13,7 @@ import util
 
 
 tasks = {'delete': util.Task('title'),
-         'post': util.Task('title', 'tags')}
+         'post': util.Task(optional='tags')}
 
 
 class BloggerServiceCL(util.BaseServiceCL):
@@ -89,9 +89,12 @@ def run_task(client, task_name, options, args):
       if os.path.exists(content_string):
         with open(content_string, 'r') as content_file:
           content = content_file.read()
+        title = os.path.basename(content_string).split('.')[0]
       else:
+        if not options.title:
+          title = 'New post'
         content = content_string
-      client.AddPost(options.title, content)
+      client.AddPost(options.title or title, content)
   elif task_name == 'delete':
     client.DeletePost(title=options.title)
   else:
