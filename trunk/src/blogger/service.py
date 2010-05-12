@@ -90,13 +90,18 @@ class BloggerServiceCL(util.BaseServiceCL):
     scheme = 'http://www.blogger.com/atom/ns#'
     remove_set, add_set, replace_tags = util.generate_tag_sets(tags)
     for post in post_entries:
-      # No point removing tags if the post has no categories,
-      # or we're replacing the keywords.
-      if post.category and not replace_tags:
-        post.category = [c for c in post.category if c.term not in remove_set]
+      # No point removing tags if we're replacing all of them.
+      if remove_set and not replace_tags:
+        # Keep categories if they meet one of two criteria:
+        # 1) Are of a different scheme than the one we're looking at, or
+        # 2) Are of the same scheme, but the term is in the 'remove' set
+        post.category = [c for c in post.category \
+                          if c.scheme != scheme or \
+                          (c.scheme == scheme and c.term not in remove_set)]
       
       if replace_tags:
-        post.category = []
+        # Remove categories that match the scheme we are updating.
+        post.category = [c for c in post.category if c.scheme != scheme]
       if add_set: 
         new_tags = [Category(term=tag, scheme=scheme) for tag in add_set]
         post.category.extend(new_tags)

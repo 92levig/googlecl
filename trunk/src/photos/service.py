@@ -210,7 +210,7 @@ class PhotosServiceCL(PhotosService, util.BaseServiceCL):
   
       # No point removing tags if the photo has no keywords,
       # or we're replacing the keywords.
-      if photo.media.keywords.text and not replace_tags:
+      if photo.media.keywords.text and remove_set and not replace_tags:
         current_tags = photo.media.keywords.text.replace(', ', ',')
         current_set = set(current_tags.split(','))
         photo.media.keywords.text = ','.join(current_set - remove_set)
