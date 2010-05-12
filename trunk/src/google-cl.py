@@ -34,6 +34,9 @@ import urllib
 import util
 
 
+available_services = ['picasa', 'blogger', 'youtube', 'help']
+
+
 def fill_out_options(task, options, logged_in):
   """Fill out options via command line prompts.
   
@@ -73,23 +76,28 @@ def fill_out_options(task, options, logged_in):
     options.category = raw_input('Please specify a category: ')
 
 
-def is_supported_service(service):
-  """Check to see if a service is supported."""
-  if service.lower() in ['picasa', 'blogger', 'youtube']:
-    return True
+def print_help(task=None):
+  """Print help messages to the screen.
+  
+  Keyword arguments:
+    task: Task to get help on (not implemented yet).
+    
+  """
+  if not task:
+    print 'Welcome to the Google CL tool!'
+    print 'Commands are broken into several parts: service, task, options,' + \
+          ' and arguments.'
+    print 'In the command "> picasa post --name "My Cat Photos" photos/cats/*"'
+    print 'the service is "picasa", the task is "post", the single option ' + \
+          'is a name of "My Cat Photos", and the argument is the path ' + \
+          'to the photos.'
+    print 'The available services are ' + str(available_services)[1:-1]
+    print 'Enter "> help <service>" for more information on a service.'
+    print 'Or, just "quit" to quit.'
   else:
-    return False
+    print "Uh, actually, you can't do that yet. Sorry. Check the README?"
 
 
-def print_help():
-  """Print a help message."""
-  print 'Welcome to the google-cl super alpha'
-  print ('The only thing working so far is picasa, ', 
-       'so give that a shot by entering ''picasa'' at the prompt')
-  print ('Quitting also works, despite what your parents told you.',
-       ' Enter ''quit'' to exit.') 
-
-       
 def run_interactive(parser):
   """Run an interactive shell for the google commands.
   
@@ -104,9 +112,9 @@ def run_interactive(parser):
       continue
     args_list = util.expand_as_command_line(command_string)
     (options, args) = parser.parse_args(args_list)
-    if is_supported_service(args[0]):
+    if args[0] in available_services:
       run_once(options, args)
-    elif command_string == '?' or command_string == 'help':
+    elif args[0] == '?':
       print_help()
     elif command_string != 'quit':
       print '> Enter "?" or "help" to print the help menu'
@@ -124,8 +132,14 @@ def run_once(options, args):
     service = args.pop(0)
     task_name = args.pop(0)
   except IndexError as e:
-    print e
-    print 'Must specify at least a service and a task!'
+    if service == 'help':
+      print_help()
+    else:
+      print 'Must specify at least a service and a task!'
+    return
+  
+  if service == 'help':
+    print_help(task_name)
     return
   
   regex = util.config.getboolean('DEFAULT', 'regex')
@@ -202,7 +216,6 @@ def setup_parser():
                           'is task-dependent. If authentication is ' +
                           'necessary, this will force the user to specify a ' +
                           'password through a command line prompt or option.'))
- 
   return parser
 
 
@@ -220,14 +233,14 @@ def main():
       print ''
       print 'Quit via keyboard interrupt'
   else:
-    if is_supported_service(args[0]):
+    if args[0] in available_services:
       try:
         run_once(options, args)
       except KeyboardInterrupt:
         print ''
     else:
       print 'Unsupported service:', args[0]
-     
-     
+
+
 if __name__ == '__main__':
   main()
