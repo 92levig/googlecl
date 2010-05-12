@@ -6,7 +6,6 @@ Created on May 3, 2010
 @author: Tom Miller
 """
 from gdata.youtube.service import YouTubeService
-import gdata.media
 import gdata.youtube
 import os
 import util
@@ -41,19 +40,40 @@ class YouTubeServiceCL(YouTubeService, util.BaseServiceCL):
     YouTubeService.__init__(self)
     util.BaseServiceCL.set_params(self, regex, tags_prompt, delete_prompt)
     
+  def build_category(self, category):
+    """Build a single-item list of a YouTube category.
+    
+    This refers to the Category of a video entry, such as "Film" or "Comedy",
+    not the atom/gdata element. This does not check if the category provided
+    is valid.
+    
+    Keyword arguments:
+      category: String representing the category.
+    
+    Returns:
+      A single-item list of a YouTube category (type gdata.media.Category).
+      
+    """
+    from gdata.media import Category
+    return [Category(
+                  text=category,
+                  scheme='http://gdata.youtube.com/schemas/2007/categories.cat',
+                  label=category)]
+
   def CategorizeVideos(self, video_entries, category):
     """Change the categories of a list of videos to a single category.
+    
+    If the update fails with a request error, a message is printed to screen.
+    Usually, valid category strings are the first word of the category as seen
+    on YouTube (e.g. "Film" for "Film & Animation")
     
     Keyword arguments:
       video_entries: List of YouTubeVideoEntry objects. 
       category: String representation of category.
     
     """
-    scheme = 'http://gdata.youtube.com/schemas/2007/categories.cat'
     for video in video_entries:
-      video.media.category = [gdata.media.Category(text=category,
-                                                   scheme=scheme,
-                                                   label=category)]
+      video.media.category = self.build_category(category)
       try:
         self.UpdateVideoEntry(video)
       except gdata.service.RequestError as e:
@@ -99,6 +119,36 @@ class YouTubeServiceCL(YouTubeService, util.BaseServiceCL):
     self.client_id = 'GoogleCL'
     
     util.BaseServiceCL.Login(self, email, password)
+
+  def PostVideos(self, paths, category, title=None, desc=None, tags=None,
+                 devtags=None):
+    """Post video(s) to YouTube.
+    
+    Keyword arguments:
+      paths: List of paths to videos.
+      category: YouTube category for the video.
+      title: Title of the video. (Default is the filename of the video).
+      desc: Video summary (Default None).
+      tags: Tags of the video as a string, separated by commas (Default None).
+      devtags: Developer tags for the video (Default None).
+      
+    """
+    from gdata.media import Group, Title, Description, Keywords
+    for path in paths:
+      filename = os.path.basename(path).split('.')[0]
+      my_media_group = Group(title=Title(text=title or filename),
+                             description=Description(text=desc),
+                             keywords=Keywords(text=tags),
+                             category=self.build_category(category))
+  
+      video_entry = gdata.youtube.YouTubeVideoEntry(media=my_media_group)
+      if devtags:
+        taglist = devtags.replace(', ', ',')
+        taglist = taglist.split(',')
+        video_entry.AddDeveloperTags(taglist)
+            
+      print 'Loading ' + path
+      self.InsertVideoEntry(video_entry, path)
 
   def TagVideos(self, video_entries, tags):
     """Add or remove tags on a list of videos.
@@ -149,25 +199,9 @@ def run_task(client, task_name, options, args):
     if not args:
       print 'Must provide path to video to post!'
       return
+    client.PostVideos(args, title=options.title, desc=options.summary,
+                     keywords=options.tags, category=options.category)
     
-    filename = os.path.basename(args[0]).split('.')[0]
-    my_media_group = gdata.media.Group(
-      title=gdata.media.Title(text=options.title or filename),
-      description=gdata.media.Description(text=options.summary),
-      keywords=gdata.media.Keywords(text=options.tags),
-      category=[gdata.media.Category(
-                  text=options.category,
-                  scheme='http://gdata.youtube.com/schemas/2007/categories.cat',
-                  label=options.category)])
-
-    video_entry = gdata.youtube.YouTubeVideoEntry(media=my_media_group)
-    if options.devtags:
-      taglist = options.devtags.replace(', ', ',')
-      taglist = taglist.split(',')
-      video_entry.AddDeveloperTags(taglist)
-          
-    print 'Loading ' + args[0]
-    client.InsertVideoEntry(video_entry, args[0])
   elif task_name == 'tag':
     video_entries = client.GetVideos(title=options.title)
     if options.category:
