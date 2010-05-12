@@ -11,6 +11,7 @@ import os
 import pickle
 import re
 import stat
+import gdata
 from gdata.service import GDataService, BadAuthentication, CaptchaRequired
 
 
@@ -51,8 +52,8 @@ class BaseServiceCL(GDataService):
       if delete:
         GDataService.Delete(self, item.GetEditLink().href)
         
-  def GetEntries(self, uri, title=None):
-    f = self.GetFeed(uri)
+  def GetEntries(self, uri, title=None, converter=gdata.GDataFeedFromString):
+    f = self.GetFeed(uri, converter=converter)
     if not title:
       return f.entry
     if self.use_regex:
@@ -290,7 +291,7 @@ def generate_tag_sets(tags):
   tags = tags.replace(', ', ',')
   tagset = set(tags.split(','))
   remove_set = set(tag[1:] for tag in tagset if tag[0] == '-')
-  if remove_set == set('-'):
+  if '-' in remove_set:
     replace_tags = True
   else:
     replace_tags = False
