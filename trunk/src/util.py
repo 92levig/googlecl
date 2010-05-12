@@ -52,8 +52,11 @@ class BaseServiceCL(GDataService):
       if delete:
         GDataService.Delete(self, item.GetEditLink().href)
         
-  def GetEntries(self, uri, title=None, converter=gdata.GDataFeedFromString):
-    f = self.GetFeed(uri, converter=converter)
+  def GetEntries(self, uri, title=None, converter=None):
+    if converter:
+      f = self.GetFeed(uri, converter=converter)
+    else:
+      f = self.GetFeed(uri)
     if not title:
       return f.entry
     if self.use_regex:

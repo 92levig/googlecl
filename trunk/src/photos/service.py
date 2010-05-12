@@ -44,7 +44,8 @@ class PhotosServiceCL(PhotosService, util.BaseServiceCL):
     PhotosService.__init__(self)
     util.BaseServiceCL.set_params(self, regex, tags_prompt, delete_prompt)
         
-  def build_entry_list(self, user='default', title=None, query=None):
+  def build_entry_list(self, user='default', title=None, query=None,
+                       force_photos=False):
     """Build a list of entries of either photos or albums.
     
     If no title is specified, entries will be of photos matching the query.
@@ -56,6 +57,9 @@ class PhotosServiceCL(PhotosService, util.BaseServiceCL):
       user: Username of the owner of the albums / photos (Default 'default').
       title: Title of the album (Default None).
       query: Query for photos, url-encoded (Default None).
+      force_photos: If true, returns photo entries, even if album entries would
+                    typically be returned. The entries will be for all photos
+                    in each album.
       
     Returns:
       A list of entries, as specified above.
@@ -64,15 +68,17 @@ class PhotosServiceCL(PhotosService, util.BaseServiceCL):
     album_entry = []
     if title or not(title or query):
       album_entry = self.GetAlbum(user=user, title=title)
-    if query:
+    if query or force_photos:
       uri = '/data/feed/api/user/' + user
-      if not album_entry:
-        entries = self.GetFeed(uri + '?kind=photo&q=%s' % query).entry
+      if query and not album_entry:
+        entries = self.GetFeed(uri + '?kind=photo&q=' + query).entry
       else:
         entries = []
+        uri += '/albumid/%s?kind=photo'
+        if query:
+          uri += '&q=' + query
         for album in album_entry:
-          f = self.GetFeed(uri + '/albumid/%s?kind=photo&q=%s' % 
-                           (album.gphoto_id.text, query))
+          f = self.GetFeed(uri % album.gphoto_id.text)
           entries.extend(f.entry)
     else:
       entries = album_entry
@@ -268,7 +274,6 @@ def run_task(client, task_name, options, args):
     if not args:
       print 'Must provide photos to post!'
       return
-     
     albums = client.GetAlbum(title=options.title)
     if len(albums) == 1:
       client.InsertPhotoList(albums[0], args, tags=options.tags)
@@ -279,7 +284,6 @@ def run_task(client, task_name, options, args):
       if not upload_all or upload_all.lower() == 'y':
         for album in albums:
           client.InsertPhotoList(album, args, tags=options.tags)
-      
     else:
       print 'No albums found that match %s' % options.title
     
@@ -291,21 +295,13 @@ def run_task(client, task_name, options, args):
     client.DownloadAlbum(base_path, user=options.user, title=options.title)
     
   elif task_name == 'tag':
-    if options.query:
-      entries = client.build_entry_list(title=options.title,
-                                        query=options.encoded_query)
-    else:
-      album_entries = client.GetAlbum(title=options.title)
-      entries = []
-      for album in album_entries:
-        uri = ('/data/feed/api/user/default/albumid/%s?kind=photo' % 
-               album.gphoto_id.text)
-        photo_feed = client.GetFeed(uri)
-        entries.extend(photo_feed.entry)
+    entries = client.build_entry_list(query=options.query,
+                                      title=options.title,
+                                      force_photos=True)
     if entries:
       client.TagPhotos(entries, options.tags)
     else:
-      print 'No matches for the title and query you gave.'
+      print 'No matches for the title and/or query you gave.'
       
   else:
     print 'Sorry, task "%s" is currently unsupported for Picasa.' % task_name
