@@ -13,7 +13,8 @@ import util
 
 tasks = {'delete': util.Task('title'),
          'post': util.Task(optional='tags'),
-         'list': util.Task()}
+         'list': util.Task(),
+         'tag': util.Task(['tags', 'title'])}
 
 
 class BloggerServiceCL(util.BaseServiceCL):
@@ -76,6 +77,32 @@ class BloggerServiceCL(util.BaseServiceCL):
     uri = '/feeds/' + self.blog_id + '/posts/default'
     return self.GetEntries(uri, title)
   
+  def LabelPosts(self, post_entries, tags):
+    """Add or remove labels on a list of posts.
+    
+    Keyword arguments:
+      post_entries: List of post entry objects. 
+      tags: String representation of tags in a comma separated list.
+            For how tags are generated from the string, 
+            see util.generate_tag_sets().
+    """
+    from atom import Category
+    scheme = 'http://www.blogger.com/atom/ns#'
+    remove_set, add_set, replace_tags = util.generate_tag_sets(tags)
+    for post in post_entries:
+      # No point removing tags if the post has no categories,
+      # or we're replacing the keywords.
+      if post.category and not replace_tags:
+        post.category = [c for c in post.category if c.term not in remove_set]
+      
+      if replace_tags:
+        post.category = []
+      if add_set: 
+        new_tags = [Category(term=tag, scheme=scheme) for tag in add_set]
+        post.category.extend(new_tags)
+ 
+      self.Put(post, post.GetEditLink().href)
+
   def Login(self, email, password):
     """Extends util.BaseServiceCL.Login to also set the blog ID."""
     util.BaseServiceCL.Login(self, email, password)
@@ -114,5 +141,8 @@ def run_task(client, task_name, options, args):
     entries = client.GetPosts(options.title)
     for entry in entries:
       print entry.title.text
+  elif task_name == 'tag':
+    entries = client.GetPosts(options.title)
+    client.LabelPosts(entries, options.tags)
   else:
     print 'Sorry, task "%s" is currently unsupported for Blogger.' % task_name

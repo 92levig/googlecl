@@ -269,6 +269,44 @@ def expand_as_command_line(command_string):
   return final_args_list
 
 
+def generate_tag_sets(tags):
+  """Generate sets of tags based on a string.
+  
+  Keyword arguments:
+    tags: Comma-separated list of tags. Tags with a '-' in front will be
+          removed from each photo. A tag of '--' will delete all tags.
+          A backslash in front of a '-' will keep the '-' in the tag.
+          Examples:
+            'tag1, tag2, tag3'      Add tag1, tag2, and tag3
+            '-tag1, tag4, \-tag5'   Remove tag1, add tag4 and -tag5
+            '--, tag6'              Remove all tags, then add tag6
+  Returns:
+    (remove_set, add_set, replace_tags) where...
+      remove_set: set object of the tags to remove
+      add_set: set object of the tags to add
+      replace_tags: boolean indicating if all the old tags are removed
+      
+  """
+  tags = tags.replace(', ', ',')
+  tagset = set(tags.split(','))
+  remove_set = set(tag[1:] for tag in tagset if tag[0] == '-')
+  if remove_set == set('-'):
+    replace_tags = True
+  else:
+    replace_tags = False
+  add_set = set()
+  if len(remove_set) != len(tagset):
+    # TODO: Can do this more cleanly with regular expressions?
+    for tag in tagset:
+      # Remove the escape '\' for calculation of 'add' set
+      if tag[:1] == '\-':
+        add_set.add(tag[1:])
+      # Don't add the tags that are being removed
+      elif tag[0] != '-':
+        add_set.add(tag) 
+  return (remove_set, add_set, replace_tags)
+
+
 def load_preferences():
   """Load preferences / configuration file.
   

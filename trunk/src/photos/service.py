@@ -196,35 +196,12 @@ class PhotosServiceCL(PhotosService, util.BaseServiceCL):
     
     Keyword arguments:
       photo_entries: List of photo entry objects. 
-      tags: Comma-separated list of tags. Tags with a '-' in front will be
-            removed from each photo. A tag of '--' will delete all tags.
-            A backslash in front of a '-' will keep the '-' in the tag.
-            Examples:
-              'tag1, tag2, tag3'      Add tag1, tag2, and tag3
-              '-tag1, tag4, \-tag5'   Remove tag1, add tag4 and -tag5
-              '--, tag6'              Remove all tags, then add tag6
-    
+      tags: String representation of tags in a comma separated list.
+            For how tags are generated from the string, 
+            see util.generate_tag_sets().
     """
     from gdata.media import Group, Keywords
-    
-    tags = tags.replace(', ', ',')
-    tagset = set(tags.split(','))
-    remove_set = set(tag[1:] for tag in tagset if tag[0] == '-')
-    if remove_set == set('-'):
-      replace_tags = True
-    else:
-      replace_tags = False
-    add_set = set()
-    if len(remove_set) != len(tagset):
-      # TODO: Can do this more cleanly with regular expressions?
-      for tag in tagset:
-        # Remove the escape '\' for calculation of 'add' set
-        if tag[:1] == '\-':
-          add_set.add(tag[1:])
-        # Don't add the tags that are being removed
-        elif tag[0] != '-':
-          add_set.add(tag)
-    
+    remove_set, add_set, replace_tags = util.generate_tag_sets(tags)
     for photo in photo_entries:
       if not photo.media:
         photo.media = Group()
