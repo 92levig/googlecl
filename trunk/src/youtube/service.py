@@ -13,7 +13,8 @@ import util
 
 
 tasks = {'post': util.Task('category', ['title', 'summary', 'tags']),
-         'list': util.Task()}
+         'list': util.Task(),
+         'tag': util.Task(['title', ['category', 'tags']])}
 
 
 class YouTubeServiceCL(YouTubeService, util.BaseServiceCL):
@@ -40,6 +41,25 @@ class YouTubeServiceCL(YouTubeService, util.BaseServiceCL):
     YouTubeService.__init__(self)
     util.BaseServiceCL.set_params(self, regex, tags_prompt, delete_prompt)
     
+  def CategorizeVideos(self, video_entries, category):
+    """Change the categories of a list of videos to a single category.
+    
+    Keyword arguments:
+      video_entries: List of YouTubeVideoEntry objects. 
+      category: String representation of category.
+    
+    """
+    scheme = 'http://gdata.youtube.com/schemas/2007/categories.cat'
+    for video in video_entries:
+      video.media.category = [gdata.media.Category(text=category,
+                                                   scheme=scheme,
+                                                   label=category)]
+      try:
+        self.UpdateVideoEntry(video)
+      except gdata.service.RequestError as e:
+        print ('Category update failed, probably because ' + category +
+               ' is not a category.') 
+
   def GetVideos(self, user='default', title=None):
     """Get entries for videos uploaded by a user.
     
@@ -52,7 +72,9 @@ class YouTubeServiceCL(YouTubeService, util.BaseServiceCL):
     
     """
     uri = 'http://gdata.youtube.com/feeds/api/users/' + user + '/uploads'
-    return self.GetEntries(uri, title)
+    return self.GetEntries(uri,
+                           title,
+                           converter=gdata.youtube.YouTubeVideoFeedFromString)
   
   def Login(self, email, password):
     """Try to use programmatic login to log into Picasa.
@@ -77,7 +99,37 @@ class YouTubeServiceCL(YouTubeService, util.BaseServiceCL):
     self.client_id = 'GoogleCL'
     
     util.BaseServiceCL.Login(self, email, password)
+
+  def TagVideos(self, video_entries, tags):
+    """Add or remove tags on a list of videos.
     
+    Keyword arguments:
+      video_entries: List of YouTubeVideoEntry objects. 
+      tags: String representation of tags in a comma separated list. For how 
+            tags are generated from the string, see util.generate_tag_sets().
+    
+    """
+    from gdata.media import Group, Keywords
+    remove_set, add_set, replace_tags = util.generate_tag_sets(tags)
+    for video in video_entries:
+      if not video.media:
+        video.media = Group()
+      if not video.media.keywords:
+        video.media.keywords = Keywords()
+  
+      # No point removing tags if the video has no keywords,
+      # or we're replacing the keywords.
+      if video.media.keywords.text and remove_set and not replace_tags:
+        current_tags = video.media.keywords.text.replace(', ', ',')
+        current_set = set(current_tags.split(','))
+        video.media.keywords.text = ','.join(current_set - remove_set)
+      
+      if replace_tags or not video.media.keywords.text:
+        video.media.keywords.text = ','.join(add_set)
+      elif add_set: 
+        video.media.keywords.text += ',' + ','.join(add_set)
+ 
+      self.UpdateVideoEntry(video)
 
 def run_task(client, task_name, options, args):
   """Execute a particular task.
@@ -116,3 +168,10 @@ def run_task(client, task_name, options, args):
           
     print 'Loading ' + args[0]
     client.InsertVideoEntry(video_entry, args[0])
+  elif task_name == 'tag':
+    video_entries = client.GetVideos(title=options.title)
+    if options.category:
+      client.CategorizeVideos(video_entries, options.category)
+    if options.tags:
+      client.TagVideos(video_entries, options.tags)
+    
