@@ -71,6 +71,16 @@ def fill_out_options(task, options, logged_in):
 
 
 def import_service_module(service):
+  """Imports the service module from a package.
+  
+  Keyword arguments:
+    service: Name of the service, which should coincide with the name of the
+             package.
+  
+  Returns:
+    Module as if imported via "import <service>.service" statement.
+    
+  """
   try:
     return __import__(service+'.service', globals(), locals(), -1)
   except ImportError as e:
