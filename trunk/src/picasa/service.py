@@ -228,6 +228,10 @@ class PhotosServiceCL(PhotosService, util.BaseServiceCL):
  
       self.UpdatePhotoMetadata(photo)
 
+
+service_class = PhotosServiceCL
+
+
 def run_task(client, task_name, options, args):
   """Execute a particular task.
   

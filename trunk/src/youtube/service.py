@@ -181,6 +181,10 @@ class YouTubeServiceCL(YouTubeService, util.BaseServiceCL):
  
       self.UpdateVideoEntry(video)
 
+
+service_class = YouTubeServiceCL
+
+
 def run_task(client, task_name, options, args):
   """Execute a particular task.
   

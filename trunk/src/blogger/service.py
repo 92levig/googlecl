@@ -118,7 +118,10 @@ class BloggerServiceCL(util.BaseServiceCL):
       if self_link:
         self.blog_id = self_link.href.split('/')[-1]
 
-    
+
+service_class = BloggerServiceCL
+
+
 def run_task(client, task_name, options, args):
   """Execute a particular task.
   

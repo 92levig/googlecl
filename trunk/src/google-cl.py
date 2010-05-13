@@ -31,10 +31,6 @@ import urllib
 import util
 
 
-available_services = ['picasa', 'blogger', 'youtube', 'help']
-
-
-
 def fill_out_options(task, options, logged_in):
   """Fill out options via command line prompts.
   
@@ -74,6 +70,15 @@ def fill_out_options(task, options, logged_in):
     options.category = raw_input('Please specify a category: ')
 
 
+def import_service_module(service):
+  try:
+    return __import__(service+'.service', globals(), locals(), -1)
+  except ImportError as e:
+    print 'Import Error: ' + str(e)
+    print 'Service package for ' + service + ' does not exist!'
+    return None
+
+
 def print_help(service=None, tasks=None):
   """Print help messages to the screen.
   
@@ -84,6 +89,7 @@ def print_help(service=None, tasks=None):
     
   """
   if not service:
+    available_services = ['picasa', 'blogger', 'youtube']
     print 'Welcome to the Google CL tool!'
     print 'Commands are broken into several parts: service, task, options,' + \
           ' and arguments.'
@@ -100,6 +106,7 @@ def print_help(service=None, tasks=None):
     for t in tasks.keys():
       print t + ' --\t' + tasks[t].usage
 
+
 def run_interactive(parser):
   """Run an interactive shell for the google commands.
   
@@ -107,19 +114,18 @@ def run_interactive(parser):
     parser: Object capable of parsing a list of arguments via parse_args.
     
   """
-  command_string = ''
-  while not command_string == 'quit': 
+  while True:
     command_string = raw_input('> ')
     if not command_string:
       continue
-    args_list = util.expand_as_command_line(command_string)
-    (options, args) = parser.parse_args(args_list)
-    if args[0] in available_services:
-      run_once(options, args)
-    elif args[0] == '?':
+    elif command_string == '?':
       print_help()
-    elif command_string != 'quit':
-      print '> Enter "?" or "help" to print the help menu'
+    elif command_string == 'quit':
+      break
+    else:
+      args_list = util.expand_as_command_line(command_string)
+      (options, args) = parser.parse_args(args_list)
+      run_once(options, args)
  
       
 def run_once(options, args):
@@ -139,46 +145,28 @@ def run_once(options, args):
     else:
       print 'Must specify at least a service and a task!'
     return
-  
+
   if service == 'help':
-    if task_name == 'picasa':
-      import photos.service
-      tasks = photos.service.tasks
-    elif task_name == 'blogger':
-      import blogger.service
-      tasks = blogger.service.tasks
-    elif task_name == 'youtube':
-      import youtube.service
-      tasks = youtube.service.tasks
-    print_help(task_name, tasks)
+    service_module = import_service_module(task_name)
+    if service_module:
+      print_help(task_name, service_module.tasks)
     return
   
   regex = util.config.getboolean('DEFAULT', 'regex')
   tags_prompt = util.config.getboolean('DEFAULT', 'tags_prompt')
   delete_prompt = util.config.getboolean('DEFAULT', 'delete_prompt')
-  if service == 'blogger':
-    import blogger.service
-    tasks = blogger.service.tasks
-    client = blogger.service.BloggerServiceCL(regex, tags_prompt, delete_prompt)
-    run_task = blogger.service.run_task
-  elif service == 'youtube':
-    import youtube.service
-    tasks = youtube.service.tasks
-    client = youtube.service.YouTubeServiceCL(regex)
-    run_task = youtube.service.run_task
-  elif service == 'picasa':
-    import photos.service
-    tasks = photos.service.tasks
-    client = photos.service.PhotosServiceCL(regex, tags_prompt, delete_prompt)
-    run_task = photos.service.run_task
-  else:
-    print 'Service %s is not supported' % service
+  
+  service_module = import_service_module(service)
+  if not service_module:
     return
+  client = service_module.service_class(regex, tags_prompt, delete_prompt)
+  
   try:
-    task = tasks[task_name]
+    task = service_module.tasks[task_name]
     task.name = task_name
   except KeyError:
-    print 'Did not recognize task, please use one of %s' % tasks.keys()
+    print 'Did not recognize task, please use one of ' + \
+          str(service_module.tasks.keys())
     return
   
   if task.login_required:
@@ -193,7 +181,7 @@ def run_once(options, args):
     options.encoded_query = urllib.quote_plus(options.query)
   else:
     options.encoded_query = None
-  run_task(client, task_name, options, args)
+  service_module.run_task(client, task_name, options, args)
 
 
 def setup_parser():
@@ -248,13 +236,10 @@ def main():
       print ''
       print 'Quit via keyboard interrupt'
   else:
-    if args[0] in available_services:
-      try:
-        run_once(options, args)
-      except KeyboardInterrupt:
-        print ''
-    else:
-      print 'Unsupported service:', args[0]
+    try:
+      run_once(options, args)
+    except KeyboardInterrupt:
+      print ''
 
 
 if __name__ == '__main__':
