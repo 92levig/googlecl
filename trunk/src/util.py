@@ -11,7 +11,6 @@ import os
 import pickle
 import re
 import stat
-import gdata
 from gdata.service import GDataService, BadAuthentication, CaptchaRequired
 
 
@@ -53,6 +52,21 @@ class BaseServiceCL(GDataService):
         GDataService.Delete(self, item.GetEditLink().href)
         
   def GetEntries(self, uri, title=None, converter=None):
+    """Get a list of entries from a feed uri.
+    
+    Keyword arguments:
+      uri: URI to get the feed from.
+      title: String to use when looking for entries to return. Will be compared
+             to entry.title.text, using regular expressions if self.use_regex.
+             (Default None for all entries from feed)
+      converter: Converter to use on the feed. If specified, will be passed into
+                 the GetFeed method. If None (default), GetFeed will be called
+                 without the converter argument being passed in.
+                 
+    Returns:
+      List of entries.
+    
+    """
     if converter:
       f = self.GetFeed(uri, converter=converter)
     else:
@@ -129,9 +143,8 @@ class Task(object):
     """Constructor.
     
     Keyword arguments:
-      required: The required attributes for the task. (Default [])
-      optional: The optional attributes for the task. Currently unused. 
-                (Default [])
+      required: Required options for the task. (Default [])
+      optional: Optional options for the task. (Default [])
       login_required: If logging in with a username is required to do this task.
                 If True, can typically ignore 'user' as a required attribute. 
                 (Default True)
@@ -144,6 +157,19 @@ class Task(object):
     self.required = required
     self.optional = optional
     self.login_required = login_required
+    # Take the "required" list, join all the terms by the following rules:
+    # 1) if the term is a string, leave it.
+    # 2) if the term is a list, replace it to the rest with '(a OR b OR ...)' where
+    if self.required:
+      req_str = ' AND '.join(['('+' OR '.join(a)+')' if isinstance(a, list) \
+                              else a for a in self.required])
+    else:
+      req_str = 'none'
+    if self.optional:
+      opt_str = '\tOptional: ' + str(self.optional)[1:-1].replace("'", '')
+    else:
+      opt_str = ''
+    self.usage = 'Requires: ' + req_str + opt_str 
     
   def mentions(self, attribute):
     """See if an attribute is optional or required."""

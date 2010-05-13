@@ -27,14 +27,12 @@ Some terminology in use:
 """
 import optparse
 import os
-import blogger.service
-import photos.service
-import youtube.service
 import urllib
 import util
 
 
 available_services = ['picasa', 'blogger', 'youtube', 'help']
+
 
 
 def fill_out_options(task, options, logged_in):
@@ -76,14 +74,16 @@ def fill_out_options(task, options, logged_in):
     options.category = raw_input('Please specify a category: ')
 
 
-def print_help(task=None):
+def print_help(service=None, tasks=None):
   """Print help messages to the screen.
   
   Keyword arguments:
-    task: Task to get help on (not implemented yet).
+    service: Service to get help on. (Default None, prints general help)
+    tasks: Dictionary of tasks that can be done by the given service.
+           (Default None)
     
   """
-  if not task:
+  if not service:
     print 'Welcome to the Google CL tool!'
     print 'Commands are broken into several parts: service, task, options,' + \
           ' and arguments.'
@@ -95,8 +95,10 @@ def print_help(task=None):
     print 'Enter "> help <service>" for more information on a service.'
     print 'Or, just "quit" to quit.'
   else:
-    print "Uh, actually, you can't do that yet. Sorry. Check the README?"
-
+    print 'Available tasks for service ' + service + \
+          ': ' + str(tasks.keys())[1:-1]
+    for t in tasks.keys():
+      print t + ' --\t' + tasks[t].usage
 
 def run_interactive(parser):
   """Run an interactive shell for the google commands.
@@ -139,21 +141,33 @@ def run_once(options, args):
     return
   
   if service == 'help':
-    print_help(task_name)
+    if task_name == 'picasa':
+      import photos.service
+      tasks = photos.service.tasks
+    elif task_name == 'blogger':
+      import blogger.service
+      tasks = blogger.service.tasks
+    elif task_name == 'youtube':
+      import youtube.service
+      tasks = youtube.service.tasks
+    print_help(task_name, tasks)
     return
   
   regex = util.config.getboolean('DEFAULT', 'regex')
   tags_prompt = util.config.getboolean('DEFAULT', 'tags_prompt')
   delete_prompt = util.config.getboolean('DEFAULT', 'delete_prompt')
   if service == 'blogger':
+    import blogger.service
     tasks = blogger.service.tasks
     client = blogger.service.BloggerServiceCL(regex, tags_prompt, delete_prompt)
     run_task = blogger.service.run_task
   elif service == 'youtube':
+    import youtube.service
     tasks = youtube.service.tasks
     client = youtube.service.YouTubeServiceCL(regex)
     run_task = youtube.service.run_task
   elif service == 'picasa':
+    import photos.service
     tasks = photos.service.tasks
     client = photos.service.PhotosServiceCL(regex, tags_prompt, delete_prompt)
     run_task = photos.service.run_task
@@ -162,6 +176,7 @@ def run_once(options, args):
     return
   try:
     task = tasks[task_name]
+    task.name = task_name
   except KeyError:
     print 'Did not recognize task, please use one of %s' % tasks.keys()
     return
