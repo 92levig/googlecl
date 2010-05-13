@@ -11,10 +11,14 @@ import os
 import util
 
 
-tasks = {'delete': util.Task('title'),
-         'post': util.Task(optional='tags'),
-         'list': util.Task(),
-         'tag': util.Task(['tags', 'title'])}
+tasks = {'delete': util.Task('Delete a post.',
+                             'title'),
+         'post': util.Task('Post content.',
+                           optional='tags',
+                           args_desc='PATH_TO_CONTENT or CONTENT'),
+         'list': util.Task('List posts in your blog'),
+         'tag': util.Task('Label posts',
+                          ['tags', 'title'])}
 
 
 class BloggerServiceCL(util.BaseServiceCL):

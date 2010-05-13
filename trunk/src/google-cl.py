@@ -101,20 +101,22 @@ def print_help(service=None, tasks=None):
   if not service:
     available_services = ['picasa', 'blogger', 'youtube']
     print 'Welcome to the Google CL tool!'
-    print 'Commands are broken into several parts: service, task, options,' + \
-          ' and arguments.'
-    print 'In the command "> picasa post --name "My Cat Photos" photos/cats/*"'
-    print 'the service is "picasa", the task is "post", the single option ' + \
-          'is a name of "My Cat Photos", and the argument is the path ' + \
-          'to the photos.'
-    print 'The available services are ' + str(available_services)[1:-1]
-    print 'Enter "> help <service>" for more information on a service.'
-    print 'Or, just "quit" to quit.'
+    print '  Commands are broken into several parts: service, task, ' + \
+          'options, and arguments.'
+    print '  For example, in the command'
+    print '      "> picasa post --title "My Cat Photos" photos/cats/*"'
+    print '  the service is "picasa", the task is "post", the single ' + \
+          'option is a name of "My Cat Photos", and the argument is the ' + \
+          'path to the photos.'
+    print '  The available services are ' + str(available_services)[1:-1]
+    print '  Enter "> help <service>" for more information on a service.'
+    print '  Or, just "quit" to quit.'
   else:
     print 'Available tasks for service ' + service + \
           ': ' + str(tasks.keys())[1:-1]
-    for t in tasks.keys():
-      print t + ' --\t' + tasks[t].usage
+    for task_name in tasks.keys():
+      print '  ' + task_name + ': ' + tasks[task_name].description
+      print '\t' + tasks[task_name].usage
 
 
 def run_interactive(parser):
@@ -206,13 +208,13 @@ def setup_parser():
   parser.add_option('-c', '--category', dest='category',
                     help='YouTube only - specify video categories' + 
                     ' as a comma-separated list, e.g. "Film, Travel"')
-  parser.add_option('--devtag', dest='devtags',
+  parser.add_option('--devtags', dest='devtags',
                     help='YouTube only - specify developer tags' +
                     ' as a comma-separated list.')
   parser.add_option('-d', '--date', dest='date',
                     help='Date of the album in MM/DD/YYYY format.' + 
                     ' If omitted, uses today.')
-  parser.add_option('-n', '--name', dest='title',
+  parser.add_option('-n', '--title', dest='title',
                     help='Title of the item')
   parser.add_option('-p', '--password', dest='password',
                     help='Password for the username specifed via -u option.')
@@ -222,7 +224,7 @@ def setup_parser():
   parser.add_option('-s', '--summary', dest='summary', 
                     help=('Description of the upload, ' +
                           'or file containing the description.'))
-  parser.add_option('-t',  '--tag', dest='tags',
+  parser.add_option('-t',  '--tags', dest='tags',
                     help='Tags for item, e.g. "Sunsets, Earth Day"')
   parser.add_option('-u', '--user', dest='user',
                     help=('Username to use for the task. Exact application ' +

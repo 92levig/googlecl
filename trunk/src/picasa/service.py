@@ -12,12 +12,21 @@ import urllib
 import util
 
 
-tasks = {'create': util.Task('title', 'summary'), 
-         'post': util.Task('title', 'tags'), 
-         'delete': util.Task([['title', 'query']]),
-         'list': util.Task('user', ['title', 'query'], login_required=False),
-         'get': util.Task('user', ['title', 'query'], login_required=False),
-         'tag': util.Task(['tags', ['title', 'query']])}
+tasks = {'create': util.Task('Create an album',
+                             'title', 'summary',
+                             args_desc='PATH_TO_PHOTOS'), 
+         'post': util.Task('Post photos to an album',
+                           'title', 'tags',
+                           args_desc='PATH_TO_PHOTOS'), 
+         'delete': util.Task('Delete photos or albums',
+                             [['title', 'query']]),
+         'list': util.Task('List photos or albums',
+                           'user', ['title', 'query'], login_required=False),
+         'get': util.Task('Download photos',
+                          'user', ['title', 'query'], login_required=False,
+                          args_desc='LOCATION'),
+         'tag': util.Task('Tag photos',
+                          ['tags', ['title', 'query']])}
 
 
 class PhotosServiceCL(PhotosService, util.BaseServiceCL):

@@ -139,21 +139,26 @@ class Task(object):
   
   """
   
-  def __init__(self, required=[], optional=[], login_required=True):
+  def __init__(self, description, required=[], optional=[], login_required=True,
+               args_desc=''):
     """Constructor.
     
     Keyword arguments:
+      description: Description of what the task does.
       required: Required options for the task. (Default [])
       optional: Optional options for the task. (Default [])
       login_required: If logging in with a username is required to do this task.
                 If True, can typically ignore 'user' as a required attribute. 
                 (Default True)
+      args_desc: Description of what the arguments should be. 
+                 (Default '', for no arguments necessary for this task)
       
     """
     if isinstance(required, basestring):
       required = [required]
     if isinstance(optional, basestring):
       optional = [optional]
+    self.description = description
     self.required = required
     self.optional = optional
     self.login_required = login_required
@@ -169,7 +174,9 @@ class Task(object):
       opt_str = '\tOptional: ' + str(self.optional)[1:-1].replace("'", '')
     else:
       opt_str = ''
-    self.usage = 'Requires: ' + req_str + opt_str 
+    if args_desc:
+      args_desc = '\tArguments: ' + args_desc
+    self.usage = 'Requires: ' + req_str + opt_str + args_desc
     
   def mentions(self, attribute):
     """See if an attribute is optional or required."""

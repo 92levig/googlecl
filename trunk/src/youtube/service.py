@@ -11,9 +11,14 @@ import os
 import util
 
 
-tasks = {'post': util.Task('category', ['title', 'summary', 'tags']),
-         'list': util.Task(),
-         'tag': util.Task(['title', ['category', 'tags']])}
+tasks = {'post': util.Task('Post a video',
+                           'category',
+                           ['title', 'summary', 'tags'],
+                           args_desc='PATH_TO_VIDEO'),
+         'list': util.Task('List videos by user',
+                           optional='user'),
+         'tag': util.Task('Add tags to a video',
+                          ['title', ['category', 'tags']])}
 
 
 class YouTubeServiceCL(YouTubeService, util.BaseServiceCL):
