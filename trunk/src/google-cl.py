@@ -209,8 +209,15 @@ def setup_parser():
   parser.add_option('-d', '--date', dest='date',
                     help='Date of the album in MM/DD/YYYY format.' + 
                     ' If omitted, uses today.')
+  parser.add_option('-f', '--folder', dest='folder',
+                    help='Docs only - specify folder(s) to upload to '+ 
+                    '/ search in.')
   parser.add_option('-n', '--title', dest='title',
                     help='Title of the item')
+  parser.add_option('--no-convert', dest='convert',
+                    action='store_false', default=True,
+                    help='Google Apps Premier only - do not convert the file' +
+                    ' on upload. (Else converts to native Google Docs format')
   parser.add_option('-p', '--password', dest='password',
                     help='Password for the username specifed via -u option.')
   parser.add_option('-q', '--query', dest='query',

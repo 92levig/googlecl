@@ -25,6 +25,8 @@ Created on May 13, 2010
 
 import gdata.docs.client
 import re
+import os
+import urllib
 import util
 from gdata.client import BadAuthentication, CaptchaChallenge
 
@@ -101,8 +103,61 @@ class DocsClientCL(gdata.docs.client.DocsClient, util.BaseServiceCL):
       print 'Too many failed logins; Captcha required.'
     else:
       self.logged_in = True
-
+    
+    # Map folder titles to IDs
+    if self.logged_in:
+      folder_feed = self.GetDocList(uri='/feeds/default/private/full/-/folder')
+      self.folder_id = {}
+      for f in folder_feed.entry:
+        self.folder_id[f.title.text] = f.resource_id.text
+    
   Login = login
+
+  def upload_docs(self, paths, title=None, folder=None, convert=True):
+    """Upload a document.
+    
+    Keyword arguments:
+      paths: Paths of files to upload.
+      title: Title to give the files once uploaded.
+             (Defaults to the names of the files).
+      folder: Folder to put the files in. (Defaults to the root folder).
+      convert: If True, converts the files to the native Google Docs format.
+               Otherwise, leaves as arbitrary file type. Only Google Apps
+               Premier users can specify a value other than True. (Default True)
+
+    Returns:
+      Dictionary mapping filenames to where they can be accessed online.
+    """
+    from gdata.docs.data import MIMETYPES
+    if folder and self.folder_id.has_key(folder):
+      folder_id = self.folder_id[folder]
+      uri = (gdata.docs.client.FOLDERS_FEED_TEMPLATE % 
+             urllib.quote_plus(folder_id))
+    else:
+      uri = gdata.docs.client.DOCLIST_FEED_URI
+    uri += '?convert=' + str(convert).lower()
+    url_locs = {}
+    for path in paths:
+      filename = os.path.basename(path)
+      try:
+        content_type = MIMETYPES[filename.split('.')[1]]
+      except:
+        content_type = 'text/plain'
+      print 'Loading ' + path
+      try:
+        entry = self.Upload(path,
+                            title or filename.split('.')[0],
+                            content_type=content_type,
+                            folder_or_uri=uri)
+      except Exception as e:
+        print 'Failed to upload ' + path
+        print e
+      else:
+        print 'Upload success! Direct link: ' + entry.GetAlternateLink().href
+        url_locs[filename] = entry.GetAlternateLink().href
+    return url_locs
+
+  UploadDocs = upload_docs
 
 
 service_class = DocsClientCL
@@ -123,8 +178,15 @@ def _run_list(client, options, args):
     print e.title.text, '('+e.GetDocumentType()+')' 
 
 
-tasks = {'upload': util.Task('Upload a document',
-                             optional=['title', 'folder'],
+def _run_upload(client, options, args):
+  if not args:
+    print 'Need to tell me what to upload!'
+    return
+  client.upload_docs(args, options.title, options.folder, options.convert)  
+
+
+tasks = {'upload': util.Task('Upload a document', callback=_run_upload,
+                             optional=['title', 'folder', 'no-convert'],
                              args_desc='PATH_TO_FILE'),
          'edit': util.Task('Edit a document',
                            required='title',
