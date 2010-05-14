@@ -6,13 +6,13 @@ Unit tests for the Picasa portion of the GoogleCL project.
 """
 #TODO: Make tests more rigorous.
 import os
-import photos.service
+import picasa.service
 import unittest
 import util
 import shutil
 
 
-_test_dir = './phototest_tmp'
+_test_dir = 'phototest_tmp'
 _download_path = os.path.join(_test_dir, 'albums')
 _test_entry_names = ['test_album1', 'test_album2']
 
@@ -25,7 +25,7 @@ class PhotoBaseTest(unittest.TestCase):
     regex = True
     tags_prompt = False
     delete_prompt = False
-    self.client = photos.service.PhotosServiceCL(regex,
+    self.client = picasa.service.PhotosServiceCL(regex,
                                                  tags_prompt,
                                                  delete_prompt)
     if not os.path.exists(_test_dir):
