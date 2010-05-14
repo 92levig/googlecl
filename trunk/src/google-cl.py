@@ -99,7 +99,7 @@ def print_help(service=None, tasks=None):
     
   """
   if not service:
-    available_services = ['picasa', 'blogger', 'youtube']
+    available_services = ['picasa', 'blogger', 'youtube', 'docs']
     print 'Welcome to the Google CL tool!'
     print '  Commands are broken into several parts: service, task, ' + \
           'options, and arguments.'
