@@ -11,16 +11,6 @@ import os
 import util
 
 
-tasks = {'delete': util.Task('Delete a post.',
-                             'title'),
-         'post': util.Task('Post content.',
-                           optional='tags',
-                           args_desc='PATH_TO_CONTENT or CONTENT'),
-         'list': util.Task('List posts in your blog'),
-         'tag': util.Task('Label posts',
-                          ['tags', 'title'])}
-
-
 class BloggerServiceCL(util.BaseServiceCL):
   
   """Command-line-friendly service for the Blogger API. 
@@ -125,36 +115,50 @@ class BloggerServiceCL(util.BaseServiceCL):
 
 service_class = BloggerServiceCL
 
+ 
+#===============================================================================
+# Each of the following _run_* functions execute a particular task.
+#  
+# Keyword arguments:
+#  client: Client to the service being used.
+#  options: Contains all attributes required to perform the task
+#  args: Additional arguments passed in on the command line, may or may not be
+#        required
+#===============================================================================
+def _run_post(client, options, args):
+  for content_string in args:
+    if os.path.exists(content_string):
+      with open(content_string, 'r') as content_file:
+        content = content_file.read()
+      title = os.path.basename(content_string).split('.')[0]
+    else:
+      if not options.title:
+        title = 'New post'
+      content = content_string
+    client.AddPost(options.title or title, content)
 
-def run_task(client, task_name, options, args):
-  """Execute a particular task.
-  
-  Keyword arguments:
-    client: Client to the service being used.
-    task_name: String of the task (e.g. 'post', 'delete').
-    options: Contains all attributes required to perform a task
-    args: Additional arguments passed in on the command line
-    
-  """
-  if task_name == 'post':
-    for content_string in args:
-      if os.path.exists(content_string):
-        with open(content_string, 'r') as content_file:
-          content = content_file.read()
-        title = os.path.basename(content_string).split('.')[0]
-      else:
-        if not options.title:
-          title = 'New post'
-        content = content_string
-      client.AddPost(options.title or title, content)
-  elif task_name == 'delete':
-    client.DeletePost(title=options.title)
-  elif task_name == 'list':
-    entries = client.GetPosts(options.title)
-    for entry in entries:
-      print entry.title.text
-  elif task_name == 'tag':
-    entries = client.GetPosts(options.title)
-    client.LabelPosts(entries, options.tags)
-  else:
-    print 'Sorry, task "%s" is currently unsupported for Blogger.' % task_name
+
+def _run_delete(client, options, args):
+  client.DeletePost(title=options.title)
+
+
+def _run_list(client, options, args):
+  entries = client.GetPosts(options.title)
+  for entry in entries:
+    print entry.title.text
+
+
+def _run_tag(client, options, args):
+  entries = client.GetPosts(options.title)
+  client.LabelPosts(entries, options.tags)
+
+
+tasks = {'delete': util.Task('Delete a post.', callback=_run_delete,
+                             required='title'),
+         'post': util.Task('Post content.', callback=_run_post,
+                           optional='tags',
+                           args_desc='PATH_TO_CONTENT or CONTENT'),
+         'list': util.Task('List posts in your blog', callback=_run_list,
+                           optional='title'),
+         'tag': util.Task('Label posts', callback=_run_tag,
+                          required=['tags', 'title'])}

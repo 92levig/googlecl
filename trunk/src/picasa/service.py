@@ -12,23 +12,6 @@ import urllib
 import util
 
 
-tasks = {'create': util.Task('Create an album',
-                             'title', 'summary',
-                             args_desc='PATH_TO_PHOTOS'), 
-         'post': util.Task('Post photos to an album',
-                           'title', 'tags',
-                           args_desc='PATH_TO_PHOTOS'), 
-         'delete': util.Task('Delete photos or albums',
-                             [['title', 'query']]),
-         'list': util.Task('List photos or albums',
-                           'user', ['title', 'query'], login_required=False),
-         'get': util.Task('Download photos',
-                          'user', ['title', 'query'], login_required=False,
-                          args_desc='LOCATION'),
-         'tag': util.Task('Tag photos',
-                          ['tags', ['title', 'query']])}
-
-
 class PhotosServiceCL(PhotosService, util.BaseServiceCL):
   
   """Extends gdata.photos.service.PhotosService for the command line.
@@ -241,80 +224,100 @@ class PhotosServiceCL(PhotosService, util.BaseServiceCL):
 service_class = PhotosServiceCL
 
 
-def run_task(client, task_name, options, args):
-  """Execute a particular task.
+#===============================================================================
+# Each of the following _run_* functions execute a particular task.
+#  
+# Keyword arguments:
+#  client: Client to the service being used.
+#  options: Contains all attributes required to perform the task
+#  args: Additional arguments passed in on the command line, may or may not be
+#        required
+#===============================================================================
+def _run_create(client, options, args):
+  if options.date:
+    import time
+    try:
+      timestamp = time.mktime(time.strptime(options.date, '%m/%d/%Y'))
+    except ValueError as e:
+      print e
+      print 'Ignoring date option, using today'
+      options.date = ''
+    else:
+      # Timestamp needs to be in milliseconds after the epoch
+      options.date = '%i' % (timestamp * 1000)
   
-  Keyword arguments:
-    client: Client to the service being used.
-    task_name: String of the task (e.g. 'post', 'delete').
-    options: Contains all attributes required to perform a task
-    args: Additional arguments passed in on the command line
-    
-  """
-  if task_name == 'create':
-    if options.date:
-      import time
-      try:
-        timestamp = time.mktime(time.strptime(options.date, '%m/%d/%Y'))
-      except ValueError as e:
-        print e
-        print 'Ignoring date option, using today'
-        options.date = ''
-      else:
-        # Timestamp needs to be in milliseconds after the epoch
-        options.date = '%i' % (timestamp * 1000)
-    
-    album = client.InsertAlbum(title=options.title, summary=options.summary, 
-                               access=util.config.get('DEFAULT', 'access'),
-                               timestamp=options.date)
-    if args:
-      client.InsertPhotoList(album, photo_list=args, tags=options.tags)
-      
-  elif task_name == 'delete':
-    client.Delete(title=options.title,
-                  query=options.encoded_query,
-                  delete_default=util.config.getboolean('DEFAULT',
-                                                        'delete_by_default'))
-    
-  elif task_name == 'list':
-    entries = client.build_entry_list(user=options.user,
-                                      title=options.title,
-                                      query=options.encoded_query)
-    for item in entries:
-      print item.title.text
-      
-  elif task_name == 'post':
-    if not args:
-      print 'Must provide photos to post!'
-      return
-    albums = client.GetAlbum(title=options.title)
-    if len(albums) == 1:
-      client.InsertPhotoList(albums[0], args, tags=options.tags)
-    elif len(albums) > 1:
-      print 'More than one album matches "%s"' % options.title
-      upload_all = raw_input('Would you like to upload photos ' + 
-                             'to each album? (Y/n) ')
-      if not upload_all or upload_all.lower() == 'y':
-        for album in albums:
-          client.InsertPhotoList(album, args, tags=options.tags)
-    else:
-      print 'No albums found that match %s' % options.title
-    
-  elif task_name == 'get':
-    if not args:
-      print 'Must provide destination of album(s)!'
-      return
-    base_path = args[0]
-    client.DownloadAlbum(base_path, user=options.user, title=options.title)
-    
-  elif task_name == 'tag':
-    entries = client.build_entry_list(query=options.query,
-                                      title=options.title,
-                                      force_photos=True)
-    if entries:
-      client.TagPhotos(entries, options.tags)
-    else:
-      print 'No matches for the title and/or query you gave.'
-      
+  album = client.InsertAlbum(title=options.title, summary=options.summary, 
+                             access=util.config.get('DEFAULT', 'access'),
+                             timestamp=options.date)
+  if args:
+    client.InsertPhotoList(album, photo_list=args, tags=options.tags)
+
+
+def _run_delete(client, options, args):
+  client.Delete(title=options.title,
+                query=options.encoded_query,
+                delete_default=util.config.getboolean('DEFAULT',
+                                                      'delete_by_default'))
+
+
+def _run_list(client, options, args):
+  entries = client.build_entry_list(user=options.user,
+                                    title=options.title,
+                                    query=options.encoded_query)
+  for item in entries:
+    print item.title.text
+
+
+def _run_post(client, options, args):
+  if not args:
+    print 'Must provide photos to post!'
+    return
+  albums = client.GetAlbum(title=options.title)
+  if len(albums) == 1:
+    client.InsertPhotoList(albums[0], args, tags=options.tags)
+  elif len(albums) > 1:
+    print 'More than one album matches "%s"' % options.title
+    upload_all = raw_input('Would you like to upload photos ' + 
+                           'to each album? (Y/n) ')
+    if not upload_all or upload_all.lower() == 'y':
+      for album in albums:
+        client.InsertPhotoList(album, args, tags=options.tags)
   else:
-    print 'Sorry, task "%s" is currently unsupported for Picasa.' % task_name
+    print 'No albums found that match %s' % options.title
+
+
+def _run_get(client, options, args):
+  if not args:
+    print 'Must provide destination of album(s)!'
+    return
+  base_path = args[0]
+  client.DownloadAlbum(base_path, user=options.user, title=options.title)
+
+
+def _run_tag(client, options, args):
+  entries = client.build_entry_list(query=options.query,
+                                    title=options.title,
+                                    force_photos=True)
+  if entries:
+    client.TagPhotos(entries, options.tags)
+  else:
+    print 'No matches for the title and/or query you gave.'
+
+
+tasks = {'create': util.Task('Create an album', callback=_run_create,
+                             required='title', optional='summary',
+                             args_desc='PATH_TO_PHOTOS'), 
+         'post': util.Task('Post photos to an album', callback=_run_post,
+                           required='title', optional='tags',
+                           args_desc='PATH_TO_PHOTOS'), 
+         'delete': util.Task('Delete photos or albums', callback=_run_delete,
+                             required=[['title', 'query']]),
+         'list': util.Task('List photos or albums', callback=_run_list,
+                           required='user', optional=['title', 'query'], 
+                           login_required=False),
+         'get': util.Task('Download photos', callback=_run_get,
+                          required='user', optional=['title', 'query'], 
+                          login_required=False,
+                          args_desc='LOCATION'),
+         'tag': util.Task('Tag photos', callback=_run_tag,
+                          required=['tags', ['title', 'query']])}

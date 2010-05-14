@@ -11,16 +11,6 @@ import os
 import util
 
 
-tasks = {'post': util.Task('Post a video',
-                           'category',
-                           ['title', 'summary', 'tags'],
-                           args_desc='PATH_TO_VIDEO'),
-         'list': util.Task('List videos by user',
-                           optional='user'),
-         'tag': util.Task('Add tags to a video',
-                          ['title', ['category', 'tags']])}
-
-
 class YouTubeServiceCL(YouTubeService, util.BaseServiceCL):
   
   """Extends gdata.youtube.service.YouTubeService for the command line.
@@ -190,31 +180,42 @@ class YouTubeServiceCL(YouTubeService, util.BaseServiceCL):
 service_class = YouTubeServiceCL
 
 
-def run_task(client, task_name, options, args):
-  """Execute a particular task.
-  
-  Keyword arguments:
-    client: Client to the service being used.
-    task_name: String of the task (e.g. 'post', 'delete').
-    options: Contains all attributes required to perform a task
-    args: Additional arguments passed in on the command line
-    
-  """
-  if task_name == 'list':
-    entries = client.GetVideos(title=options.title)
-    for vid in entries:
-      print vid.title.text
-  elif task_name == 'post':
-    if not args:
-      print 'Must provide path to video to post!'
-      return
-    client.PostVideos(args, title=options.title, desc=options.summary,
-                     keywords=options.tags, category=options.category)
-    
-  elif task_name == 'tag':
-    video_entries = client.GetVideos(title=options.title)
-    if options.category:
-      client.CategorizeVideos(video_entries, options.category)
-    if options.tags:
-      client.TagVideos(video_entries, options.tags)
-    
+#===============================================================================
+# Each of the following _run_* functions execute a particular task.
+#  
+# Keyword arguments:
+#  client: Client to the service being used.
+#  options: Contains all attributes required to perform the task
+#  args: Additional arguments passed in on the command line, may or may not be
+#        required
+#===============================================================================
+def _run_list(client, options, args):
+  entries = client.GetVideos(title=options.title)
+  for vid in entries:
+    print vid.title.text
+
+
+def _run_post(client, options, args):
+  if not args:
+    print 'Must provide path to video to post!'
+    return
+  client.PostVideos(args, title=options.title, desc=options.summary,
+                   keywords=options.tags, category=options.category)
+
+
+def _run_tag(client, options, args):
+  video_entries = client.GetVideos(title=options.title)
+  if options.category:
+    client.CategorizeVideos(video_entries, options.category)
+  if options.tags:
+    client.TagVideos(video_entries, options.tags)
+
+
+tasks = {'post': util.Task('Post a video', callback=_run_post,
+                           required='category',
+                           optional=['title', 'summary', 'tags'],
+                           args_desc='PATH_TO_VIDEO'),
+         'list': util.Task('List videos by user', callback=_run_list,
+                           optional='user'),
+         'tag': util.Task('Add tags to a video', callback=_run_tag,
+                          required=['title', ['category', 'tags']])}  

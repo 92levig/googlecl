@@ -28,18 +28,6 @@ import re
 import util
 from gdata.client import BadAuthentication, CaptchaChallenge
 
-tasks = {'upload': util.Task('Upload a document',
-                             optional=['title', 'folder'],
-                             args_desc='PATH_TO_FILE'),
-         'edit': util.Task('Edit a document',
-                           required='title',
-                           optional=['editor']),
-         'get': util.Task('Download a document',
-                          required=['title', 'folder'],
-                          args_desc='LOCATION'),
-         'list': util.Task('List documents',
-                           optional='title')}
-
 
 class DocsClientCL(gdata.docs.client.DocsClient, util.BaseServiceCL):
   
@@ -120,20 +108,29 @@ class DocsClientCL(gdata.docs.client.DocsClient, util.BaseServiceCL):
 service_class = DocsClientCL
 
 
-def run_task(client, task_name, options, args):
-  """Execute a particular task.
-  
-  Keyword arguments:
-    client: Client to the service being used.
-    task_name: String of the task (e.g. 'post', 'delete').
-    options: Contains all attributes required to perform a task
-    args: Additional arguments passed in on the command line
-    
-  """
-  
-  if task_name == 'list':
-    entries = client.get_doclist(options.title)
-    for e in entries:
-      print e.title.text, '('+e.GetDocumentType()+')' 
-  else:
-    print 'Sorry, not implemented yet.'
+#===============================================================================
+# Each of the following _run_* functions execute a particular task.
+#  
+# Keyword arguments:
+#  client: Client to the service being used.
+#  options: Contains all attributes required to perform the task
+#  args: Additional arguments passed in on the command line, may or may not be
+#        required
+#===============================================================================
+def _run_list(client, options, args):
+  entries = client.get_doclist(options.title)
+  for e in entries:
+    print e.title.text, '('+e.GetDocumentType()+')' 
+
+
+tasks = {'upload': util.Task('Upload a document',
+                             optional=['title', 'folder'],
+                             args_desc='PATH_TO_FILE'),
+         'edit': util.Task('Edit a document',
+                           required='title',
+                           optional=['editor']),
+         'get': util.Task('Download a document',
+                          required=['title', 'folder'],
+                          args_desc='LOCATION'),
+         'list': util.Task('List documents', callback=_run_list,
+                           optional='title')}

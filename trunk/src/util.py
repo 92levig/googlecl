@@ -139,12 +139,14 @@ class Task(object):
   
   """
   
-  def __init__(self, description, required=[], optional=[], login_required=True,
-               args_desc=''):
+  def __init__(self, description, callback=None, required=[], optional=[],
+               login_required=True, args_desc=''):
     """Constructor.
     
     Keyword arguments:
       description: Description of what the task does.
+      callback: Function to use to execute task.
+                (Default None, prints a message instead of running)
       required: Required options for the task. (Default [])
       optional: Optional options for the task. (Default [])
       login_required: If logging in with a username is required to do this task.
@@ -159,6 +161,7 @@ class Task(object):
     if isinstance(optional, basestring):
       optional = [optional]
     self.description = description
+    self.run = callback or self._not_impl
     self.required = required
     self.optional = optional
     self.login_required = login_required
@@ -221,6 +224,10 @@ class Task(object):
         return True
       else:
         return choices
+      
+  def _not_impl(self, *args):
+    """Just use this as a place-holder for Task callbacks."""
+    print 'Sorry, this task is not yet implemented!'
 
 
 def expand_as_command_line(command_string):
@@ -453,5 +460,4 @@ def write_creds(email, password, cred_path):
     # Ensure only the owner of the file has read/write permission
     os.chmod(cred_path, stat.S_IRUSR | stat.S_IWUSR)
     pickle.dump((email, password), cred_file)
-  
   

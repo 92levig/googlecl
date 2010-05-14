@@ -81,12 +81,7 @@ def import_service_module(service):
     Module as if imported via "import <service>.service" statement.
     
   """
-  try:
-    return __import__(service+'.service', globals(), locals(), -1)
-  except ImportError as e:
-    print 'Import Error: ' + str(e)
-    print 'Service package for ' + service + ' does not exist!'
-    return None
+  return __import__(service+'.service', globals(), locals(), -1)
 
 
 def print_help(service=None, tasks=None):
@@ -193,7 +188,7 @@ def run_once(options, args):
     options.encoded_query = urllib.quote_plus(options.query)
   else:
     options.encoded_query = None
-  service_module.run_task(client, task_name, options, args)
+  task.run(client, options, args)
 
 
 def setup_parser():
