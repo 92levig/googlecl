@@ -139,7 +139,9 @@ def _run_post(client, options, args):
 
 
 def _run_delete(client, options, args):
-  client.DeletePost(title=options.title)
+  client.DeletePost(title=options.title,
+                    delete_default=util.config.getboolean('GENERAL',
+                                                          'delete_by_default'))
 
 
 def _run_list(client, options, args):

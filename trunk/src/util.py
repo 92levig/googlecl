@@ -19,7 +19,7 @@ _google_cl_dir = os.path.expanduser('~/.googlecl')
 _preferences_filename = 'prefs'
 _login_filename = 'creds'
 
-
+    
 class BaseServiceCL(GDataService):
 
   """Small extension of gdata.GDataService specific to the command line."""
@@ -357,45 +357,33 @@ def load_preferences():
   Sets up the global ConfigParser.ConfigParser, config.
   
   """
+  
   def set_options():
     """Ensure the config file has all of the configuration options."""
+    # These may be useful to define at the module level, but for now,
+    # keep them here.
+    _picasa = {'access': 'public'}
+    _general = {'regex': False,
+               'delete_by_default': False,
+               'delete_prompt': True,
+               'tags_prompt': False,
+               'use_default_username': True}
+    _docs = {'editor': 'pico',
+            'format': 'txt'}
+    CONFIG_DEFAULTS = {'GENERAL': _general,
+                       'DOCS': _docs,
+                       'PICASA': _picasa}
     made_changes = False
-    if not config.has_option('DEFAULT', 'regex'):
-      config.set('DEFAULT', 'regex', False)
-      made_changes = True
-    if not config.has_option('DEFAULT', 'delete_by_default'):
-      config.set('DEFAULT', 'delete_by_default', False)
-      made_changes = True
-    if not config.has_option('DEFAULT', 'delete_prompt'):
-      config.set('DEFAULT', 'delete_prompt', True)
-      made_changes = True
-    if not config.has_option('DEFAULT', 'tags_prompt'):
-      config.set('DEFAULT', 'tags_prompt', False)
-      made_changes = True
-    if not config.has_option('DEFAULT', 'access'):
-      config.set('DEFAULT', 'access', 'public')
-      made_changes = True
-    if not config.has_option('DEFAULT', 'use_default_username'):
-      config.set('DEFAULT', 'use_default_username', False)
-      made_changes = True
+    for section_name in CONFIG_DEFAULTS.keys():
+      if not config.has_section(section_name):
+        config.add_section(section_name)
+      section = CONFIG_DEFAULTS[section_name]
+      missing_opts = set(section.keys()) - set(config.options(section_name))
+      if missing_opts:
+        made_changes = True
+      for opt in missing_opts:
+        config.set(section_name, opt, section[opt])
     return made_changes
-  
-  def validate_options():
-    """Ensure that the config file's options are valid."""
-    pub_values = ['public', 'private', 'protected']
-    try:
-      config.getboolean('DEFAULT', 'regex')
-      config.getboolean('DEFAULT', 'delete_by_default')
-      config.getboolean('DEFAULT', 'delete_prompt')
-      config.getboolean('DEFAULT', 'tags_prompt')
-      config.getboolean('DEFAULT', 'use_default_username')
-      if not config.get('DEFAULT', 'access') in pub_values: 
-        raise ValueError('"access" must be one of %s' % pub_values)
-    except Exception as e:
-      print 'Error in configuration file:', e
-      return False
-    else:
-      return True
       
   if not os.path.exists(_google_cl_dir):
     os.makedirs(_google_cl_dir)
@@ -407,8 +395,6 @@ def load_preferences():
   if made_changes:
     with open(pref_path, 'w') as pref_file:
       config.write(pref_file)
-        
-  return validate_options()
 
 
 def read_creds():

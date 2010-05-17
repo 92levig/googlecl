@@ -182,12 +182,13 @@ def _run_upload(client, options, args):
   if not args:
     print 'Need to tell me what to upload!'
     return
-  client.upload_docs(args, options.title, options.folder, options.convert)  
+  client.upload_docs(args, options.title, options.folder, options.convert)
 
 
 def _run_edit(client, options, args):
   import subprocess
   from gdata.docs.data import MIMETYPES
+  from gdata.data import MediaSource
   
   if not os.path.exists('/tmp/googlecl'):
     os.mkdir('/tmp/googlecl')
@@ -198,8 +199,8 @@ def _run_edit(client, options, args):
   path = '/tmp/googlecl/' + e.title.text + '.' + options.format 
   client.export(e, path)
   subprocess.call([options.editor, path])
-  mediasource = gdata.data.MediaSource(file_path=path,
-                                       content_type=MIMETYPES[options.format.upper()])
+  mediasource = MediaSource(file_path=path,
+                            content_type=MIMETYPES[options.format.upper()])
   client.Update(e, mediasource)
 
 

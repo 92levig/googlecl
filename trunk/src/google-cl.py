@@ -49,7 +49,7 @@ def fill_out_options(task, options, logged_in):
     
   """
   if not logged_in and task.requires('user') and not options.user:
-    if util.config.getboolean('DEFAULT', 'use_default_username'):
+    if util.config.getboolean('GENERAL', 'use_default_username'):
       email, password = util.read_creds()
       if email:
         options.user = email
@@ -159,9 +159,9 @@ def run_once(options, args):
       print_help(task_name, service_module.tasks)
     return
   
-  regex = util.config.getboolean('DEFAULT', 'regex')
-  tags_prompt = util.config.getboolean('DEFAULT', 'tags_prompt')
-  delete_prompt = util.config.getboolean('DEFAULT', 'delete_prompt')
+  regex = util.config.getboolean('GENERAL', 'regex')
+  tags_prompt = util.config.getboolean('GENERAL', 'tags_prompt')
+  delete_prompt = util.config.getboolean('GENERAL', 'delete_prompt')
   
   service_module = import_service_module(service)
   if not service_module:
@@ -243,9 +243,7 @@ def setup_parser():
 
 
 def main():
-  if not util.load_preferences():
-    print 'Invalid preferences, quitting...'
-    return -1
+  util.load_preferences()
   parser = setup_parser()
     
   (options, args) = parser.parse_args()

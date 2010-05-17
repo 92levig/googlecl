@@ -247,7 +247,7 @@ def _run_create(client, options, args):
       options.date = '%i' % (timestamp * 1000)
   
   album = client.InsertAlbum(title=options.title, summary=options.summary, 
-                             access=util.config.get('DEFAULT', 'access'),
+                             access=util.config.get('PICASA', 'access'),
                              timestamp=options.date)
   if args:
     client.InsertPhotoList(album, photo_list=args, tags=options.tags)
@@ -256,7 +256,7 @@ def _run_create(client, options, args):
 def _run_delete(client, options, args):
   client.Delete(title=options.title,
                 query=options.encoded_query,
-                delete_default=util.config.getboolean('DEFAULT',
+                delete_default=util.config.getboolean('GENERAL',
                                                       'delete_by_default'))
 
 
