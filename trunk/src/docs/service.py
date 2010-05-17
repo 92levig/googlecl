@@ -13,7 +13,7 @@ Upload a document:
   docs upload --folder "Some folder" path_to_doc
   
 Edit a document in your word editor:
-  docs edit --title "Grocery List" --editor vim (editor also set in prefs
+  docs edit --title "Grocery List" --editor vim (editor also set in prefs)
   
 Download docs:
   docs get --folder "Some folder"
@@ -185,11 +185,29 @@ def _run_upload(client, options, args):
   client.upload_docs(args, options.title, options.folder, options.convert)  
 
 
+def _run_edit(client, options, args):
+  import subprocess
+  from gdata.docs.data import MIMETYPES
+  
+  if not os.path.exists('/tmp/googlecl'):
+    os.mkdir('/tmp/googlecl')
+  entries = client.get_doclist(options.title)
+  if len(entries) > 1:
+    print 'More than one match, only editing the first result.'
+  e = entries[0]
+  path = '/tmp/googlecl/' + e.title.text + '.' + options.format 
+  client.export(e, path)
+  subprocess.call([options.editor, path])
+  mediasource = gdata.data.MediaSource(file_path=path,
+                                       content_type=MIMETYPES[options.format.upper()])
+  client.Update(e, mediasource)
+
+
 tasks = {'upload': util.Task('Upload a document', callback=_run_upload,
                              optional=['title', 'folder', 'no-convert'],
                              args_desc='PATH_TO_FILE'),
          'edit': util.Task('Edit a document',
-                           required='title',
+                           required=['title', 'format', 'editor'],
                            optional=['editor']),
          'get': util.Task('Download a document',
                           required=['title', 'folder'],

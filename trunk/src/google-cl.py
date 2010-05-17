@@ -209,9 +209,15 @@ def setup_parser():
   parser.add_option('-d', '--date', dest='date',
                     help='Date of the album in MM/DD/YYYY format.' + 
                     ' If omitted, uses today.')
+  parser.add_option('--editor', dest='editor',
+                    default='pico',
+                    help='Docs only - editor to use on a file.')
   parser.add_option('-f', '--folder', dest='folder',
                     help='Docs only - specify folder(s) to upload to '+ 
                     '/ search in.')
+  parser.add_option('--format', dest='format',
+                    default = 'txt',
+                    help='Docs only - format to download documents as.')
   parser.add_option('-n', '--title', dest='title',
                     help='Title of the item')
   parser.add_option('--no-convert', dest='convert',
