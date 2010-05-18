@@ -43,7 +43,18 @@ class BloggerServiceCL(util.BaseServiceCL):
       control.draft = atom.Draft(text='yes')
       entry.control = control
     self.Post(entry, '/feeds/' + self.blog_id + '/posts/default')
-  
+
+  def IsTokenValid(self):
+    """Check that the token being used is valid."""
+    if util.BaseServiceCL.IsTokenValid(self, '/feeds/default/blogs'):
+      feed = self.Get('/feeds/default/blogs')
+      self_link = feed.entry[0].GetSelfLink()
+      if self_link:
+        self.blog_id = self_link.href.split('/')[-1]
+      return True
+    else:
+      return False
+
   def DeletePost(self, title, delete_default=False):
     """Delete post(s) based on a title."""
     to_delete = self.GetPosts(title)

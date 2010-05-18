@@ -188,7 +188,11 @@ class PhotosServiceCL(PhotosService, util.BaseServiceCL):
         print 'Failed to upload %s. (%s: %s)' % (file, e.reason, e.body) 
         failures.append(file)   
     return failures
-      
+
+  def IsTokenValid(self):
+    """Check that the token being used is valid."""
+    return util.BaseServiceCL.IsTokenValid(self, '/data/feed/api/user/default')
+
   def TagPhotos(self, photo_entries, tags):
     """Add or remove tags on a list of photos.
     

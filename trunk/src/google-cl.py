@@ -177,10 +177,20 @@ def run_once(options, args):
     return
   
   if task.login_required:
-    util.try_login(client, options.user, options.password)
+    token = util.read_auth_token(service)
+    if token:
+      client.SetClientLoginToken(token)
+      if client.IsTokenValid():
+        client.logged_in = True
+      else:
+        util.remove_auth_token(service)
     if not client.logged_in:
-      print 'Failed to log on!'
-      return
+      util.try_login(client, options.user, options.password)
+      if client.logged_in:
+        util.write_auth_token(service, client.GetClientLoginToken())
+      else:
+        print 'Failed to log on!'
+        return
   
   fill_out_options(task, options, client.logged_in)
   

@@ -11,15 +11,16 @@ import os
 import pickle
 import re
 import stat
-from gdata.service import GDataService, BadAuthentication, CaptchaRequired
+from gdata.service import GDataService, BadAuthentication, CaptchaRequired, RequestError
 
 
 config = ConfigParser.ConfigParser()
 _google_cl_dir = os.path.expanduser('~/.googlecl')
 _preferences_filename = 'prefs'
 _login_filename = 'creds'
+_auth_tokens_filename = 'auths'
 
-    
+
 class BaseServiceCL(GDataService):
 
   """Small extension of gdata.GDataService specific to the command line."""
@@ -78,6 +79,27 @@ class BaseServiceCL(GDataService):
     else:
       entries = [entry for entry in f.entry if title == entry.title.text]
     return entries
+
+  def IsTokenValid(self, test_uri):
+    """Check that the token being used is valid.
+    
+    Keyword arguments:
+      test_uri: URI to pass to self.Get().
+      
+    Returns:
+      True if Get was successful, False if Get raised an exception with the
+      string 'Token invalid' in its body, and raises any other exceptions.
+    
+    """
+    try:
+      self.Get(test_uri)
+    except RequestError as e:
+      if e.args[0]['body'].find('Token invalid') != -1:
+        return False
+      else:
+        raise
+    else:
+      return True
   
   def Login(self, email, password):
     """Extends programmatic login.
@@ -107,7 +129,7 @@ class BaseServiceCL(GDataService):
       print 'Too many failed logins; Captcha required.'
     else:
       self.logged_in = True
-  
+
   def set_params(self, regex=False, tags_prompt=False, delete_prompt=True):
     """Set constructor and basic parameters.
     
@@ -121,7 +143,7 @@ class BaseServiceCL(GDataService):
               
     """
     self.source = 'GoogleCL'
-    
+    self.client_id = 'GoogleCL'
     self.logged_in = False
     self.use_regex = regex
     self.prompt_for_tags = tags_prompt
@@ -409,6 +431,49 @@ def read_creds():
   return (email, password)
 
 
+def read_auth_token(service):
+  """Try to read an authorization token from a file.
+  
+  Keyword arguments:
+    service: Service the token is for. E.g. picasa, docs, blogger.
+  
+  Returns:
+    The authorization token, if it exists. If there is no authorization token,
+    return NoneType.
+  
+  """
+  token_path = os.path.join(_google_cl_dir, _auth_tokens_filename)
+  if os.path.exists(token_path):
+    with open(token_path, 'r') as token_file:
+      token_dict = pickle.load(token_file)
+    try:
+      token = token_dict[service.lower()]
+    except KeyError:
+      print 'No token for ' + service
+      return None
+    else:
+      return token
+  else:
+    return None
+
+
+def remove_auth_token(service):
+  """Remove an auth token for a particular service."""
+  token_path = os.path.join(_google_cl_dir, _auth_tokens_filename)
+  success = False
+  if os.path.exists(token_path):
+    with open(token_path, 'r+') as token_file:
+      token_dict = pickle.load(token_file)
+      try:
+        del token_dict[service.lower()]
+      except KeyError:
+        print 'No token for ' + service
+      else:
+        pickle.dump(token_dict, token_file)
+        success = True
+  return success
+
+
 def try_login(client, email=None, password=None):
   """Try to log into a service via the client.
   
@@ -440,10 +505,29 @@ def try_login(client, email=None, password=None):
     write_creds(email, password, cred_path)
 
 
+def write_auth_token(service, token):
+  """Write an authorization token to a file.
+  
+  Keyword arguments:
+    service: Service the token is for. E.g. picasa, docs, blogger.
+  
+  """
+  token_path = os.path.join(_google_cl_dir, _auth_tokens_filename)
+  if os.path.exists(token_path):
+    with open(token_path, 'r') as token_file:
+      token_dict = pickle.load(token_file)
+  else:
+    token_dict = {}
+  token_dict[service] = token 
+  with open(token_path, 'w') as token_file:
+    # Ensure only the owner of the file has read/write permission
+    os.chmod(token_path, stat.S_IRUSR | stat.S_IWUSR)
+    pickle.dump(token_dict, token_file)
+
+
 def write_creds(email, password, cred_path):
   """Write the email/password to the credentials file."""
   with open(cred_path, 'w') as cred_file:
     # Ensure only the owner of the file has read/write permission
     os.chmod(cred_path, stat.S_IRUSR | stat.S_IWUSR)
     pickle.dump((email, password), cred_file)
-  

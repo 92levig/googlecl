@@ -34,7 +34,7 @@ class YouTubeServiceCL(YouTubeService, util.BaseServiceCL):
     """ 
     YouTubeService.__init__(self)
     util.BaseServiceCL.set_params(self, regex, tags_prompt, delete_prompt)
-    
+
   def build_category(self, category):
     """Build a single-item list of a YouTube category.
     
@@ -90,9 +90,13 @@ class YouTubeServiceCL(YouTubeService, util.BaseServiceCL):
     return self.GetEntries(uri,
                            title,
                            converter=gdata.youtube.YouTubeVideoFeedFromString)
-  
+
+  def IsTokenValid(self):
+    """Check that the token being used is valid."""
+    return util.BaseServiceCL.IsTokenValid(self, '/feeds/api/users/default')
+
   def Login(self, email, password):
-    """Try to use programmatic login to log into Picasa.
+    """Try to use programmatic login to log into YouTube.
     
     Keyword arguments:
       email: Email account to log in with. If no domain is specified, gmail.com
@@ -109,10 +113,7 @@ class YouTubeServiceCL(YouTubeService, util.BaseServiceCL):
     with open(os.path.expanduser('~/google/devkey'), 'r') as devkey_file:
       #Strip the !*&!@# newline character
       devkey = devkey_file.read().strip()
-     
     self.developer_key = devkey
-    self.client_id = 'GoogleCL'
-    
     util.BaseServiceCL.Login(self, email, password)
 
   def PostVideos(self, paths, category, title=None, desc=None, tags=None,

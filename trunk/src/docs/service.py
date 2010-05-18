@@ -79,6 +79,12 @@ class DocsClientCL(gdata.docs.client.DocsClient, util.BaseServiceCL):
       entries = [entry for entry in f.entry if title == entry.title.text]
     return entries
   
+  def is_token_valid(self):
+    """Check that the token being used is valid."""
+    return util.BaseServiceCL.IsTokenValid(self, '/feeds/default/private/full')
+  
+  IsTokenValid = is_token_valid
+
   def login(self, email, password):
     """Log in to the docs service.
     
