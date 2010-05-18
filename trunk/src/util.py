@@ -11,7 +11,7 @@ import os
 import pickle
 import re
 import stat
-from gdata.service import GDataService, BadAuthentication, CaptchaRequired, RequestError
+import gdata.service
 
 
 config = ConfigParser.ConfigParser()
@@ -21,7 +21,7 @@ _login_filename = 'creds'
 _auth_tokens_filename = 'auths'
 
 
-class BaseServiceCL(GDataService):
+class BaseServiceCL(gdata.service.GDataService):
 
   """Small extension of gdata.GDataService specific to the command line."""
 
@@ -50,7 +50,7 @@ class BaseServiceCL(GDataService):
         delete = True
       
       if delete:
-        GDataService.Delete(self, item.GetEditLink().href)
+        gdata.service.GDataService.Delete(self, item.GetEditLink().href)
         
   def GetEntries(self, uri, title=None, converter=None):
     """Get a list of entries from a feed uri.
@@ -93,7 +93,7 @@ class BaseServiceCL(GDataService):
     """
     try:
       self.Get(test_uri)
-    except RequestError as e:
+    except gdata.service.RequestError as e:
       if e.args[0]['body'].find('Token invalid') != -1:
         return False
       else:
@@ -123,9 +123,9 @@ class BaseServiceCL(GDataService):
     
     try:
       self.ProgrammaticLogin()
-    except BadAuthentication as e:
+    except gdata.service.BadAuthentication as e:
       print e
-    except CaptchaRequired:
+    except gdata.service.CaptchaRequired:
       print 'Too many failed logins; Captcha required.'
     else:
       self.logged_in = True
@@ -189,7 +189,8 @@ class Task(object):
     self.login_required = login_required
     # Take the "required" list, join all the terms by the following rules:
     # 1) if the term is a string, leave it.
-    # 2) if the term is a list, replace it to the rest with '(a OR b OR ...)' where
+    # 2) if the term is a list, join it with the ' OR ' string.
+    # Then join the resulting list with ' AND '.
     if self.required:
       req_str = ' AND '.join(['('+' OR '.join(a)+')' if isinstance(a, list) \
                               else a for a in self.required])
@@ -231,7 +232,8 @@ class Task(object):
     
     """
     # Get a list of all the sublists that contain attribute
-    choices = [sublist for sublist in self.required if isinstance(sublist, list) and attribute in sublist]
+    choices = [sublist for sublist in self.required
+               if isinstance(sublist, list) and attribute in sublist]
     if options:
       if attribute in self.required:
         return not bool(getattr(options, attribute))
