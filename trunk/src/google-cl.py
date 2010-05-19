@@ -179,7 +179,10 @@ def run_once(options, args):
   if task.login_required:
     token = util.read_auth_token(service)
     if token:
-      client.SetClientLoginToken(token)
+      try:
+        client.SetClientLoginToken(token)
+      except AttributeError:
+        client.auth_token = token
       if client.IsTokenValid():
         client.logged_in = True
       else:
@@ -187,7 +190,11 @@ def run_once(options, args):
     if not client.logged_in:
       util.try_login(client, options.user, options.password)
       if client.logged_in:
-        util.write_auth_token(service, client.GetClientLoginToken())
+        try:
+          token = client.GetClientLoginToken()
+        except AttributeError:
+          token = client.auth_token
+        util.write_auth_token(service, token)
       else:
         print 'Failed to log on!'
         return

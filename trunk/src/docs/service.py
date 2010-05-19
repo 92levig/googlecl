@@ -31,7 +31,7 @@ import util
 from gdata.client import BadAuthentication, CaptchaChallenge
 
 
-class DocsClientCL(gdata.docs.client.DocsClient, util.BaseServiceCL):
+class DocsClientCL(gdata.docs.client.DocsClient):
   
   """Extends gdata.docs.client.DocsClient for the command line.
   
@@ -52,11 +52,11 @@ class DocsClientCL(gdata.docs.client.DocsClient, util.BaseServiceCL):
                      deleting an album or photo. (Default True)
               
     """ 
-    # Seems like a bug to need this. But it stops "No attribute <blah>"
-    # exceptions.
-    util.BaseServiceCL.__init__(self)
     gdata.docs.client.DocsClient.__init__(self, source='GoogleCL')
-    util.BaseServiceCL.set_params(self, regex, tags_prompt, delete_prompt)
+    self.logged_in = False
+    self.use_regex = regex
+    self.prompt_for_tags = tags_prompt
+    self.prompt_for_delete = delete_prompt
 
   def get_docs(self, base_path, entries, default_format='txt'):
     """Download documents.
@@ -139,7 +139,15 @@ class DocsClientCL(gdata.docs.client.DocsClient, util.BaseServiceCL):
   
   def is_token_valid(self):
     """Check that the token being used is valid."""
-    return util.BaseServiceCL.IsTokenValid(self, '/feeds/default/private/full')
+    try:
+      self.Get('/feeds/default/private/full')
+    except gdata.service.RequestError as e:
+      if e.args[0]['body'].find('Token invalid') != -1:
+        return False
+      else:
+        raise
+    else:
+      return True
   
   IsTokenValid = is_token_valid
 
