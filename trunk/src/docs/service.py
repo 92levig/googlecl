@@ -70,18 +70,7 @@ class DocsClientCL(gdata.docs.client.DocsClient):
     
     """
     for entry in entries:
-      type = entry.GetDocumentType() 
-      if type == gdata.docs.data.SPREADSHEET_LABEL:
-        format = util.config.get('DOCS', 'spreadsheet_format')
-      elif type == gdata.docs.data.DOCUMENT_LABEL:
-        format = util.config.get('DOCS', 'document_format')
-      elif type == gdata.docs.data.PDF_LABEL:
-        format = 'pdf'
-      elif type == gdata.docs.data.PRESENTATION_LABEL:
-        format = util.config.get('DOCS', 'document_format')
-      else:
-        print 'Unexpected type: ' + type
-        format = default_format
+      format = self.get_extension(entry)
       path = os.path.join(base_path, entry.title.text + '.' + format)
       print 'Downloading ' + entry.title.text + ' to ' + path
       try:
@@ -136,7 +125,23 @@ class DocsClientCL(gdata.docs.client.DocsClient):
         entries = [entry for entry in f.entry
                    if title == entry.title.text]
     return entries
-  
+
+  def get_extension(self, entry):
+    """Return file extension based on entry type and preferences file."""
+    type = entry.GetDocumentType() 
+    if type == gdata.docs.data.SPREADSHEET_LABEL:
+      return util.config.get('DOCS', 'spreadsheet_format')
+    elif type == gdata.docs.data.DOCUMENT_LABEL:
+      return util.config.get('DOCS', 'document_format')
+    elif type == gdata.docs.data.PDF_LABEL:
+      return 'pdf'
+    elif type == gdata.docs.data.PRESENTATION_LABEL:
+      return util.config.get('DOCS', 'document_format')
+    else:
+      return util.config.get('DOCS', 'default_format')
+
+  GetExtension = get_extension
+
   def is_token_valid(self):
     """Check that the token being used is valid."""
     try:
@@ -280,11 +285,19 @@ def _run_edit(client, options, args):
   if len(entries) > 1:
     print 'More than one match, only editing the first result.'
   e = entries[0]
-  path = '/tmp/googlecl/' + e.title.text + '.' + options.format 
+  format = options.format or client.get_extension(e)
+  path = '/tmp/googlecl/' + e.title.text + '.' + format
   client.export(e, path)
   subprocess.call([options.editor, path])
-  mediasource = MediaSource(file_path=path,
-                            content_type=MIMETYPES[options.format.upper()])
+  try:
+    content_type = MIMETYPES[format.upper()]
+  except KeyError:
+    print 'Could not find mimetype for ' + format
+    while format not in MIMETYPES.keys():
+      format = raw_input('Please enter one of ' + MIMETYPES.keys() + 
+                         ' for a content type to upload as.')
+    content_type = MIMETYPES[format]
+  mediasource = MediaSource(file_path=path, content_type=content_type)
   client.Update(e, mediasource)
 
 

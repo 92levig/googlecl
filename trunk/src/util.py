@@ -395,7 +395,8 @@ def load_preferences():
     _docs = {'editor': 'pico',
             'document_format': 'txt',
             'spreadsheet_format': 'xls',
-            'presentation_format': 'ppt'}
+            'presentation_format': 'ppt',
+            'default_format': 'txt'}
     CONFIG_DEFAULTS = {'GENERAL': _general,
                        'DOCS': _docs,
                        'PICASA': _picasa}
