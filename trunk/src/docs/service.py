@@ -57,26 +57,84 @@ class DocsClientCL(gdata.docs.client.DocsClient, util.BaseServiceCL):
     util.BaseServiceCL.__init__(self)
     gdata.docs.client.DocsClient.__init__(self, source='GoogleCL')
     util.BaseServiceCL.set_params(self, regex, tags_prompt, delete_prompt)
-  
-  def get_doclist(self, title=None):
+
+  def get_docs(self, base_path, entries, default_format='txt'):
+    """Download documents.
+    
+    Keyword arguments:
+      base_path: The path to download files to. This plus an entry's title plus
+                 its format-specific extension will form the complete path.
+      entries: List of DocEntry items representing the files to download.
+      default_format: The extension to use if the type of the entry is not
+                      defined or unknown. (Default 'txt').
+    
+    """
+    for entry in entries:
+      type = entry.GetDocumentType() 
+      if type == gdata.docs.data.SPREADSHEET_LABEL:
+        format = util.config.get('DOCS', 'spreadsheet_format')
+      elif type == gdata.docs.data.DOCUMENT_LABEL:
+        format = util.config.get('DOCS', 'document_format')
+      elif type == gdata.docs.data.PDF_LABEL:
+        format = 'pdf'
+      elif type == gdata.docs.data.PRESENTATION_LABEL:
+        format = util.config.get('DOCS', 'document_format')
+      else:
+        print 'Unexpected type: ' + type
+        format = default_format
+      path = os.path.join(base_path, entry.title.text + '.' + format)
+      print 'Downloading ' + entry.title.text + ' to ' + path
+      try:
+        self.export(entry, path)
+      except Exception as e:
+        print e.args[0]['body']
+        print 'Download of ' + entry.title.text + ' failed'
+
+  GetDocs = get_docs
+
+  def get_doclist(self, title=None, folder=None):
     """Get a list of document entries from a feed.
     
     Keyword arguments:
       title: String to use when looking for entries to return. Will be compared
              to entry.title.text, using regular expressions if self.use_regex.
-             (Default None for all entries from feed)
+             (Default None for all entries from feed).
+      folder: String to match against folder titles. Only files found in folders
+              with matching titles will be returned. (Default None for all
+              folders).
                  
     Returns:
       List of entries.
       
     """
-    f = gdata.docs.client.DocsClient.get_doclist(self)
-    if not title:
-      return f.entry
-    if self.use_regex:
-      entries = [entry for entry in f.entry if re.match(title,entry.title.text)]
-    else:
-      entries = [entry for entry in f.entry if title == entry.title.text]
+    if folder:
+      feed = gdata.docs.client.DocsClient.get_doclist(self,
+                                    uri='/feeds/default/private/full/-/folder')
+      entries = []
+      for f in feed.entry:
+        # Skip folders that do not match the name we're looking for
+        if ((self.use_regex and re.match(folder,f.title.text)) or
+            (not self.use_regex and folder == f.title.text)):
+          contents = gdata.docs.client.DocsClient.get_doclist(self,
+                                                              uri=f.content.src)
+          if not title:
+            entries.extend(contents.entry)
+          elif self.use_regex:
+            entries.extend([entry for entry in contents.entry
+                            if re.match(title,entry.title.text)])
+          else:
+            entries.extend([entry for entry in contents.entry
+                            if title == entry.title.text])
+    else: 
+      f = gdata.docs.client.DocsClient.get_doclist(self)
+      if not title:
+        return f.entry
+      if self.use_regex:
+        entries = [entry for entry in f.entry
+                   if re.match(title,entry.title.text)]
+      else:
+        entries = [entry for entry in f.entry
+                   if title == entry.title.text]
     return entries
   
   def is_token_valid(self):
@@ -178,6 +236,18 @@ service_class = DocsClientCL
 #  args: Additional arguments passed in on the command line, may or may not be
 #        required
 #===============================================================================
+def _run_get(client, options, args):
+  if not args:
+    path = os.getcwd()
+  else:
+    path = args[0]
+    if not os.path.exists(path):
+      print 'Path ' + path + ' does not exist!'
+      return
+  entries = client.get_doclist(options.title, options.folder)
+  client.get_docs(path, entries)
+
+
 def _run_list(client, options, args):
   entries = client.get_doclist(options.title)
   for e in entries:
@@ -216,8 +286,8 @@ tasks = {'upload': util.Task('Upload a document', callback=_run_upload,
          'edit': util.Task('Edit a document',
                            required=['title', 'format', 'editor'],
                            optional=['editor']),
-         'get': util.Task('Download a document',
-                          required=['title', 'folder'],
+         'get': util.Task('Download a document', callback=_run_get,
+                          required=[['title', 'folder']],
                           args_desc='LOCATION'),
          'list': util.Task('List documents', callback=_run_list,
                            optional='title')}

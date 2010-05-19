@@ -226,7 +226,6 @@ def setup_parser():
                     help='Docs only - specify folder(s) to upload to '+ 
                     '/ search in.')
   parser.add_option('--format', dest='format',
-                    default = 'txt',
                     help='Docs only - format to download documents as.')
   parser.add_option('-n', '--title', dest='title',
                     help='Title of the item')

@@ -393,7 +393,9 @@ def load_preferences():
                'tags_prompt': False,
                'use_default_username': True}
     _docs = {'editor': 'pico',
-            'format': 'txt'}
+            'document_format': 'txt',
+            'spreadsheet_format': 'xls',
+            'presentation_format': 'ppt'}
     CONFIG_DEFAULTS = {'GENERAL': _general,
                        'DOCS': _docs,
                        'PICASA': _picasa}
