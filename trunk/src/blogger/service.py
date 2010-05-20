@@ -9,6 +9,7 @@ import atom
 import gdata
 import os
 import util
+import blogger
 
 
 class BloggerServiceCL(util.BaseServiceCL):
@@ -160,7 +161,7 @@ def _run_list(client, options, args):
   if args:
     style_list = args[0].split(',')
   else:
-    style_list = util.config.get('GENERAL', 'default_list_style').split(',')
+    style_list = util.get_list_style(blogger.SECTION_HEADER)
   for entry in entries:
     print util.entry_to_string(entry, style_list)
 

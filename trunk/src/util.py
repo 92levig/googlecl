@@ -254,7 +254,7 @@ class Task(object):
     print 'Sorry, this task is not yet implemented!'
 
 
-def entry_to_string(entry, style_list):
+def entry_to_string(entry, style_list, missing_field_value=None):
   """Return a useful string describing a gdata.data.GDEntry.
   
   Keyword arguments:
@@ -275,13 +275,15 @@ def entry_to_string(entry, style_list):
            user's album, 'url-direct' gives a link to the image url.
            If 'url-direct' is specified but is not applicable, 'url-site' is
            placed in its stead, and vice-versa.
+    missing_field_value: If any of the styles for any of the entries are
+                         invalid or undefined, put this in its place
+                         Default None to use "missing_field_value" config
+                         option).
   
   """
-  return_string = ''
-  delimiter = ', '
-  for style in style_list:
-    if style == 'title':
-      return_string += entry.title.text
+  def _string_for_style(style, entry):
+    if style == 'title' or style == 'name':
+      return entry.title.text
     elif style[:3] == 'url':
       substyle = style[4:] or config.get('GENERAL', 'default_url_style')
       try:
@@ -292,15 +294,37 @@ def entry_to_string(entry, style_list):
         else:
           raise
       if substyle == 'direct':
-        return_string += entry.content.src or href
+        return entry.content.src or href
       else:
-        return_string += href or entry.content.src or ''
-    elif style == 'author':
+        return href or entry.content.src
+    elif style == 'author' and entry.author:
       author_string = str([a.name.text for a in entry.author])[1:-1]
       author_string = author_string.replace("'", '')
-      return_string += author_string
+      return author_string
+    elif style == 'email':
+      if hasattr(entry, 'email'):
+        email_string = str([e.address for e in entry.email])[1:-1]
+        email_string = email_string.replace("'", '')
+      else:
+        email_string = ''
+      return email_string
     else:
       raise ValueError("'Unknown listing style: '" + style + "'")
+
+  return_string = ''
+  delimiter = ', '
+  missing_field_value = missing_field_value or config.get('GENERAL',
+                                                          'missing_field_value')
+  for style in style_list:
+    try:
+      return_string += _string_for_style(style, entry) or missing_field_value
+    except ValueError as e:
+      print e.args + ' (Did not add entry for style ' + style + ')'
+    except AttributeError as e:
+      if e.args[0].find("'NoneType' object has no attribute") != -1:
+        return_string += missing_field_value
+      else:
+        raise 
     return_string += delimiter
   return return_string.rstrip(delimiter)
 
@@ -426,6 +450,15 @@ def generate_tag_sets(tags):
   return (remove_set, add_set, replace_tags)
 
 
+def get_list_style(section):
+  try:
+    return config.get(section, 'default_list_style').split(',')
+  except ConfigParser.NoSectionError:
+    return config.get('GENERAL', 'default_list_style').split(',')
+  except ConfigParser.NoOptionError:
+    return config.get('GENERAL', 'default_list_style').split(',')
+
+
 def load_preferences():
   """Load preferences / configuration file.
   
@@ -433,6 +466,8 @@ def load_preferences():
   
   """
   def set_options():
+    import picasa
+    import docs
     """Ensure the config file has all of the configuration options."""
     # These may be useful to define at the module level, but for now,
     # keep them here.
@@ -443,15 +478,16 @@ def load_preferences():
                'tags_prompt': False,
                'use_default_username': True,
                'default_url_style': 'site',
-               'default_list_style': 'title,url-site'}
+               'default_list_style': 'title,url-site',
+               'missing_field_value': 'N/A'}
     _docs = {'editor': 'pico',
             'document_format': 'txt',
             'spreadsheet_format': 'xls',
             'presentation_format': 'ppt',
             'default_format': 'txt'}
     CONFIG_DEFAULTS = {'GENERAL': _general,
-                       'DOCS': _docs,
-                       'PICASA': _picasa}
+                       docs.SECTION_HEADER: _docs,
+                       picasa.SECTION_HEADER: _picasa}
     made_changes = False
     for section_name in CONFIG_DEFAULTS.keys():
       if not config.has_section(section_name):

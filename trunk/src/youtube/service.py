@@ -9,6 +9,7 @@ from gdata.youtube.service import YouTubeService
 import gdata.youtube
 import os
 import util
+import youtube
 
 
 class YouTubeServiceCL(YouTubeService, util.BaseServiceCL):
@@ -195,7 +196,7 @@ def _run_list(client, options, args):
   if args:
     style_list = args[0].split(',')
   else:
-    style_list = util.config.get('GENERAL', 'default_list_style').split(',')
+    style_list = util.get_list_style(youtube.SECTION_HEADER)
   for vid in entries:
     print util.entry_to_string(vid, style_list)
 
