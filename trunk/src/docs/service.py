@@ -268,7 +268,7 @@ def _run_list(client, options, args):
   else:
     style_list = util.get_list_style(docs.SECTION_HEADER)
   for e in entries:
-    print util.entry_to_string(e, style_list)
+    print util.entry_to_string(e, style_list, delimiter=options.delimiter)
 
 
 def _run_upload(client, options, args):

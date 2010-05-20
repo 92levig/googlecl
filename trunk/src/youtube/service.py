@@ -198,7 +198,7 @@ def _run_list(client, options, args):
   else:
     style_list = util.get_list_style(youtube.SECTION_HEADER)
   for vid in entries:
-    print util.entry_to_string(vid, style_list)
+    print util.entry_to_string(vid, style_list, delimiter=options.delimiter)
 
 
 def _run_post(client, options, args):

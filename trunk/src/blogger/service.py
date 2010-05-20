@@ -163,7 +163,7 @@ def _run_list(client, options, args):
   else:
     style_list = util.get_list_style(blogger.SECTION_HEADER)
   for entry in entries:
-    print util.entry_to_string(entry, style_list)
+    print util.entry_to_string(entry, style_list, delimiter=options.delimiter)
 
 
 def _run_tag(client, options, args):

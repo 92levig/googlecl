@@ -226,6 +226,8 @@ def setup_parser():
   parser.add_option('-d', '--date', dest='date',
                     help='Date of the album in MM/DD/YYYY format.' + 
                     ' If omitted, uses today.')
+  parser.add_option('--delimiter', dest='delimiter',
+                    help='Specify a delimiter for the output of the list task.')
   parser.add_option('--editor', dest='editor',
                     default='pico',
                     help='Docs only - editor to use on a file.')

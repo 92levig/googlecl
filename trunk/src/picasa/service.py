@@ -274,7 +274,7 @@ def _run_list(client, options, args):
   else:
     style_list = util.get_list_style(picasa.SECTION_HEADER)
   for item in entries:
-    print util.entry_to_string(item, style_list)
+    print util.entry_to_string(item, style_list, delimiter=options.delimiter)
 
 
 def _run_post(client, options, args):

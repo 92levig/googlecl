@@ -254,7 +254,8 @@ class Task(object):
     print 'Sorry, this task is not yet implemented!'
 
 
-def entry_to_string(entry, style_list, missing_field_value=None):
+def entry_to_string(entry, style_list, missing_field_value=None,
+                    delimiter=None):
   """Return a useful string describing a gdata.data.GDEntry.
   
   Keyword arguments:
@@ -277,8 +278,10 @@ def entry_to_string(entry, style_list, missing_field_value=None):
            placed in its stead, and vice-versa.
     missing_field_value: If any of the styles for any of the entries are
                          invalid or undefined, put this in its place
-                         Default None to use "missing_field_value" config
+                         (Default None to use "missing_field_value" config
                          option).
+    delimiter: String to use as the delimiter between fields. (Default None to
+               use the "list_delimiter" config option).
   
   """
   def _string_for_style(style, entry):
@@ -312,7 +315,7 @@ def entry_to_string(entry, style_list, missing_field_value=None):
       raise ValueError("'Unknown listing style: '" + style + "'")
 
   return_string = ''
-  delimiter = ', '
+  delimiter = delimiter or config.get('GENERAL', 'list_delimiter')
   missing_field_value = missing_field_value or config.get('GENERAL',
                                                           'missing_field_value')
   for style in style_list:
@@ -479,7 +482,8 @@ def load_preferences():
                'use_default_username': True,
                'default_url_style': 'site',
                'default_list_style': 'title,url-site',
-               'missing_field_value': 'N/A'}
+               'missing_field_value': 'N/A',
+               'list_delimiter': ','}
     _docs = {'editor': 'pico',
             'document_format': 'txt',
             'spreadsheet_format': 'xls',
