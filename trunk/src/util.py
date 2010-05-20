@@ -75,7 +75,8 @@ class BaseServiceCL(gdata.service.GDataService):
     if not title:
       return f.entry
     if self.use_regex:
-      entries = [entry for entry in f.entry if re.match(title,entry.title.text)]
+      entries = [entry for entry in f.entry 
+                 if entry.title.text and re.match(title,entry.title.text)]
     else:
       entries = [entry for entry in f.entry if title == entry.title.text]
     return entries
