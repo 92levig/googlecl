@@ -1,5 +1,7 @@
+1. Introduction
 Google CL aims to bring management of your Google services to the command line. Currently, the only Google services supported are Picasa, Blogger, and YouTube.
 
+2. Example usage
 Here are some examples for this wonderful tool!
 
 Launch interactive mode. The only difference between this mode and the command line is that you don't have to keep typing "google-cl.py"
@@ -28,3 +30,19 @@ Post your latest film endeavor to YouTube
 Tag all your robot videos as such
 > youtube tag -n ".*robot.*" -t robot
 
+List the albums that your friend has (See below for more info on the list task)
+> picasa list title,url -u friend.username
+
+3. The 'list' task
+The list task can be given additional arguments to specify what exactly is being listed. For example,
+
+> <service> list style1,style2,style3
+
+will output those styles, in that order, with a comma delimiter. Valid values for <style1> etc. are:
+	'title' - title of the entry.
+	'url' - treated as 'url-direct' or 'url-site' depending on setting in preferences file.
+	'url-site' - url of the site associated with the entry.
+	'url-direct' - url directly to the resource.
+	'author' - author(s) of the entry.
+
+The difference between 'url-site' and 'url-direct' is best exemplified by a picasa PhotoEntry: 'url-site' gives a link to the photo in the user's album, 'url-direct' gives a link to the image url. If 'url-direct' is specified but is not applicable, 'url-site' is placed in its stead, and vice-versa.

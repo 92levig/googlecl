@@ -254,6 +254,57 @@ class Task(object):
     print 'Sorry, this task is not yet implemented!'
 
 
+def entry_to_string(entry, style_list):
+  """Return a useful string describing a gdata.data.GDEntry.
+  
+  Keyword arguments:
+    entry: Entry to convert to string.
+    style: List of strings that describe what the return string should be
+           composed of. Valid style strings are:
+           'title' - title of the entry (entry.title.text).
+           'url' - treated as 'url-direct' or 'url-site' depending on
+                   setting in preferences file.
+           'url-site' - url of the site associated with the entry
+                        (entry.GetHtmlLink().href).
+           'url-direct' - url directly to the resource 
+                          (entry.content.src).
+           'author' - author of the entry 
+                      (e.name.text for every e in entry.author).
+           The difference between url-site and url-direct is best exemplified
+           by a picasa PhotoEntry: 'url-site' gives a link to the photo in the
+           user's album, 'url-direct' gives a link to the image url.
+           If 'url-direct' is specified but is not applicable, 'url-site' is
+           placed in its stead, and vice-versa.
+  
+  """
+  return_string = ''
+  delimiter = ', '
+  for style in style_list:
+    if style == 'title':
+      return_string += entry.title.text
+    elif style[:3] == 'url':
+      substyle = style[4:] or config.get('GENERAL', 'default_url_style')
+      try:
+        href = entry.GetHtmlLink().href
+      except AttributeError:
+        if not entry.GetHtmlLink():
+          href = ''
+        else:
+          raise
+      if substyle == 'direct':
+        return_string += entry.content.src or href
+      else:
+        return_string += href or entry.content.src or ''
+    elif style == 'author':
+      author_string = str([a.name.text for a in entry.author])[1:-1]
+      author_string = author_string.replace("'", '')
+      return_string += author_string
+    else:
+      raise ValueError("'Unknown listing style: '" + style + "'")
+    return_string += delimiter
+  return return_string.rstrip(delimiter)
+
+
 def expand_as_command_line(command_string):
   """Expand a string as if it was entered at the command line.
   
@@ -381,7 +432,6 @@ def load_preferences():
   Sets up the global ConfigParser.ConfigParser, config.
   
   """
-  
   def set_options():
     """Ensure the config file has all of the configuration options."""
     # These may be useful to define at the module level, but for now,
@@ -391,7 +441,9 @@ def load_preferences():
                'delete_by_default': False,
                'delete_prompt': True,
                'tags_prompt': False,
-               'use_default_username': True}
+               'use_default_username': True,
+               'default_url_style': 'site',
+               'default_list_style': 'title,url-site'}
     _docs = {'editor': 'pico',
             'document_format': 'txt',
             'spreadsheet_format': 'xls',

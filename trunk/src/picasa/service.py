@@ -268,8 +268,12 @@ def _run_list(client, options, args):
   entries = client.build_entry_list(user=options.user,
                                     title=options.title,
                                     query=options.encoded_query)
+  if args:
+    style_list = args[0].split(',')
+  else:
+    style_list = util.config.get('GENERAL', 'default_list_style').split(',')
   for item in entries:
-    print item.title.text
+    print util.entry_to_string(item, style_list)
 
 
 def _run_post(client, options, args):

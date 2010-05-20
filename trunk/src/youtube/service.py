@@ -192,8 +192,12 @@ service_class = YouTubeServiceCL
 #===============================================================================
 def _run_list(client, options, args):
   entries = client.GetVideos(title=options.title)
+  if args:
+    style_list = args[0].split(',')
+  else:
+    style_list = util.config.get('GENERAL', 'default_list_style').split(',')
   for vid in entries:
-    print vid.title.text
+    print util.entry_to_string(vid, style_list)
 
 
 def _run_post(client, options, args):

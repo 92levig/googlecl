@@ -64,7 +64,7 @@ class BloggerServiceCL(util.BaseServiceCL):
       util.BaseServiceCL.Delete(self, to_delete, 
                                 entry_type='post',
                                 delete_default=delete_default)
-  
+    
   def GetPosts(self, title=None):
     """Get entries for posts that match a title.
     
@@ -157,8 +157,12 @@ def _run_delete(client, options, args):
 
 def _run_list(client, options, args):
   entries = client.GetPosts(options.title)
+  if args:
+    style_list = args[0].split(',')
+  else:
+    style_list = util.config.get('GENERAL', 'default_list_style').split(',')
   for entry in entries:
-    print entry.title.text
+    print util.entry_to_string(entry, style_list)
 
 
 def _run_tag(client, options, args):

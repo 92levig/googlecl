@@ -263,8 +263,12 @@ def _run_get(client, options, args):
 
 def _run_list(client, options, args):
   entries = client.get_doclist(options.title)
+  if args:
+    style_list = args[0].split(',')
+  else:
+    style_list = util.config.get('GENERAL', 'default_list_style').split(',')
   for e in entries:
-    print e.title.text, '('+e.GetDocumentType()+')' 
+    print util.entry_to_string(e, style_list) 
 
 
 def _run_upload(client, options, args):
