@@ -217,7 +217,7 @@ class DocsClientCL(gdata.docs.client.DocsClient):
     for path in paths:
       filename = os.path.basename(path)
       try:
-        content_type = MIMETYPES[filename.split('.')[1]]
+        content_type = MIMETYPES[filename.split('.')[1].upper()]
       except:
         content_type = 'text/plain'
       print 'Loading ' + path
