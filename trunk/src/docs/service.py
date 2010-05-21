@@ -21,7 +21,9 @@ Download docs:
 Created on May 13, 2010
 
 @author: Tom Miller
+
 """
+import ConfigParser
 import docs
 import gdata.docs.client
 import re
@@ -70,13 +72,13 @@ class DocsClientCL(gdata.docs.client.DocsClient):
     
     """
     for entry in entries:
-      format = self.get_extension(entry)
+      format = _get_extension(entry)
       path = os.path.join(base_path, entry.title.text + '.' + format)
       print 'Downloading ' + entry.title.text + ' to ' + path
       try:
         self.export(entry, path)
       except Exception as e:
-        print e.args[0]['body']
+        print e
         print 'Download of ' + entry.title.text + ' failed'
 
   GetDocs = get_docs
@@ -125,22 +127,6 @@ class DocsClientCL(gdata.docs.client.DocsClient):
         entries = [entry for entry in f.entry
                    if title == entry.title.text]
     return entries
-
-  def get_extension(self, entry):
-    """Return file extension based on entry type and preferences file."""
-    type = entry.GetDocumentType() 
-    if type == gdata.docs.data.SPREADSHEET_LABEL:
-      return util.config.get('DOCS', 'spreadsheet_format')
-    elif type == gdata.docs.data.DOCUMENT_LABEL:
-      return util.config.get('DOCS', 'document_format')
-    elif type == gdata.docs.data.PDF_LABEL:
-      return 'pdf'
-    elif type == gdata.docs.data.PRESENTATION_LABEL:
-      return util.config.get('DOCS', 'document_format')
-    else:
-      return util.config.get('DOCS', 'default_format')
-
-  GetExtension = get_extension
 
   def is_token_valid(self):
     """Check that the token being used is valid."""
@@ -240,6 +226,40 @@ class DocsClientCL(gdata.docs.client.DocsClient):
 service_class = DocsClientCL
 
 
+def _get_extension(entry):
+  """Return file extension based on entry type and preferences file."""
+  type = entry.GetDocumentType()
+  try:
+    if type == gdata.docs.data.SPREADSHEET_LABEL:
+      return util.config.get(docs.SECTION_HEADER, 'spreadsheet_format')
+    elif type == gdata.docs.data.DOCUMENT_LABEL:
+      return util.config.get(docs.SECTION_HEADER, 'document_format')
+    elif type == gdata.docs.data.PDF_LABEL:
+      return 'pdf'
+    elif type == gdata.docs.data.PRESENTATION_LABEL:
+      return util.config.get(docs.SECTION_HEADER, 'presentation_format')
+  except ConfigParser.NoOptionError:
+    pass
+  return util.config.get(docs.SECTION_HEADER, 'default_format')
+
+
+def _get_editor(entry):
+  """Return editor for file based on entry type and preferences file."""
+  type = entry.GetDocumentType()
+  try:
+    if type == gdata.docs.data.SPREADSHEET_LABEL:
+      return util.config.get(docs.SECTION_HEADER, 'spreadsheet_editor')
+    elif type == gdata.docs.data.DOCUMENT_LABEL:
+      return util.config.get(docs.SECTION_HEADER, 'document_editor')
+    elif type == gdata.docs.data.PDF_LABEL:
+      return util.config.get(docs.SECTION_HEADER, 'pdf_editor')
+    elif type == gdata.docs.data.PRESENTATION_LABEL:
+      return util.config.get(docs.SECTION_HEADER, 'presentation_editor')
+  except ConfigParser.NoOptionError:
+    pass
+  return util.config.get(docs.SECTION_HEADER, 'default_editor')
+  
+    
 #===============================================================================
 # Each of the following _run_* functions execute a particular task.
 #  
@@ -289,10 +309,10 @@ def _run_edit(client, options, args):
   if len(entries) > 1:
     print 'More than one match, only editing the first result.'
   e = entries[0]
-  format = options.format or client.get_extension(e)
+  format = options.format or _get_extension(e)
   path = '/tmp/googlecl/' + e.title.text + '.' + format
   client.export(e, path)
-  subprocess.call([options.editor, path])
+  subprocess.call([options.editor or _get_editor(e), path])
   try:
     content_type = MIMETYPES[format.upper()]
   except KeyError:
@@ -309,8 +329,8 @@ tasks = {'upload': util.Task('Upload a document', callback=_run_upload,
                              optional=['title', 'folder', 'no-convert'],
                              args_desc='PATH_TO_FILE'),
          'edit': util.Task('Edit a document', callback=_run_edit,
-                           required=['title', 'editor'],
-                           optional=['format']),
+                           required=['title'],
+                           optional=['format', 'editor']),
          'get': util.Task('Download a document', callback=_run_get,
                           required=[['title', 'folder']],
                           args_desc='LOCATION'),

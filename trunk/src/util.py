@@ -487,7 +487,11 @@ def load_preferences():
     _docs = {'document_format': 'txt',
              'spreadsheet_format': 'xls',
              'presentation_format': 'ppt',
-             'default_format': 'txt'}
+             'format': 'txt',
+             'document_editor': 'vim',
+             'spreadsheet_editor': 'openoffice.org',
+             'presentation_editor': 'openoffice.org',
+             'editor': 'nano'}
     CONFIG_DEFAULTS = {docs.SECTION_HEADER: _docs,
                        picasa.SECTION_HEADER: _picasa,
                        'GENERAL': _general,
