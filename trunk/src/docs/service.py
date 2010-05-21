@@ -308,11 +308,11 @@ def _run_edit(client, options, args):
 tasks = {'upload': util.Task('Upload a document', callback=_run_upload,
                              optional=['title', 'folder', 'no-convert'],
                              args_desc='PATH_TO_FILE'),
-         'edit': util.Task('Edit a document',
-                           required=['title', 'format', 'editor'],
-                           optional=['editor']),
+         'edit': util.Task('Edit a document', callback=_run_edit,
+                           required=['title', 'editor'],
+                           optional=['format']),
          'get': util.Task('Download a document', callback=_run_get,
                           required=[['title', 'folder']],
                           args_desc='LOCATION'),
          'list': util.Task('List documents', callback=_run_list,
-                           optional='title')}
+                           required='delimiter', optional='title')}

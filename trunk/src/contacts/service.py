@@ -70,4 +70,4 @@ def _run_list(client, options, args):
 
 
 tasks = {'list': util.Task('List contacts', callback=_run_list,
-                           optional='title')}
+                           required='delimiter', optional='title')}

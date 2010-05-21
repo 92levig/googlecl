@@ -25,6 +25,7 @@ Some terminology in use:
   task: What the client wants done by the service (e.g. post, get, delete).
   
 """
+import ConfigParser
 import optparse
 import os
 import urllib
@@ -32,11 +33,11 @@ import util
 
 
 def fill_out_options(task, options, logged_in):
-  """Fill out options via command line prompts.
+  """Fill out required options via config file and command line prompts.
   
-  If there are any required fields missing for a task, prompt the user to enter
-  them at the command line. For example, if the service is Picasa and the task
-  is to create an album, ensure that an album title is known.
+  If there are any required fields missing for a task, fill them in.
+  This is attempted first by checking the OPTION_DEFAULTS section of the
+  preferences file, then prompting the user if the prior method fails.
   
   Keyword arguments:
     task: Requirements of the task (see class util.Task).
@@ -60,14 +61,22 @@ def fill_out_options(task, options, logged_in):
     with open(options.summary, 'r') as summary_file:
       options.summary = summary_file.read()
 
-  if task.requires('title', options):
-    options.title = raw_input('Please specify a title: ')
-  if task.requires('query', options):  
-    options.query = raw_input('Please specify a query: ')
-  if task.requires('tags', options):
-    options.tags = raw_input('Please specify some tags: ')
-  if task.requires('category', options):
-    options.category = raw_input('Please specify a category: ')
+  # Grab all attributes from options that match two criteria:
+  # 1) They contain no underscores at the beginning or end of the name
+  # 2) They evaluate to False (NoneType or '')
+  missing_attributes = [attr for attr in dir(options)
+                        if attr.strip('_') == attr and
+                        not getattr(options, attr)]
+  for attr in missing_attributes:
+    if task.requires(attr, options):
+      try:
+        setattr(options, attr, util.config.get('OPTION_DEFAULTS', attr))
+      except ConfigParser.NoOptionError:
+        setattr(options, attr, raw_input('Please specify ' + attr + ': '))
+  if options.query:
+    options.encoded_query = urllib.quote_plus(options.query)
+  else:
+    options.encoded_query = None
 
 
 def import_service_module(service):
@@ -201,10 +210,6 @@ def run_once(options, args):
   
   fill_out_options(task, options, client.logged_in)
   
-  if options.query:
-    options.encoded_query = urllib.quote_plus(options.query)
-  else:
-    options.encoded_query = None
   task.run(client, options, args)
 
 

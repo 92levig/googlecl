@@ -222,6 +222,6 @@ tasks = {'post': util.Task('Post a video', callback=_run_post,
                            optional=['title', 'summary', 'tags'],
                            args_desc='PATH_TO_VIDEO'),
          'list': util.Task('List videos by user', callback=_run_list,
-                           optional='user'),
+                           required='delimiter', optional='user'),
          'tag': util.Task('Add tags to a video', callback=_run_tag,
                           required=['title', ['category', 'tags']])}  

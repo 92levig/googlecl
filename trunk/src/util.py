@@ -255,8 +255,7 @@ class Task(object):
     print 'Sorry, this task is not yet implemented!'
 
 
-def entry_to_string(entry, style_list, missing_field_value=None,
-                    delimiter=None):
+def entry_to_string(entry, style_list, delimiter, missing_field_value=None):
   """Return a useful string describing a gdata.data.GDEntry.
   
   Keyword arguments:
@@ -277,12 +276,12 @@ def entry_to_string(entry, style_list, missing_field_value=None,
            user's album, 'url-direct' gives a link to the image url.
            If 'url-direct' is specified but is not applicable, 'url-site' is
            placed in its stead, and vice-versa.
+    delimiter: String to use as the delimiter between fields.
     missing_field_value: If any of the styles for any of the entries are
                          invalid or undefined, put this in its place
                          (Default None to use "missing_field_value" config
                          option).
-    delimiter: String to use as the delimiter between fields. (Default None to
-               use the "list_delimiter" config option).
+    
   
   """
   def _string_for_style(style, entry):
@@ -316,7 +315,6 @@ def entry_to_string(entry, style_list, missing_field_value=None,
       raise ValueError("'Unknown listing style: '" + style + "'")
 
   return_string = ''
-  delimiter = delimiter or config.get('GENERAL', 'list_delimiter')
   missing_field_value = missing_field_value or config.get('GENERAL',
                                                           'missing_field_value')
   for style in style_list:
@@ -475,6 +473,8 @@ def load_preferences():
     """Ensure the config file has all of the configuration options."""
     # These may be useful to define at the module level, but for now,
     # keep them here.
+    _options = {'editor': 'pico',
+                'delimiter': ','}
     _picasa = {'access': 'public'}
     _general = {'regex': False,
                'delete_by_default': False,
@@ -483,16 +483,15 @@ def load_preferences():
                'use_default_username': True,
                'default_url_style': 'site',
                'default_list_style': 'title,url-site',
-               'missing_field_value': 'N/A',
-               'list_delimiter': ','}
-    _docs = {'editor': 'pico',
-            'document_format': 'txt',
-            'spreadsheet_format': 'xls',
-            'presentation_format': 'ppt',
-            'default_format': 'txt'}
-    CONFIG_DEFAULTS = {'GENERAL': _general,
-                       docs.SECTION_HEADER: _docs,
-                       picasa.SECTION_HEADER: _picasa}
+               'missing_field_value': 'N/A'}
+    _docs = {'document_format': 'txt',
+             'spreadsheet_format': 'xls',
+             'presentation_format': 'ppt',
+             'default_format': 'txt'}
+    CONFIG_DEFAULTS = {docs.SECTION_HEADER: _docs,
+                       picasa.SECTION_HEADER: _picasa,
+                       'GENERAL': _general,
+                       'OPTION_DEFAULTS': _options}
     made_changes = False
     for section_name in CONFIG_DEFAULTS.keys():
       if not config.has_section(section_name):

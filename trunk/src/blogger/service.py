@@ -177,6 +177,6 @@ tasks = {'delete': util.Task('Delete a post.', callback=_run_delete,
                            optional='tags',
                            args_desc='PATH_TO_CONTENT or CONTENT'),
          'list': util.Task('List posts in your blog', callback=_run_list,
-                           optional='title'),
+                           required='delimiter', optional='title'),
          'tag': util.Task('Label posts', callback=_run_tag,
                           required=['tags', 'title'])}
