@@ -322,7 +322,7 @@ def _run_edit(client, options, args):
                          ' for a content type to upload as.')
     content_type = MIMETYPES[format]
   mediasource = MediaSource(file_path=path, content_type=content_type)
-  client.Update(e, mediasource)
+  client.Update(e, media_source=mediasource)
 
 
 tasks = {'upload': util.Task('Upload a document', callback=_run_upload,
