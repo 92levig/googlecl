@@ -35,6 +35,36 @@ class ContactsServiceCL(gdata.contacts.service.ContactsService,
     gdata.contacts.service.ContactsService.__init__(self)
     util.BaseServiceCL.set_params(self, regex, tags_prompt, delete_prompt)
 
+  def add_contact(self, string_or_csv_file):
+    """Add contact(s).
+    
+    Keyword arguments:
+      string_or_csv_file: String representing a name/email address to add, or
+                          a path to a csv file of such strings. Entries should
+                          be of the form "name,email@server.com" (whitespace
+                          before/after the comma is ignored).
+
+    """
+    import atom
+    import os.path
+    if os.path.exists(string_or_csv_file):
+      with open(string_or_csv_file, 'r') as file:
+        for line in file:
+          if line.strip():    # filter out empty lines
+            self.add_contact(line)
+    else:
+      name, junk, email = string_or_csv_file.partition(',')
+      new_contact = gdata.contacts.ContactEntry(title=atom.Title(
+                                                             text=name.strip()))
+      new_contact.email.append(gdata.contacts.Email(address=email.strip()))
+      try:
+        self.CreateContact(new_contact)
+      except gdata.service.RequestError as e:
+        if e.args[0]['reason'] == 'Conflict':
+          print 'Already have a contact for e-mail address ' + email.strip()
+        else:
+          raise 
+
   def get_contacts(self, name):
     uri = self.GetFeedUri()
     return self.GetEntries(uri, name,
@@ -42,9 +72,11 @@ class ContactsServiceCL(gdata.contacts.service.ContactsService,
 
   GetContacts = get_contacts
 
-  def IsTokenValid(self):
+  def is_token_valid(self):
     """Check that the token being used is valid."""
     return util.BaseServiceCL.IsTokenValid(self, self.GetFeedUri())
+
+  IsTokenValid = is_token_valid
 
 
 service_class = ContactsServiceCL
@@ -69,5 +101,12 @@ def _run_list(client, options, args):
     print util.entry_to_string(e, style_list, delimiter=options.delimiter)
 
 
+def _run_add(client, options, args):
+  for contact in args:
+    client.add_contact(contact)
+
+
 tasks = {'list': util.Task('List contacts', callback=_run_list,
-                           required='delimiter', optional='title')}
+                           required='delimiter', optional='title'),
+         'add': util.Task('Add contacts', callback=_run_add,
+                          args_desc='CONTACT DATA or CSV FILE')}
