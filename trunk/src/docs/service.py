@@ -226,38 +226,52 @@ class DocsClientCL(gdata.docs.client.DocsClient):
 service_class = DocsClientCL
 
 
-def _get_extension(entry):
-  """Return file extension based on entry type and preferences file."""
-  type = entry.GetDocumentType()
+def get_extension(doctype_label):
+  """Return file extension based on document type and preferences file."""
   try:
-    if type == gdata.docs.data.SPREADSHEET_LABEL:
+    if doctype_label == gdata.docs.data.SPREADSHEET_LABEL:
       return util.config.get(docs.SECTION_HEADER, 'spreadsheet_format')
-    elif type == gdata.docs.data.DOCUMENT_LABEL:
+    elif doctype_label == gdata.docs.data.DOCUMENT_LABEL:
       return util.config.get(docs.SECTION_HEADER, 'document_format')
-    elif type == gdata.docs.data.PDF_LABEL:
+    elif doctype_label == gdata.docs.data.PDF_LABEL:
       return 'pdf'
-    elif type == gdata.docs.data.PRESENTATION_LABEL:
+    elif doctype_label == gdata.docs.data.PRESENTATION_LABEL:
       return util.config.get(docs.SECTION_HEADER, 'presentation_format')
   except ConfigParser.NoOptionError:
-    pass
-  return util.config.get(docs.SECTION_HEADER, 'default_format')
+    try:
+      return util.config.get(docs.SECTION_HEADER, 'format')
+    except:
+      return None
 
 
-def _get_editor(entry):
-  """Return editor for file based on entry type and preferences file."""
-  type = entry.GetDocumentType()
+def get_editor(doctype_label):
+  """Return editor for file based on entry type and preferences file.
+  
+  Editor is determined in an order of preference:
+  1) Try to load the editor for the specific type (spreadsheet, document, etc.)
+  2) If no specification, try to load the "default_editor" option.
+  3) If no default_editor, try to load the EDITOR environment variable.
+  4) If no EDITOR variable, return None.
+  
+  Keyword arguments:
+    doctype_label: A string representing the type of document to edit. Should
+                   be defined in gdata.docs.data, e.g. SPREADSHEET_LABEL.
+  
+  """
   try:
-    if type == gdata.docs.data.SPREADSHEET_LABEL:
+    if doctype_label == gdata.docs.data.SPREADSHEET_LABEL:
       return util.config.get(docs.SECTION_HEADER, 'spreadsheet_editor')
-    elif type == gdata.docs.data.DOCUMENT_LABEL:
+    elif doctype_label == gdata.docs.data.DOCUMENT_LABEL:
       return util.config.get(docs.SECTION_HEADER, 'document_editor')
-    elif type == gdata.docs.data.PDF_LABEL:
+    elif doctype_label == gdata.docs.data.PDF_LABEL:
       return util.config.get(docs.SECTION_HEADER, 'pdf_editor')
-    elif type == gdata.docs.data.PRESENTATION_LABEL:
+    elif doctype_label == gdata.docs.data.PRESENTATION_LABEL:
       return util.config.get(docs.SECTION_HEADER, 'presentation_editor')
   except ConfigParser.NoOptionError:
-    pass
-  return util.config.get(docs.SECTION_HEADER, 'default_editor')
+    try:
+      return util.config.get(docs.SECTION_HEADER, 'editor')
+    except ConfigParser.NoOptionError:
+      return os.getenv('EDITOR')
   
     
 #===============================================================================
@@ -309,10 +323,16 @@ def _run_edit(client, options, args):
   if len(entries) > 1:
     print 'More than one match, only editing the first result.'
   e = entries[0]
-  format = options.format or _get_extension(e)
+  format = options.format or get_extension(e.GetDocumentType())
+  editor = options.editor or get_editor(e.GetDocumentType())
   path = '/tmp/googlecl/' + e.title.text + '.' + format
   client.export(e, path)
-  subprocess.call([options.editor or _get_editor(e), path])
+  if not editor:
+    print 'No editor defined!'
+    print 'Define a "default_editor" option in your config file, set the ' +\
+          'EDITOR environment variable, or pass an editor in with --editor.'
+    return
+  subprocess.call([editor, path])
   try:
     content_type = MIMETYPES[format.upper()]
   except KeyError:

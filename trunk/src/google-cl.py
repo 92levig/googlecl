@@ -234,7 +234,6 @@ def setup_parser():
   parser.add_option('--delimiter', dest='delimiter',
                     help='Specify a delimiter for the output of the list task.')
   parser.add_option('--editor', dest='editor',
-                    default='pico',
                     help='Docs only - editor to use on a file.')
   parser.add_option('-f', '--folder', dest='folder',
                     help='Docs only - specify folder(s) to upload to '+ 
@@ -276,6 +275,8 @@ def main():
     except KeyboardInterrupt:
       print ''
       print 'Quit via keyboard interrupt'
+    except EOFError:
+      print ''
   else:
     try:
       run_once(options, args)

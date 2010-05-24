@@ -473,6 +473,7 @@ def load_preferences():
     """Ensure the config file has all of the configuration options."""
     # These may be useful to define at the module level, but for now,
     # keep them here.
+    # REMEMBER: updating these means you need to update the CONFIG readme.
     _options = {'editor': 'pico',
                 'delimiter': ','}
     _picasa = {'access': 'public'}
@@ -488,10 +489,8 @@ def load_preferences():
              'spreadsheet_format': 'xls',
              'presentation_format': 'ppt',
              'format': 'txt',
-             'document_editor': 'vim',
              'spreadsheet_editor': 'openoffice.org',
-             'presentation_editor': 'openoffice.org',
-             'editor': 'nano'}
+             'presentation_editor': 'openoffice.org'}
     CONFIG_DEFAULTS = {docs.SECTION_HEADER: _docs,
                        picasa.SECTION_HEADER: _picasa,
                        'GENERAL': _general,
@@ -550,7 +549,6 @@ def read_auth_token(service):
     try:
       token = token_dict[service.lower()]
     except KeyError:
-      print 'No token for ' + service
       return None
     else:
       return token
