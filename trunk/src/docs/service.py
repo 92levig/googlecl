@@ -72,7 +72,7 @@ class DocsClientCL(gdata.docs.client.DocsClient):
     
     """
     for entry in entries:
-      format = _get_extension(entry)
+      format = get_extension(entry)
       path = os.path.join(base_path, entry.title.text + '.' + format)
       print 'Downloading ' + entry.title.text + ' to ' + path
       try:
@@ -190,6 +190,7 @@ class DocsClientCL(gdata.docs.client.DocsClient):
 
     Returns:
       Dictionary mapping filenames to where they can be accessed online.
+    
     """
     from gdata.docs.data import MIMETYPES
     if folder and self.folder_id.has_key(folder):
@@ -325,24 +326,29 @@ def _run_edit(client, options, args):
   e = entries[0]
   format = options.format or get_extension(e.GetDocumentType())
   editor = options.editor or get_editor(e.GetDocumentType())
-  path = '/tmp/googlecl/' + e.title.text + '.' + format
-  client.export(e, path)
   if not editor:
     print 'No editor defined!'
     print 'Define a "default_editor" option in your config file, set the ' +\
           'EDITOR environment variable, or pass an editor in with --editor.'
     return
+  path = '/tmp/googlecl/' + e.title.text + '.' + format
+  client.export(e, path)
+  create_time = os.stat(path).st_mtime
   subprocess.call([editor, path])
-  try:
-    content_type = MIMETYPES[format.upper()]
-  except KeyError:
-    print 'Could not find mimetype for ' + format
-    while format not in MIMETYPES.keys():
-      format = raw_input('Please enter one of ' + MIMETYPES.keys() + 
-                         ' for a content type to upload as.')
-    content_type = MIMETYPES[format]
-  mediasource = MediaSource(file_path=path, content_type=content_type)
-  client.Update(e, media_source=mediasource)
+  if create_time == os.stat(path).st_mtime:
+    print 'No modifications to file, not uploading.'
+    return
+  else:
+    try:
+      content_type = MIMETYPES[format.upper()]
+    except KeyError:
+      print 'Could not find mimetype for ' + format
+      while format not in MIMETYPES.keys():
+        format = raw_input('Please enter one of ' + MIMETYPES.keys() + 
+                           ' for a content type to upload as.')
+      content_type = MIMETYPES[format]
+    mediasource = MediaSource(file_path=path, content_type=content_type)
+    client.Update(e, media_source=mediasource)
 
 
 tasks = {'upload': util.Task('Upload a document', callback=_run_upload,
