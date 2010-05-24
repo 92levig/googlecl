@@ -32,6 +32,9 @@ import urllib
 import util
 
 
+_available_services = ['picasa', 'blogger', 'youtube', 'docs']
+
+
 def fill_out_options(task, options, logged_in):
   """Fill out required options via config file and command line prompts.
   
@@ -103,7 +106,6 @@ def print_help(service=None, tasks=None):
     
   """
   if not service:
-    available_services = ['picasa', 'blogger', 'youtube', 'docs']
     print 'Welcome to the Google CL tool!'
     print '  Commands are broken into several parts: service, task, ' + \
           'options, and arguments.'
@@ -112,7 +114,7 @@ def print_help(service=None, tasks=None):
     print '  the service is "picasa", the task is "post", the single ' + \
           'option is a name of "My Cat Photos", and the argument is the ' + \
           'path to the photos.'
-    print '  The available services are ' + str(available_services)[1:-1]
+    print '  The available services are ' + str(_available_services)[1:-1]
     print '  Enter "> help <service>" for more information on a service.'
     print '  Or, just "quit" to quit.'
   else:
@@ -220,7 +222,8 @@ def setup_parser():
     optparse.OptionParser with options configured.
   
   """
-  usage = "usage: %prog service task [options]"
+  usage = 'usage: %prog ' + str(_available_services).replace("'", '') +\
+          ' TASK [options]' 
   parser = optparse.OptionParser(usage=usage)
   parser.add_option('-c', '--category', dest='category',
                     help='YouTube only - specify video categories' + 
