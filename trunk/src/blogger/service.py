@@ -4,6 +4,7 @@ Service details and instances for the Blogger service.
 Created on May 5, 2010
 
 @author: Tom Miller
+
 """
 import atom
 import gdata
@@ -26,7 +27,7 @@ class BloggerServiceCL(util.BaseServiceCL):
     self.server = 'www.blogger.com'
     util.BaseServiceCL.set_params(self, regex, tags_prompt, delete_prompt)
     
-  def AddPost(self, title, content, is_draft=False):
+  def add_post(self, title, content, is_draft=False):
     """Add a post.
     
     Keyword arguments:
@@ -43,9 +44,11 @@ class BloggerServiceCL(util.BaseServiceCL):
       control = atom.Control()
       control.draft = atom.Draft(text='yes')
       entry.control = control
-    self.Post(entry, '/feeds/' + self.blog_id + '/posts/default')
+    return self.Post(entry, '/feeds/' + self.blog_id + '/posts/default')
 
-  def IsTokenValid(self):
+  AddPost = add_post
+
+  def is_token_valid(self):
     """Check that the token being used is valid."""
     if util.BaseServiceCL.IsTokenValid(self, '/feeds/default/blogs'):
       feed = self.Get('/feeds/default/blogs')
@@ -56,7 +59,9 @@ class BloggerServiceCL(util.BaseServiceCL):
     else:
       return False
 
-  def DeletePost(self, title, delete_default=False):
+  IsTokenValid = is_token_valid
+
+  def delete_post(self, title, delete_default=False):
     """Delete post(s) based on a title."""
     to_delete = self.GetPosts(title)
     if not to_delete:
@@ -65,8 +70,10 @@ class BloggerServiceCL(util.BaseServiceCL):
       util.BaseServiceCL.Delete(self, to_delete, 
                                 entry_type='post',
                                 delete_default=delete_default)
+
+  DeletePost = delete_post
     
-  def GetPosts(self, title=None):
+  def get_posts(self, title=None):
     """Get entries for posts that match a title.
     
     This will only get posts for the user that has logged in. It's apparently
@@ -82,8 +89,10 @@ class BloggerServiceCL(util.BaseServiceCL):
     """
     uri = '/feeds/' + self.blog_id + '/posts/default'
     return self.GetEntries(uri, title)
-  
-  def LabelPosts(self, post_entries, tags):
+
+  GetPosts = get_posts
+
+  def label_posts(self, post_entries, tags):
     """Add or remove labels on a list of posts.
     
     Keyword arguments:
@@ -91,6 +100,7 @@ class BloggerServiceCL(util.BaseServiceCL):
       tags: String representation of tags in a comma separated list.
             For how tags are generated from the string, 
             see util.generate_tag_sets().
+    
     """
     from atom import Category
     scheme = 'http://www.blogger.com/atom/ns#'
@@ -114,7 +124,9 @@ class BloggerServiceCL(util.BaseServiceCL):
  
       self.Put(post, post.GetEditLink().href)
 
-  def Login(self, email, password):
+  LabelPosts = label_posts
+
+  def login(self, email, password):
     """Extends util.BaseServiceCL.Login to also set the blog ID."""
     util.BaseServiceCL.Login(self, email, password)
     
@@ -124,10 +136,12 @@ class BloggerServiceCL(util.BaseServiceCL):
       if self_link:
         self.blog_id = self_link.href.split('/')[-1]
 
+  Login = login
+
 
 service_class = BloggerServiceCL
 
- 
+
 #===============================================================================
 # Each of the following _run_* functions execute a particular task.
 #  
@@ -147,7 +161,8 @@ def _run_post(client, options, args):
       if not options.title:
         title = 'New post'
       content = content_string
-    client.AddPost(options.title or title, content)
+    entry = client.AddPost(options.title or title, content)
+    client.LabelPosts([entry], options.tags)
 
 
 def _run_delete(client, options, args):

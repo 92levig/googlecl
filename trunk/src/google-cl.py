@@ -142,8 +142,8 @@ def run_interactive(parser):
       args_list = util.expand_as_command_line(command_string)
       (options, args) = parser.parse_args(args_list)
       run_once(options, args)
- 
-      
+
+
 def run_once(options, args):
   """Run one command.
   
