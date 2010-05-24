@@ -176,7 +176,8 @@ def _run_list(client, options, args):
   if args:
     style_list = args[0].split(',')
   else:
-    style_list = util.get_list_style(blogger.SECTION_HEADER)
+    style_list = util.get_config_option(blogger.SECTION_HEADER,
+                                        'list_style').split(',')
   for entry in entries:
     print util.entry_to_string(entry, style_list, delimiter=options.delimiter)
 

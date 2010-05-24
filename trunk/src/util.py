@@ -452,13 +452,30 @@ def generate_tag_sets(tags):
   return (remove_set, add_set, replace_tags)
 
 
-def get_list_style(section):
+def get_config_option(section, option):
+  """Return option from config file.
+  
+  Tries to retrieve <option> from the given section. If that fails, tries to
+  retrieve the same option from the GENERAL section.
+  
+  Keyword arguments:
+    section: Name of the section to initially try to retrieve the option from.
+    option: Name of the option to retrieve.
+  
+  Returns:
+    Value of the option if it exists in the prefs file, or None if it does not
+    exist.
+  
+  """
   try:
-    return config.get(section, 'default_list_style').split(',')
-  except ConfigParser.NoSectionError:
-    return config.get('GENERAL', 'default_list_style').split(',')
+    try:
+      return config.get(section, option)
+    except ConfigParser.NoSectionError:
+      return config.get('GENERAL', option)
+    except ConfigParser.NoOptionError:
+      return config.get('GENERAL', option)
   except ConfigParser.NoOptionError:
-    return config.get('GENERAL', 'default_list_style').split(',')
+    return None
 
 
 def load_preferences():
@@ -474,8 +491,6 @@ def load_preferences():
     # These may be useful to define at the module level, but for now,
     # keep them here.
     # REMEMBER: updating these means you need to update the CONFIG readme.
-    _options = {'editor': 'pico',
-                'delimiter': ','}
     _picasa = {'access': 'public'}
     _general = {'regex': False,
                'delete_by_default': False,
@@ -493,8 +508,7 @@ def load_preferences():
              'presentation_editor': 'openoffice.org'}
     CONFIG_DEFAULTS = {docs.SECTION_HEADER: _docs,
                        picasa.SECTION_HEADER: _picasa,
-                       'GENERAL': _general,
-                       'OPTION_DEFAULTS': _options}
+                       'GENERAL': _general}
     made_changes = False
     for section_name in CONFIG_DEFAULTS.keys():
       if not config.has_section(section_name):

@@ -99,7 +99,8 @@ def _run_list(client, options, args):
   if args:
     style_list = args[0].split(',')
   else:
-    style_list = util.get_list_style(contacts.SECTION_HEADER)
+    style_list = util.get_config_option(contacts.SECTION_HEADER,
+                                        'list_style').split(',')
   for e in entries:
     print util.entry_to_string(e, style_list, delimiter=options.delimiter)
 

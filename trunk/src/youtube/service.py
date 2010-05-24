@@ -196,7 +196,8 @@ def _run_list(client, options, args):
   if args:
     style_list = args[0].split(',')
   else:
-    style_list = util.get_list_style(youtube.SECTION_HEADER)
+    style_list = util.get_config_option(youtube.SECTION_HEADER,
+                                        'list_style').split(',')
   for vid in entries:
     print util.entry_to_string(vid, style_list, delimiter=options.delimiter)
 

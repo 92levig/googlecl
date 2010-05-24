@@ -32,10 +32,10 @@ import urllib
 import util
 
 
-_available_services = ['picasa', 'blogger', 'youtube', 'docs']
+_available_services = ['picasa', 'blogger', 'youtube', 'docs', 'contacts']
 
 
-def fill_out_options(task, options, logged_in):
+def fill_out_options(service_header, task, options, logged_in):
   """Fill out required options via config file and command line prompts.
   
   If there are any required fields missing for a task, fill them in.
@@ -72,28 +72,15 @@ def fill_out_options(task, options, logged_in):
                         not getattr(options, attr)]
   for attr in missing_attributes:
     if task.requires(attr, options):
-      try:
-        setattr(options, attr, util.config.get('OPTION_DEFAULTS', attr))
-      except ConfigParser.NoOptionError:
+      value = util.get_config_option(service_header, attr)
+      if value:
+        setattr(options, attr, value)
+      else:
         setattr(options, attr, raw_input('Please specify ' + attr + ': '))
   if options.query:
     options.encoded_query = urllib.quote_plus(options.query)
   else:
     options.encoded_query = None
-
-
-def import_service_module(service):
-  """Imports the service module from a package.
-  
-  Keyword arguments:
-    service: Name of the service, which should coincide with the name of the
-             package.
-  
-  Returns:
-    Module as if imported via "import <service>.service" statement.
-    
-  """
-  return __import__(service+'.service', globals(), locals(), -1)
 
 
 def print_help(service=None, tasks=None):
@@ -165,7 +152,7 @@ def run_once(options, args):
     return
 
   if service == 'help':
-    service_module = import_service_module(task_name)
+    service_module = __import__(task_name+'.service', globals(), locals(), -1)
     if service_module:
       print_help(task_name, service_module.tasks)
     return
@@ -174,7 +161,7 @@ def run_once(options, args):
   tags_prompt = util.config.getboolean('GENERAL', 'tags_prompt')
   delete_prompt = util.config.getboolean('GENERAL', 'delete_prompt')
   
-  service_module = import_service_module(service)
+  service_module = __import__(service+'.service', globals(), locals(), -1)
   if not service_module:
     return
   client = service_module.service_class(regex, tags_prompt, delete_prompt)
@@ -210,7 +197,8 @@ def run_once(options, args):
         print 'Failed to log on!'
         return
   
-  fill_out_options(task, options, client.logged_in)
+  package = __import__(service)
+  fill_out_options(package.SECTION_HEADER, task, options, client.logged_in)
   
   task.run(client, options, args)
 
