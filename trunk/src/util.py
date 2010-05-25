@@ -20,6 +20,7 @@ _preferences_filename = 'prefs'
 _login_filename = 'creds'
 _auth_tokens_filename = 'auths'
 
+DATE_FORMAT = '%Y-%m-%d'
 
 class BaseServiceCL(gdata.service.GDataService):
 

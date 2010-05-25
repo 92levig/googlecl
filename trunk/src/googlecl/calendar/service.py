@@ -13,6 +13,7 @@ Created on May 24, 2010
 @author: Tom Miller
 
 """
+import datetime
 import gdata.calendar.service
 import util
 from googlecl.calendar import SECTION_HEADER
@@ -60,7 +61,13 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
     query = gdata.calendar.service.CalendarEventQuery('default', 'private',
                                                       'full')
     query.start_min = start_date
-    query.start_max = end_date 
+    if not end_date:
+      # Convert from string to datetime to do the addition of one day.
+      end_date = datetime.datetime.strptime(start_date, util.DATE_FORMAT) + \
+                 datetime.timedelta(days=1)
+      # Convert back to string for the query.
+      end_date = end_date.strftime(util.DATE_FORMAT)
+    query.start_max = end_date
     return self.GetEntries(query.ToUri(), title,
                            converter=gdata.calendar.CalendarEventFeedFromString)
 
@@ -95,7 +102,15 @@ def _run_list(client, options, args):
     style_list = util.get_config_option(SECTION_HEADER, 'list_style').split(',')
   for e in entries:
     print util.entry_to_string(e, style_list, delimiter=options.delimiter)
- 
+
+
+def _run_list_today(client, options, args):
+  now = datetime.datetime.now()
+  tomorrow = now + datetime.timedelta(days=1)
+  options.date = now.strftime(util.DATE_FORMAT) + ',' + \
+                 tomorrow.strftime(util.DATE_FORMAT)
+  _run_list(client, options, args)
+
 
 def _run_add(client, options, args):
   client.quick_add_event(args[0])
@@ -103,7 +118,8 @@ def _run_add(client, options, args):
 
 tasks = {'list': util.Task('List events for a date range', callback=_run_list,
                            required=['delimiter', 'date'], optional='title'),
-         'today': util.Task('List events for today',
+         'today': util.Task('List events for today (automatically sets date)',
+                            callback=_run_list_today,
                             required='delimiter', optional='title'),
          'add': util.Task('Add event to calendar', callback=_run_add,
                           args_desc='QUICK_ADD_TEXT')}
