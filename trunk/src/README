@@ -33,6 +33,9 @@ Tag all your robot videos as such
 List the albums that your friend has (See below for more info on the list task)
 > picasa list title,url -u friend.username
 
+List your events for a given week
+> calendar list --date 2010-05-25,2010-06-02
+
 3. The 'list' task
 The list task can be given additional arguments to specify what exactly is being listed. For example,
 
