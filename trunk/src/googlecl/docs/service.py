@@ -24,14 +24,13 @@ Created on May 13, 2010
 
 """
 import ConfigParser
-import docs
 import gdata.docs.client
 import re
 import os
 import urllib
 import util
 from gdata.client import BadAuthentication, CaptchaChallenge
-
+from googlecl.docs import SECTION_HEADER
 
 class DocsClientCL(gdata.docs.client.DocsClient):
   
@@ -231,16 +230,16 @@ def get_extension(doctype_label):
   """Return file extension based on document type and preferences file."""
   try:
     if doctype_label == gdata.docs.data.SPREADSHEET_LABEL:
-      return util.config.get(docs.SECTION_HEADER, 'spreadsheet_format')
+      return util.config.get(SECTION_HEADER, 'spreadsheet_format')
     elif doctype_label == gdata.docs.data.DOCUMENT_LABEL:
-      return util.config.get(docs.SECTION_HEADER, 'document_format')
+      return util.config.get(SECTION_HEADER, 'document_format')
     elif doctype_label == gdata.docs.data.PDF_LABEL:
       return 'pdf'
     elif doctype_label == gdata.docs.data.PRESENTATION_LABEL:
-      return util.config.get(docs.SECTION_HEADER, 'presentation_format')
+      return util.config.get(SECTION_HEADER, 'presentation_format')
   except ConfigParser.NoOptionError:
     try:
-      return util.config.get(docs.SECTION_HEADER, 'format')
+      return util.config.get(SECTION_HEADER, 'format')
     except:
       return None
 
@@ -261,16 +260,16 @@ def get_editor(doctype_label):
   """
   try:
     if doctype_label == gdata.docs.data.SPREADSHEET_LABEL:
-      return util.config.get(docs.SECTION_HEADER, 'spreadsheet_editor')
+      return util.config.get(SECTION_HEADER, 'spreadsheet_editor')
     elif doctype_label == gdata.docs.data.DOCUMENT_LABEL:
-      return util.config.get(docs.SECTION_HEADER, 'document_editor')
+      return util.config.get(SECTION_HEADER, 'document_editor')
     elif doctype_label == gdata.docs.data.PDF_LABEL:
-      return util.config.get(docs.SECTION_HEADER, 'pdf_editor')
+      return util.config.get(SECTION_HEADER, 'pdf_editor')
     elif doctype_label == gdata.docs.data.PRESENTATION_LABEL:
-      return util.config.get(docs.SECTION_HEADER, 'presentation_editor')
+      return util.config.get(SECTION_HEADER, 'presentation_editor')
   except ConfigParser.NoOptionError:
     try:
-      return util.config.get(docs.SECTION_HEADER, 'editor')
+      return util.config.get(SECTION_HEADER, 'editor')
     except ConfigParser.NoOptionError:
       return os.getenv('EDITOR')
   
@@ -301,8 +300,7 @@ def _run_list(client, options, args):
   if args:
     style_list = args[0].split(',')
   else:
-    style_list = util.get_config_option(docs.SECTION_HEADER,
-                                        'list_style').split(',')
+    style_list = util.get_config_option(SECTION_HEADER, 'list_style').split(',')
   for e in entries:
     print util.entry_to_string(e, style_list, delimiter=options.delimiter)
 

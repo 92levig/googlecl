@@ -6,11 +6,11 @@ Created on Apr 20, 2010
 @author: Tom Miller
 
 """
-from gdata.photos.service import PhotosService, GooglePhotosException
 import os
-import picasa
 import urllib
 import util
+from googlecl.picasa import SECTION_HEADER
+from gdata.photos.service import PhotosService, GooglePhotosException
 
 
 class PhotosServiceCL(PhotosService, util.BaseServiceCL):
@@ -272,8 +272,7 @@ def _run_list(client, options, args):
   if args:
     style_list = args[0].split(',')
   else:
-    style_list = util.get_config_option(picasa.SECTION_HEADER,
-                                        'list_style').split(',')
+    style_list = util.get_config_option(SECTION_HEADER, 'list_style').split(',')
   for item in entries:
     print util.entry_to_string(item, style_list, delimiter=options.delimiter)
 

@@ -15,7 +15,7 @@ Created on May 24, 2010
 """
 import gdata.calendar.service
 import util
-import calendar
+from googlecl.calendar import SECTION_HEADER
 
 
 class CalendarServiceCL(gdata.calendar.service.CalendarService,
@@ -92,8 +92,7 @@ def _run_list(client, options, args):
   if args:
     style_list = args[0].split(',')
   else:
-    style_list = util.get_config_option(calendar.SECTION_HEADER,
-                                        'list_style').split(',')
+    style_list = util.get_config_option(SECTION_HEADER, 'list_style').split(',')
   for e in entries:
     print util.entry_to_string(e, style_list, delimiter=options.delimiter)
  

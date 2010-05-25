@@ -4,13 +4,13 @@ Service details and instances for the YouTube service.
 Created on May 3, 2010
 
 @author: Tom Miller
+
 """
-from gdata.youtube.service import YouTubeService
 import gdata.youtube
 import os
 import util
-import youtube
-
+from googlecl.youtube import SECTION_HEADER
+from gdata.youtube.service import YouTubeService
 
 class YouTubeServiceCL(YouTubeService, util.BaseServiceCL):
   
@@ -196,8 +196,7 @@ def _run_list(client, options, args):
   if args:
     style_list = args[0].split(',')
   else:
-    style_list = util.get_config_option(youtube.SECTION_HEADER,
-                                        'list_style').split(',')
+    style_list = util.get_config_option(SECTION_HEADER, 'list_style').split(',')
   for vid in entries:
     print util.entry_to_string(vid, style_list, delimiter=options.delimiter)
 

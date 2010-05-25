@@ -1,10 +1,10 @@
 #!/usr/bin/python
-"""Main function for the Google command line tool.
+"""Main function for the Google command line tool, GoogleCL.
 
 This program provides some functionality for a number of Google services from
 the command line. 
 
-Example usage (omitting the initial "./google-cl.py"):
+Example usage (omitting the initial "./google.py"):
   # Create a photo album with tags "Vermont" and name "Summer Vacation 2009"
   picasa create -n "Summer Vacation 2009" -t Vermont ~/photos/vacation2009/*
   
@@ -25,14 +25,14 @@ Some terminology in use:
   task: What the client wants done by the service (e.g. post, get, delete).
   
 """
-import ConfigParser
 import optparse
 import os
 import urllib
 import util
 
 
-_available_services = ['picasa', 'blogger', 'youtube', 'docs', 'contacts']
+_available_services = ['picasa', 'blogger', 'youtube', 'docs', 'contacts',
+                       'calendar']
 
 
 def fill_out_options(service_header, task, options, logged_in):
@@ -138,7 +138,7 @@ def run_once(options, args):
   
   Keyword arguments:
     options: Options instance as built and returned by optparse.
-    args: Arguments to google-cl, also as returned by optparse.
+    args: Arguments to GoogleCL, also as returned by optparse.
   
   """
   try:
@@ -152,7 +152,8 @@ def run_once(options, args):
     return
 
   if service == 'help':
-    service_module = __import__(task_name+'.service', globals(), locals(), -1)
+    service_module = __import__('googlecl.' + task_name + '.service',
+                                globals(), locals(), -1)
     if service_module:
       print_help(task_name, service_module.tasks)
     return
@@ -161,7 +162,8 @@ def run_once(options, args):
   tags_prompt = util.config.getboolean('GENERAL', 'tags_prompt')
   delete_prompt = util.config.getboolean('GENERAL', 'delete_prompt')
   
-  service_module = __import__(service+'.service', globals(), locals(), -1)
+  service_module = __import__('googlecl.' + service + '.service',
+                              globals(), locals(), -1)
   if not service_module:
     return
   client = service_module.service_class(regex, tags_prompt, delete_prompt)
@@ -197,7 +199,8 @@ def run_once(options, args):
         print 'Failed to log on!'
         return
   
-  package = __import__(service)
+  # Not sure why the fromlist keyword argument became necessary...
+  package = __import__('googlecl.' + service, fromlist=['SECTION_HEADER'])
   fill_out_options(package.SECTION_HEADER, task, options, client.logged_in)
   
   task.run(client, options, args)

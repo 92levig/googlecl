@@ -1,13 +1,13 @@
 1. Introduction
-Google CL aims to bring management of your Google services to the command line. Currently, the only Google services supported are Picasa, Blogger, and YouTube.
+GoogleCL aims to bring management of your Google services to the command line. Currently, the only Google services supported are Picasa, Blogger, and YouTube.
 
 2. Example usage
 Here are some examples for this wonderful tool!
 
-Launch interactive mode. The only difference between this mode and the command line is that you don't have to keep typing "google-cl.py"
-$ ./google-cl.py
+Launch interactive mode. The only difference between this mode and the command line is that you don't have to keep typing "google.py"
+$ ./google.py
 
-The rest of these examples assume you're in interactive mode and therefore omit the "./google-cl.py".
+The rest of these examples assume you're in interactive mode and therefore omit the "./google.py".
 
 Create a photo album with tags "Vermont" and name "Summer Vacation 2009"
 > picasa create -n "Summer Vacation 2009" -t Vermont ~/photos/vacation2009/*

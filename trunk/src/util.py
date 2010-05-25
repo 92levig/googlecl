@@ -485,8 +485,8 @@ def load_preferences():
   
   """
   def set_options():
-    import picasa
-    import docs
+    import googlecl.picasa
+    import googlecl.docs
     """Ensure the config file has all of the configuration options."""
     # These may be useful to define at the module level, but for now,
     # keep them here.
@@ -506,8 +506,8 @@ def load_preferences():
              'format': 'txt',
              'spreadsheet_editor': 'openoffice.org',
              'presentation_editor': 'openoffice.org'}
-    CONFIG_DEFAULTS = {docs.SECTION_HEADER: _docs,
-                       picasa.SECTION_HEADER: _picasa,
+    CONFIG_DEFAULTS = {googlecl.docs.SECTION_HEADER: _docs,
+                       googlecl.picasa.SECTION_HEADER: _picasa,
                        'GENERAL': _general}
     made_changes = False
     for section_name in CONFIG_DEFAULTS.keys():

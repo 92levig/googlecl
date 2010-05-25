@@ -14,7 +14,7 @@ Created on May 20, 2010
 """
 import gdata.contacts.service
 import util
-import contacts
+from googlecl.contacts import SECTION_HEADER
 
 
 class ContactsServiceCL(gdata.contacts.service.ContactsService,
@@ -99,8 +99,7 @@ def _run_list(client, options, args):
   if args:
     style_list = args[0].split(',')
   else:
-    style_list = util.get_config_option(contacts.SECTION_HEADER,
-                                        'list_style').split(',')
+    style_list = util.get_config_option(SECTION_HEADER, 'list_style').split(',')
   for e in entries:
     print util.entry_to_string(e, style_list, delimiter=options.delimiter)
 
