@@ -11,6 +11,7 @@ import os
 import pickle
 import re
 import stat
+import time
 import gdata.service
 
 
@@ -19,8 +20,8 @@ _google_cl_dir = os.path.expanduser('~/.googlecl')
 _preferences_filename = 'prefs'
 _login_filename = 'creds'
 _auth_tokens_filename = 'auths'
-
 DATE_FORMAT = '%Y-%m-%d'
+
 
 class BaseServiceCL(gdata.service.GDataService):
 
@@ -289,7 +290,7 @@ def entry_to_string(entry, style_list, delimiter, missing_field_value=None):
     if style == 'title' or style == 'name':
       return entry.title.text
     elif style[:3] == 'url':
-      substyle = style[4:] or config.get('GENERAL', 'default_url_style')
+      substyle = style[4:] or config.get('GENERAL', 'url_style')
       try:
         href = entry.GetHtmlLink().href
       except AttributeError:
@@ -312,6 +313,17 @@ def entry_to_string(entry, style_list, delimiter, missing_field_value=None):
       else:
         email_string = ''
       return email_string
+    elif style == 'when':
+      w = entry.when[0]
+      start_time_data = time.strptime(w.start_time[:-10], '%Y-%m-%dT%H:%M:%S')
+      start_time = time.strftime(config.get('GENERAL', 'date_print_format'),
+                                 start_time_data)
+      end_time_data = time.strptime(w.end_time[:-10], '%Y-%m-%dT%H:%M:%S')
+      end_time = time.strftime(config.get('GENERAL', 'date_print_format'),
+                                 end_time_data)
+      return start_time + ' - ' + end_time
+    elif style == 'where':
+      return ';'.join([w.value_string for w in entry.where if w.value_string])
     else:
       raise ValueError("'Unknown listing style: '" + style + "'")
 
@@ -319,16 +331,18 @@ def entry_to_string(entry, style_list, delimiter, missing_field_value=None):
   missing_field_value = missing_field_value or config.get('GENERAL',
                                                           'missing_field_value')
   for style in style_list:
+    value = ''
     try:
-      return_string += _string_for_style(style, entry) or missing_field_value
+      value = _string_for_style(style, entry)
     except ValueError as e:
-      print e.args + ' (Did not add entry for style ' + style + ')'
+      print e.args[0] + ' (Did not add value for style ' + style + ')'
     except AttributeError as e:
       if e.args[0].find("'NoneType' object has no attribute") != -1:
         return_string += missing_field_value
       else:
-        raise 
-    return_string += delimiter
+        raise
+    return_string += (value.replace(delimiter, '') or missing_field_value) +\
+                     delimiter
   return return_string.rstrip(delimiter)
 
 
@@ -498,9 +512,10 @@ def load_preferences():
                'delete_prompt': True,
                'tags_prompt': False,
                'use_default_username': True,
-               'default_url_style': 'site',
-               'default_list_style': 'title,url-site',
-               'missing_field_value': 'N/A'}
+               'url_style': 'site',
+               'list_style': 'title,url-site',
+               'missing_field_value': 'N/A',
+               'date_print_format': '%b %d %H:%M'}
     _docs = {'document_format': 'txt',
              'spreadsheet_format': 'xls',
              'presentation_format': 'ppt',

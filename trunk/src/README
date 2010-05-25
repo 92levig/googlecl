@@ -42,10 +42,12 @@ The list task can be given additional arguments to specify what exactly is being
 > <service> list style1,style2,style3
 
 will output those styles, in that order, with a comma delimiter. Valid values for <style1> etc. are:
-	'title' - title of the entry.
-	'url' - treated as 'url-direct' or 'url-site' depending on setting in preferences file.
-	'url-site' - url of the site associated with the entry.
-	'url-direct' - url directly to the resource.
-	'author' - author(s) of the entry.
+        'title' - title of the entry.
+        'url' - treated as 'url-direct' or 'url-site' depending on setting in preferences file.
+        'url-site' - url of the site associated with the entry.
+        'url-direct' - url directly to the resource.
+        'author' - author(s) of the entry.
+        'when' - "when" data for the entry (typically calendar-only, for start and end date of the event).
+        'where' - "where" data for the entry (typically calendar-only, for where the event takes place).
 
 The difference between 'url-site' and 'url-direct' is best exemplified by a picasa PhotoEntry: 'url-site' gives a link to the photo in the user's album, 'url-direct' gives a link to the image url. If 'url-direct' is specified but is not applicable, 'url-site' is placed in its stead, and vice-versa.
