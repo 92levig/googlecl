@@ -220,8 +220,10 @@ def setup_parser():
                     help='YouTube only - specify developer tags' +
                     ' as a comma-separated list.')
   parser.add_option('-d', '--date', dest='date',
-                    help='Date of the album in MM/DD/YYYY format.' + 
-                    ' If omitted, uses today.')
+                    help='Date in YYYY-MM-DD format.' + 
+                    ' Picasa only - sets the date of the album\n' +
+                    ' Calendar only - date of the event to add / look for. ' +
+                    '       Can also specify a range via YYYY-MM-DD,YYYY-MM-DD')
   parser.add_option('--delimiter', dest='delimiter',
                     help='Specify a delimiter for the output of the list task.')
   parser.add_option('--editor', dest='editor',

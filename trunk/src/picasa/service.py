@@ -242,7 +242,7 @@ def _run_create(client, options, args):
   if options.date:
     import time
     try:
-      timestamp = time.mktime(time.strptime(options.date, '%m/%d/%Y'))
+      timestamp = time.mktime(time.strptime(options.date, '%Y-%m-%d'))
     except ValueError as e:
       print e
       print 'Ignoring date option, using today'
