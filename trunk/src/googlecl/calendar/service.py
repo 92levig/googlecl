@@ -57,18 +57,28 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
 
   QuickAddEvent = quick_add_event
 
-  def get_events(self, start_date, end_date, title):
-    """Get events that fall within a date range."""
-    query = gdata.calendar.service.CalendarEventQuery('default', 'private',
-                                                      'full')
-    query.start_min = start_date
-    if not end_date:
-      # Convert from string to datetime to do the addition of one day.
-      end_date = datetime.datetime.strptime(start_date, util.DATE_FORMAT) + \
-                 datetime.timedelta(days=1)
-      # Convert back to string for the query.
-      end_date = end_date.strftime(util.DATE_FORMAT)
-    query.start_max = end_date
+  def get_events(self, start_date=None, end_date=None, title=None, query=None):
+    """Get events.
+    
+    Keyword arguments:
+      start_date: Start date of the events (inclusive). Default None for no
+                  start-min parameter in the uri.
+      end_date: End date of the events (exclusive). Default None for no
+                start-max parameter in the uri.
+      title: Title to look for in the event, supporting regular expressions.
+             Default None for any title.
+      query: Query string (not encoded) for doing full-text searches on event
+             titles and content.
+                 
+    Returns:
+      List of events from all calendars that match the given params.
+                  
+    """
+    query = gdata.calendar.service.CalendarEventQuery(text_query=query)
+    if start_date:
+      query.start_min = start_date
+    if end_date:
+      query.start_max = end_date
     return self.GetEntries(query.ToUri(), title,
                            converter=gdata.calendar.CalendarEventFeedFromString)
 
@@ -95,8 +105,12 @@ service_class = CalendarServiceCL
 #        required
 #===============================================================================
 def _run_list(client, options, args):
-  from_, junk, to = options.date.partition(',')
-  entries = client.get_events(from_, to, options.title)
+  if options.date:
+    from_, junk, to = options.date.partition(',')
+    entries = client.get_events(from_, to, options.title, options.encoded_query)
+  else:
+    entries = client.get_events(title=options.title,
+                                query=options.query)
   if args:
     style_list = args[0].split(',')
   else:
@@ -117,10 +131,20 @@ def _run_add(client, options, args):
   client.quick_add_event(args[0])
 
 
+def _run_delete(client, options, args):
+  
+  from_, junk, to = options.date.partition(',')
+  events = client.get_events(from_, to, options.title, options.query)
+  client.Delete(events, 'event')
+
+
 tasks = {'list': util.Task('List events for a date range', callback=_run_list,
-                           required=['delimiter', 'date'], optional='title'),
+                           required=['delimiter'],
+                           optional=['title', 'query', 'date']),
          'today': util.Task('List events for today (automatically sets date)',
                             callback=_run_list_today,
-                            required='delimiter', optional='title'),
+                            required='delimiter', optional=['title', 'query']),
          'add': util.Task('Add event to calendar', callback=_run_add,
-                          args_desc='QUICK_ADD_TEXT')}
+                          args_desc='QUICK_ADD_TEXT'),
+         'delete': util.Task('Delete event from calendar',
+                             required=[['title', 'query']], optional='date')}

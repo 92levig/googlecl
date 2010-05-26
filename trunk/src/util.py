@@ -274,6 +274,11 @@ def entry_to_string(entry, style_list, delimiter, missing_field_value=None):
                           (entry.content.src).
            'author' - author of the entry 
                       (e.name.text for every e in entry.author).
+           'email' - email addresses of entry (entry.email[:].address),
+           'where' - location associated with the entry
+                     (entry.where[:].value_string).
+           'when' - time of the entry
+                    (entry.when[:].start_time - entry.when[:].end_time)
            The difference between url-site and url-direct is best exemplified
            by a picasa PhotoEntry: 'url-site' gives a link to the photo in the
            user's album, 'url-direct' gives a link to the image url.
@@ -315,13 +320,20 @@ def entry_to_string(entry, style_list, delimiter, missing_field_value=None):
         email_string = ''
       return email_string
     elif style == 'when':
+      if not entry.when:
+        return ''
       w = entry.when[0]
-      start_time_data = time.strptime(w.start_time[:-10], '%Y-%m-%dT%H:%M:%S')
-      start_time = time.strftime(config.get('GENERAL', 'date_print_format'),
-                                 start_time_data)
-      end_time_data = time.strptime(w.end_time[:-10], '%Y-%m-%dT%H:%M:%S')
-      end_time = time.strftime(config.get('GENERAL', 'date_print_format'),
-                                 end_time_data)
+      print_format = config.get('GENERAL', 'date_print_format')
+      try:
+        start_time_data = time.strptime(w.start_time[:-10], '%Y-%m-%dT%H:%M:%S')
+        end_time_data = time.strptime(w.end_time[:-10], '%Y-%m-%dT%H:%M:%S')
+      except ValueError as e:
+        # Handle date format for all-day events
+        if e.args[0].find('does not match format') != -1:
+          start_time_data = time.strptime(w.start_time, '%Y-%m-%d')
+          end_time_data = time.strptime(w.end_time, '%Y-%m-%d')
+      start_time = time.strftime(print_format, start_time_data)
+      end_time = time.strftime(print_format, end_time_data)
       return start_time + ' - ' + end_time
     elif style == 'where':
       return ';'.join([w.value_string for w in entry.where if w.value_string])
