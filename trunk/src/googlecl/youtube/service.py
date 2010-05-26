@@ -13,6 +13,7 @@ import util
 from googlecl.youtube import SECTION_HEADER
 from gdata.youtube.service import YouTubeService
 
+
 class YouTubeServiceCL(YouTubeService, util.BaseServiceCL):
   
   """Extends gdata.youtube.service.YouTubeService for the command line.
@@ -230,6 +231,12 @@ def _run_tag(client, options, args):
     client.TagVideos(video_entries, options.tags)
 
 
+def _run_delete(client, options, args):
+  entries = client.GetVideos(title=options.title)
+  client.Delete(entries, 'video',
+                util.config.get('GENERAL', 'delete_by_default'))
+
+
 tasks = {'post': util.Task('Post a video', callback=_run_post,
                            required='category',
                            optional=['title', 'summary', 'tags'],
@@ -237,4 +244,6 @@ tasks = {'post': util.Task('Post a video', callback=_run_post,
          'list': util.Task('List videos by user', callback=_run_list,
                            required='delimiter', optional='user'),
          'tag': util.Task('Add tags to a video', callback=_run_tag,
-                          required=['title', ['category', 'tags']])}  
+                          required=['title', ['category', 'tags']]),
+         'delete': util.Task('Delete videos', callback=_run_delete,
+                             optional='title')}  

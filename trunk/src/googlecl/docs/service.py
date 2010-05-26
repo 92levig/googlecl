@@ -314,6 +314,8 @@ def _run_upload(client, options, args):
 
 
 def _run_edit(client, options, args):
+  # This has not been incorporated as a function of DocsClientCL because it
+  # does not work well yet.
   import subprocess
   from gdata.docs.data import MIMETYPES
   from gdata.data import MediaSource
@@ -351,6 +353,12 @@ def _run_edit(client, options, args):
     client.Update(e, media_source=mediasource)
 
 
+def _run_delete(client, options, args):
+  entries = client.get_doclist(options.title)
+  client.Delete(entries, 'document',
+                util.config.get('GENERAL', 'delete_by_default'))
+
+
 tasks = {'upload': util.Task('Upload a document', callback=_run_upload,
                              optional=['title', 'folder', 'no-convert'],
                              args_desc='PATH_TO_FILE'),
@@ -361,4 +369,6 @@ tasks = {'upload': util.Task('Upload a document', callback=_run_upload,
                           required=[['title', 'folder']],
                           args_desc='LOCATION'),
          'list': util.Task('List documents', callback=_run_list,
-                           required='delimiter', optional='title')}
+                           required='delimiter', optional='title'),
+         'delete': util.Task('Delete contacts', callback=_run_delete,
+                             optional='title')}
