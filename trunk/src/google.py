@@ -23,8 +23,11 @@ Example usage (omitting the initial "./google.py"):
 Some terminology in use:
   service: The Google service being accessed (e.g. Picasa, Blogger, YouTube).
   task: What the client wants done by the service (e.g. post, get, delete).
-  
+
+@author: Tom Miller
+
 """
+__author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import optparse
 import os
 import urllib

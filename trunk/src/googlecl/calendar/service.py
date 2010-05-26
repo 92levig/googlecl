@@ -13,6 +13,7 @@ Created on May 24, 2010
 @author: Tom Miller
 
 """
+__author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import datetime
 import gdata.calendar.service
 import util
@@ -27,11 +28,11 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
     
     Keyword arguments:
       regex: Indicates if regular expressions should be used for matching
-             strings, such as album titles. (Default False)
-      tags_prompt: Indicates if while inserting photos, instance should prompt
+             strings, such as event titles. (Default False)
+      tags_prompt: Indicates if while inserting events, instance should prompt
                    for tags for each photo. (Default False)
       delete_prompt: Indicates if instance should prompt user before
-                     deleting an album or photo. (Default True)
+                     deleting a calendar or event. (Default True)
               
     """
     gdata.calendar.service.CalendarService.__init__(self)

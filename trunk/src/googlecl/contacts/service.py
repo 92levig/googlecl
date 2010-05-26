@@ -11,7 +11,9 @@ List contacts:
 Created on May 20, 2010
 
 @author: Tom Miller
+
 """
+__author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import gdata.contacts.service
 import util
 from googlecl.contacts import SECTION_HEADER
@@ -25,11 +27,11 @@ class ContactsServiceCL(gdata.contacts.service.ContactsService,
     
     Keyword arguments:
       regex: Indicates if regular expressions should be used for matching
-             strings, such as album titles. (Default False)
+             strings, such as contact names. (Default False)
       tags_prompt: Indicates if while inserting photos, instance should prompt
                    for tags for each photo. (Default False)
       delete_prompt: Indicates if instance should prompt user before
-                     deleting an album or photo. (Default True)
+                     deleting a contact. (Default True)
               
     """
     gdata.contacts.service.ContactsService.__init__(self)

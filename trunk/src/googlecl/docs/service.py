@@ -23,6 +23,7 @@ Created on May 13, 2010
 @author: Tom Miller
 
 """
+__author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import ConfigParser
 import gdata.docs.client
 import re
@@ -46,11 +47,11 @@ class DocsClientCL(gdata.docs.client.DocsClient):
     
     Keyword arguments:
       regex: Indicates if regular expressions should be used for matching
-             strings, such as album titles. (Default False)
-      tags_prompt: Indicates if while inserting photos, instance should prompt
-                   for tags for each photo. (Default False)
+             strings, such as document names. (Default False)
+      tags_prompt: Indicates if while inserting docs, instance should prompt
+                   for tags for each doc. (Default False)
       delete_prompt: Indicates if instance should prompt user before
-                     deleting an album or photo. (Default True)
+                     deleting a document. (Default True)
               
     """ 
     gdata.docs.client.DocsClient.__init__(self, source='GoogleCL')

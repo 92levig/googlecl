@@ -2,8 +2,9 @@
 Utility functions for the Google command line tool
 
 @author: Tom Miller
-"""
 
+"""
+__author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import ConfigParser
 import getpass
 import glob

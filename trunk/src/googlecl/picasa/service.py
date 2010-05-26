@@ -6,6 +6,7 @@ Created on Apr 20, 2010
 @author: Tom Miller
 
 """
+__author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import os
 import urllib
 import util
@@ -78,7 +79,7 @@ class PhotosServiceCL(PhotosService, util.BaseServiceCL):
       
     return entries
   
-  def Delete(self, title='', query='', delete_default=False):
+  def delete(self, title='', query='', delete_default=False):
     """Delete album(s) or photo(s).
     
     Keyword arguments:
@@ -99,8 +100,10 @@ class PhotosServiceCL(PhotosService, util.BaseServiceCL):
     if not entries:
       print 'No %ss matching %s' % (entry_type, search_string)
     util.BaseServiceCL.Delete(self, entries, entry_type, delete_default)
-        
-  def DownloadAlbum(self, base_path, user, title=None):
+
+  Delete = delete
+
+  def download_album(self, base_path, user, title=None):
     """Download an album to the local host.
     
     Keyword arguments:
@@ -147,8 +150,10 @@ class PhotosServiceCL(PhotosService, util.BaseServiceCL):
         url = photo.content.src
         high_res_url = url[:url.rfind('/')+1]+'d'+url[url.rfind('/'):]
         urllib.urlretrieve(high_res_url, photo_path)
-        
-  def GetAlbum(self, user='default', title=None):
+
+  DownloadAlbum = download_album
+
+  def get_album(self, user='default', title=None):
     """Get albums from a user feed.
     
     Keyword arguments:
@@ -161,8 +166,10 @@ class PhotosServiceCL(PhotosService, util.BaseServiceCL):
     """
     uri = '/data/feed/api/user/' + user + '?kind=album'
     return self.GetEntries(uri, title)
-  
-  def InsertPhotoList(self, album, photo_list, tags=''):
+
+  GetAlbum = get_album
+
+  def insert_photo_list(self, album, photo_list, tags=''):
     """Insert photos into an album.
     
     Keyword arguments:
@@ -190,11 +197,15 @@ class PhotosServiceCL(PhotosService, util.BaseServiceCL):
         failures.append(file)   
     return failures
 
-  def IsTokenValid(self):
+  InsertPhotoList = insert_photo_list
+
+  def is_token_valid(self):
     """Check that the token being used is valid."""
     return util.BaseServiceCL.IsTokenValid(self, '/data/feed/api/user/default')
 
-  def TagPhotos(self, photo_entries, tags):
+  IsTokenValid = is_token_valid
+
+  def tag_photos(self, photo_entries, tags):
     """Add or remove tags on a list of photos.
     
     Keyword arguments:
@@ -224,6 +235,8 @@ class PhotosServiceCL(PhotosService, util.BaseServiceCL):
         photo.media.keywords.text += ',' + ','.join(add_set)
  
       self.UpdatePhotoMetadata(photo)
+
+  TagPhotos = tag_photos
 
 
 service_class = PhotosServiceCL

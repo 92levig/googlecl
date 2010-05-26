@@ -6,6 +6,7 @@ Created on May 3, 2010
 @author: Tom Miller
 
 """
+__author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import gdata.youtube
 import os
 import util
@@ -26,11 +27,11 @@ class YouTubeServiceCL(YouTubeService, util.BaseServiceCL):
     
     Keyword arguments:
       regex: Indicates if regular expressions should be used for matching
-             strings, such as movie titles. (Default False)
-      tags_prompt: Indicates if while inserting items, instance should prompt
-                   for tags for each item. (Default False)
+             strings, such as video titles. (Default False)
+      tags_prompt: Indicates if while inserting videos, instance should prompt
+                   for tags for each video. (Default False)
       delete_prompt: Indicates if instance should prompt user before
-                     deleting an item. (Default True)
+                     deleting a video. (Default True)
               
     """ 
     YouTubeService.__init__(self)
@@ -56,7 +57,7 @@ class YouTubeServiceCL(YouTubeService, util.BaseServiceCL):
                   scheme='http://gdata.youtube.com/schemas/2007/categories.cat',
                   label=category)]
 
-  def CategorizeVideos(self, video_entries, category):
+  def categorize_videos(self, video_entries, category):
     """Change the categories of a list of videos to a single category.
     
     If the update fails with a request error, a message is printed to screen.
@@ -76,7 +77,9 @@ class YouTubeServiceCL(YouTubeService, util.BaseServiceCL):
         print ('Category update failed, probably because ' + category +
                ' is not a category.') 
 
-  def GetVideos(self, user='default', title=None):
+  CategorizeVideos = categorize_videos
+
+  def get_videos(self, user='default', title=None):
     """Get entries for videos uploaded by a user.
     
     Keyword arguments:
@@ -92,11 +95,15 @@ class YouTubeServiceCL(YouTubeService, util.BaseServiceCL):
                            title,
                            converter=gdata.youtube.YouTubeVideoFeedFromString)
 
-  def IsTokenValid(self):
+  GetVideos = get_videos
+
+  def is_token_valid(self):
     """Check that the token being used is valid."""
     return util.BaseServiceCL.IsTokenValid(self, '/feeds/api/users/default')
 
-  def Login(self, email, password):
+  IsTokenValid = is_token_valid
+
+  def login(self, email, password):
     """Try to use programmatic login to log into YouTube.
     
     Keyword arguments:
@@ -117,7 +124,9 @@ class YouTubeServiceCL(YouTubeService, util.BaseServiceCL):
     self.developer_key = devkey
     util.BaseServiceCL.Login(self, email, password)
 
-  def PostVideos(self, paths, category, title=None, desc=None, tags=None,
+  Login = login
+
+  def post_videos(self, paths, category, title=None, desc=None, tags=None,
                  devtags=None):
     """Post video(s) to YouTube.
     
@@ -147,7 +156,9 @@ class YouTubeServiceCL(YouTubeService, util.BaseServiceCL):
       print 'Loading ' + path
       self.InsertVideoEntry(video_entry, path)
 
-  def TagVideos(self, video_entries, tags):
+  PostVideos = post_videos
+
+  def tag_videos(self, video_entries, tags):
     """Add or remove tags on a list of videos.
     
     Keyword arguments:
@@ -177,6 +188,8 @@ class YouTubeServiceCL(YouTubeService, util.BaseServiceCL):
         video.media.keywords.text += ',' + ','.join(add_set)
  
       self.UpdateVideoEntry(video)
+
+  TagVideos = tag_videos
 
 
 service_class = YouTubeServiceCL

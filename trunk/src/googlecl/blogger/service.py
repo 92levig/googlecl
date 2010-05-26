@@ -6,6 +6,7 @@ Created on May 5, 2010
 @author: Tom Miller
 
 """
+__author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import atom
 import gdata
 import os
@@ -22,6 +23,17 @@ class BloggerServiceCL(util.BaseServiceCL):
   """
   
   def __init__(self, regex=False, tags_prompt=False, delete_prompt=True):
+    """Constructor.
+    
+    Keyword arguments:
+      regex: Indicates if regular expressions should be used for matching
+             strings, such as post titles. (Default False)
+      tags_prompt: Indicates if while inserting posts, instance should prompt
+                   for tags for each post. (Default False)
+      delete_prompt: Indicates if instance should prompt user before
+                     deleting a post. (Default True)
+              
+    """
     util.BaseServiceCL.__init__(self)
     self.service = 'blogger'
     self.server = 'www.blogger.com'
