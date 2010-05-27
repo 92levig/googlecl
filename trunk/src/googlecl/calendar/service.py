@@ -66,7 +66,7 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
               '<format>' - set a start date.
               '<format>,<format>' - set a start and end date.
               ',<format>' - set an end date.
-            Default None for any date.
+            Default None for setting a start date of today.
       title: Title to look for in the event, supporting regular expressions.
              Default None for any title.
       query: Query string (not encoded) for doing full-text searches on event
@@ -83,6 +83,8 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
         query.start_min = start
       if end:
         query.start_max = end
+    else:
+      query.start_min = datetime.datetime.now().strftime(util.DATE_FORMAT)
     return self.GetEntries(query.ToUri(), title,
                            converter=gdata.calendar.CalendarEventFeedFromString)
 
@@ -91,7 +93,7 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
   def is_token_valid(self):
     """Check that the token being used is valid."""
     return util.BaseServiceCL.IsTokenValid(self,
-                                    '/calendar/feeds/default/allcalendars/full')
+                                         '/calendar/feeds/default/private/full')
 
   IsTokenValid = is_token_valid
 
@@ -116,6 +118,7 @@ def _run_list(client, options, args):
     style_list = args[0].split(',')
   else:
     style_list = util.get_config_option(SECTION_HEADER, 'list_style').split(',')
+  entries.sort(key=lambda e: util.get_datetimes(e)[0])
   for e in entries:
     print util.entry_to_string(e, style_list, delimiter=options.delimiter)
 

@@ -320,22 +320,7 @@ def entry_to_string(entry, style_list, delimiter, missing_field_value=None):
         email_string = ''
       return email_string
     elif style == 'when':
-      if not entry.when:
-        start_time_data, end_time_data, freq = parse_recurrence(
-                                                       entry.recurrence.text)
-      else:
-        freq = None
-        w = entry.when[0]
-        try:
-          start_time_data = time.strptime(w.start_time[:-10],
-                                          '%Y-%m-%dT%H:%M:%S')
-          end_time_data = time.strptime(w.end_time[:-10],
-                                        '%Y-%m-%dT%H:%M:%S')
-        except ValueError as e:
-          # Handle date format for all-day events
-          if e.args[0].find('does not match format') != -1:
-            start_time_data = time.strptime(w.start_time, '%Y-%m-%d')
-            end_time_data = time.strptime(w.end_time, '%Y-%m-%d')
+      start_time_data, end_time_data, freq = get_datetimes(entry)
       print_format = config.get('GENERAL', 'date_print_format')
       start_time = time.strftime(print_format, start_time_data)
       end_time = time.strftime(print_format, end_time_data)
@@ -512,6 +497,39 @@ def get_config_option(section, option):
       return config.get('GENERAL', option)
   except ConfigParser.NoOptionError:
     return None
+
+
+def get_datetimes(cal_entry):
+  """Get datetime objects for the start and end of the event specified by a
+  calendar entry.
+  
+  Keyword arguments:
+    cal_entry: A CalendarEventEntry
+  
+  Returns:
+    (start_time, end_time, freq) where
+      start_time - datetime object of the start of the event
+      end_time - datetime object of the end of the event
+      freq - string that tells how often the event repeats (NoneType if the
+           event does not repeat)
+  
+  """
+  if cal_entry.recurrence:
+    return parse_recurrence(cal_entry.recurrence.text)
+  else:
+    freq = None
+    w = cal_entry.when[0]
+    try:
+      start_time_data = time.strptime(w.start_time[:-10],
+                                      '%Y-%m-%dT%H:%M:%S')
+      end_time_data = time.strptime(w.end_time[:-10],
+                                    '%Y-%m-%dT%H:%M:%S')
+    except ValueError as e:
+      # Handle date format for all-day events
+      if e.args[0].find('does not match format') != -1:
+        start_time_data = time.strptime(w.start_time, '%Y-%m-%d')
+        end_time_data = time.strptime(w.end_time, '%Y-%m-%d')
+  return (start_time_data, end_time_data, freq)
 
 
 def load_preferences():
