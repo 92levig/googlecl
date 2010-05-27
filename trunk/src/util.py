@@ -326,7 +326,10 @@ def entry_to_string(entry, style_list, delimiter, missing_field_value=None):
       end_time = time.strftime(print_format, end_time_data)
       time_string = start_time + ' - ' + end_time
       if freq:
-        time_string += ' (' + freq + ')'
+        if freq.has_key('BYDAY'):
+          time_string += ' (' + freq['BYDAY'].lower() + ')'
+        else:
+          time_string += ' (' + freq['FREQ'].lower() + ')'
       return time_string
     elif style == 'where':
       return ';'.join([w.value_string for w in entry.where if w.value_string])
@@ -347,7 +350,7 @@ def entry_to_string(entry, style_list, delimiter, missing_field_value=None):
         return_string += missing_field_value
       else:
         raise
-    return_string += (value.replace(delimiter, '') or missing_field_value) +\
+    return_string += (value.replace(delimiter, ' ') or missing_field_value) +\
                      delimiter
   return return_string.rstrip(delimiter)
 
@@ -596,18 +599,27 @@ def parse_recurrence(time_string):
   
   Returns:
     Tuple of (start_time, end_time, frequency). All values are in the user's
-    current timezone (I hope).
+    current timezone (I hope). start_time and end_time are datetime objects,
+    and frequency is a dictionary mapping RFC 2445 RRULE parameters to their
+    values. (http://www.ietf.org/rfc/rfc2445.txt, section 4.3.10)
   
   """
+  # Google calendars uses a pretty limited section of RFC 2445, and I'm
+  # abusing that here. This will probably break if Google ever changes how
+  # they handle recurrence, or how the recurrence string is built.
   data = time_string.split('\n')
-  start_time_string = data[0][-15:]
+  start_time_string = data[0].split(':')[-1]
   start_time = time.strptime(start_time_string,'%Y%m%dT%H%M%S')
   
-  end_time_string = data[1][-15:]
+  end_time_string = data[1].split(':')[-1]
   end_time = time.strptime(end_time_string,'%Y%m%dT%H%M%S')
   
-  freq = data[2][11:(data[2].find(';'))].lower()
-  
+  freq_string = data[2][6:]
+  freq_properties = freq_string.split(';')
+  freq = {}
+  for p in freq_properties:
+    key, value = p.split('=')
+    freq[key] = value
   return (start_time, end_time, freq)
 
 

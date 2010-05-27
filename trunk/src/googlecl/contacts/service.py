@@ -55,7 +55,7 @@ class ContactsServiceCL(gdata.contacts.service.ContactsService,
           if line.strip():    # filter out empty lines
             self.add_contact(line)
     else:
-      name, junk, email = string_or_csv_file.partition(',')
+      name, email = string_or_csv_file.split(',')
       new_contact = gdata.contacts.ContactEntry(title=atom.Title(
                                                              text=name.strip()))
       new_contact.email.append(gdata.contacts.Email(address=email.strip()))

@@ -78,7 +78,7 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
     """
     query = gdata.calendar.service.CalendarEventQuery(text_query=query)
     if date:
-      start, junk, end = date.partition(',')
+      start, end = date.split(',')
       if start:
         query.start_min = start
       if end:
