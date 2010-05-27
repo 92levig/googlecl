@@ -148,6 +148,9 @@ class BaseServiceCL(gdata.service.GDataService):
     """
     self.source = 'GoogleCL'
     self.client_id = 'GoogleCL'
+    # To resolve Issue 367
+    # http://code.google.com/p/gdata-python-client/issues/detail?id=367
+    self.ssl = False
     self.logged_in = False
     self.use_regex = regex
     self.prompt_for_tags = tags_prompt
@@ -294,7 +297,7 @@ def entry_to_string(entry, style_list, delimiter, missing_field_value=None):
   """
   def _string_for_style(style, entry):
     if style == 'title' or style == 'name':
-      return entry.title.text
+      return entry.title.text or ''
     elif style[:3] == 'url':
       substyle = style[4:] or config.get('GENERAL', 'url_style')
       try:
@@ -305,9 +308,9 @@ def entry_to_string(entry, style_list, delimiter, missing_field_value=None):
         else:
           raise
       if substyle == 'direct':
-        return entry.content.src or href
+        return entry.content.src or href or ''
       else:
-        return href or entry.content.src
+        return href or entry.content.src or ''
     elif style == 'author' and entry.author:
       author_string = str([a.name.text for a in entry.author])[1:-1]
       author_string = author_string.replace("'", '')

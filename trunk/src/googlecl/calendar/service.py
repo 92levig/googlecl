@@ -38,22 +38,38 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
     gdata.calendar.service.CalendarService.__init__(self)
     util.BaseServiceCL.set_params(self, regex, tags_prompt, delete_prompt)
 
-  def quick_add_event(self, quick_add_string):
+  def quick_add_event(self, quick_add_strings, calendar=None):
     """Add an event using the Calendar Quick Add feature.
     
     Keyword arguments:
-      quick_add_string: String to be parsed by the Calendar service, as if it
-                        was entered via the "Quick Add" function.
+      quick_add_strings: List of strings to be parsed by the Calendar service,
+                         as if it was entered via the "Quick Add" function.
+      calendar: Name of the calendar to add to. 
+                Default None for primary calendar.
 
     Returns:
       The event that was added.
     
     """
     import atom
-    event = gdata.calendar.CalendarEventEntry()
-    event.content = atom.Content(text=quick_add_string)
-    event.quick_add = gdata.calendar.QuickAdd(value='true') 
-    return self.InsertEvent(event, '/calendar/feeds/default/private/full')
+    request_feed = gdata.calendar.CalendarEventFeed()
+    if calendar:
+      cal = self.GetEntries('/calendar/feeds/default/allcalendars/full',
+                            calendar,
+                            converter=gdata.calendar.CalendarListFeedFromString)
+      if len(cal) > 1:
+        print 'More than one result for calendar ' + calendar +\
+              ' only adding event to ' + cal[0].title.text
+      cal_uri = cal[0].content.src
+    else:
+      cal_uri = '/calendar/feeds/default/private/full'
+    for i, event_str in enumerate(quick_add_strings):
+      event = gdata.calendar.CalendarEventEntry()
+      event.content = atom.Content(text=event_str)
+      event.quick_add = gdata.calendar.QuickAdd(value='true')
+      request_feed.AddInsert(event, 'insert-request' + str(i))
+    response_feed = self.ExecuteBatch(request_feed, cal_uri + '/batch')
+    return response_feed.entry
 
   QuickAddEvent = quick_add_event
 
@@ -132,7 +148,7 @@ def _run_list_today(client, options, args):
 
 
 def _run_add(client, options, args):
-  client.quick_add_event(args[0])
+  client.quick_add_event(args, options.cal)
 
 
 def _run_delete(client, options, args):

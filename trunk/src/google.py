@@ -219,6 +219,9 @@ def setup_parser():
   usage = 'usage: %prog ' + str(_available_services).replace("'", '') +\
           ' TASK [options]' 
   parser = optparse.OptionParser(usage=usage)
+  parser.add_option('--cal', dest='cal',
+                    help='Calendar only - specify a calendar other than your' +
+                    ' primary for retrieving/adding events.')
   parser.add_option('-c', '--category', dest='category',
                     help='YouTube only - specify video categories' + 
                     ' as a comma-separated list, e.g. "Film, Travel"')
