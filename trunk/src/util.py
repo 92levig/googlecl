@@ -321,20 +321,28 @@ def entry_to_string(entry, style_list, delimiter, missing_field_value=None):
       return email_string
     elif style == 'when':
       if not entry.when:
-        return ''
-      w = entry.when[0]
+        start_time_data, end_time_data, freq = parse_recurrence(
+                                                       entry.recurrence.text)
+      else:
+        freq = None
+        w = entry.when[0]
+        try:
+          start_time_data = time.strptime(w.start_time[:-10],
+                                          '%Y-%m-%dT%H:%M:%S')
+          end_time_data = time.strptime(w.end_time[:-10],
+                                        '%Y-%m-%dT%H:%M:%S')
+        except ValueError as e:
+          # Handle date format for all-day events
+          if e.args[0].find('does not match format') != -1:
+            start_time_data = time.strptime(w.start_time, '%Y-%m-%d')
+            end_time_data = time.strptime(w.end_time, '%Y-%m-%d')
       print_format = config.get('GENERAL', 'date_print_format')
-      try:
-        start_time_data = time.strptime(w.start_time[:-10], '%Y-%m-%dT%H:%M:%S')
-        end_time_data = time.strptime(w.end_time[:-10], '%Y-%m-%dT%H:%M:%S')
-      except ValueError as e:
-        # Handle date format for all-day events
-        if e.args[0].find('does not match format') != -1:
-          start_time_data = time.strptime(w.start_time, '%Y-%m-%d')
-          end_time_data = time.strptime(w.end_time, '%Y-%m-%d')
       start_time = time.strftime(print_format, start_time_data)
       end_time = time.strftime(print_format, end_time_data)
-      return start_time + ' - ' + end_time
+      time_string = start_time + ' - ' + end_time
+      if freq:
+        time_string += ' (' + freq + ')'
+      return time_string
     elif style == 'where':
       return ';'.join([w.value_string for w in entry.where if w.value_string])
     else:
@@ -560,6 +568,29 @@ def load_preferences():
   if made_changes:
     with open(pref_path, 'w') as pref_file:
       config.write(pref_file)
+
+
+def parse_recurrence(time_string):
+  """Parse recurrence data found in event entry.
+  
+  Keyword arguments:
+    time_string: Value of entry's recurrence.text field.
+  
+  Returns:
+    Tuple of (start_time, end_time, frequency). All values are in the user's
+    current timezone (I hope).
+  
+  """
+  data = time_string.split('\n')
+  start_time_string = data[0][-15:]
+  start_time = time.strptime(start_time_string,'%Y%m%dT%H%M%S')
+  
+  end_time_string = data[1][-15:]
+  end_time = time.strptime(end_time_string,'%Y%m%dT%H%M%S')
+  
+  freq = data[2][11:(data[2].find(';'))].lower()
+  
+  return (start_time, end_time, freq)
 
 
 def read_creds():
