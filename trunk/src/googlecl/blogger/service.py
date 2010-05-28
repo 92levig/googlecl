@@ -201,7 +201,7 @@ def _run_tag(client, options, args):
 tasks = {'delete': util.Task('Delete a post.', callback=_run_delete,
                              required='title'),
          'post': util.Task('Post content.', callback=_run_post,
-                           optional='tags',
+                           optional=['title', 'tags'],
                            args_desc='PATH_TO_CONTENT or CONTENT'),
          'list': util.Task('List posts in your blog', callback=_run_list,
                            required='delimiter', optional='title'),

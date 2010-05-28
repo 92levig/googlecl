@@ -67,6 +67,8 @@ class ContactsServiceCL(gdata.contacts.service.ContactsService,
         else:
           raise 
 
+  AddContact = add_contact
+
   def get_contacts(self, name):
     # The API only states that to return all the contacts, pass a large number
     # to max_results. Multiple queries never seem to run out of contacts...
