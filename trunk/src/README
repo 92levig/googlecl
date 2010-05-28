@@ -1,53 +1,63 @@
-1. Introduction
-GoogleCL aims to bring management of your Google services to the command line. Currently, the only Google services supported are Picasa, Blogger, and YouTube.
+Some terminology:
+  * service - The Google service being used (Picasa, Blogger, etc.)
+	* task - The task that the service will be doing (tag, post, delete, etc.)
 
-2. Example usage
-Here are some examples for this wonderful tool!
 
-Launch interactive mode. The only difference between this mode and the command line is that you don't have to keep typing "google.py"
-$ ./google.py
+You can also access help by typing {{{$ ./google.py help}}} or help on a specific service with {{{$ ./google.py help <service>}}}. For help with available options and what they mean, use {{{$ ./google.py --help}}}
 
-The rest of these examples assume you're in interactive mode and therefore omit the "./google.py".
+=Services=
+Each sub-section corresponds to a service, and each list item is a task that service can do. Each list item follows the format "task: description. {{{example}}}". Note that the example omits the initial {{{$ ./google.py <service>}}}
 
-Create a photo album with tags "Vermont" and name "Summer Vacation 2009"
-> picasa create -n "Summer Vacation 2009" -t Vermont ~/photos/vacation2009/*
-  
-Post photos to an existing album
-> picasa post -n "Summer Vacation 2008" ~/old_photos/*.jpg
-  
-Download another user's albums whose titles match a regular expression
-> picasa get --user my.friend.joe --title ".*ponies.*" ~/photos/joes_pony
-  
-Delete some posts you accidentally put up
-> blogger delete -n "Silly post, number [0-9]*"
-  
-Upload that post you wrote while deep underground
-> blogger post -n "My adventures in mining" -t "mines, Internet-less existence, darkness" ~/blog_entries/mining.txt
+==Blogger==
+  * delete: Delete posts. {{{delete --title "Silly post number [0-9]*"}}}
+  * list: List posts. {{{list title,url-site}}}
+	* post: Upload posts. {{{post --tags "GoogleCL, awesome" "Here's a really short post. The next posts will be much longer!" ~/blog/2010/may/*}}}
+	* tag: Label posts {{{tag --title "Dev post" --tags "Python, software"}}}
 
-Post your latest film endeavor to YouTube
-> youtube post --category Film --tags "Jane Austen, zombies" ~/final_project.mp4
+==Calendar==
+  * add: Add event to calendar. {{{add "Dinner party with George tomorrow at 6pm"}}}
+	* delete: Delete an event. {{{delete --cal "GoogleCL dev cal" --title "Release.*"}}}
+	* list: List events. {{{list --date 2010-06-01,2010-06-30}}}
+	* today: List events for today only. {{{today}}}
 
-Tag all your robot videos as such
-> youtube tag -n ".*robot.*" -t robot
+==Contacts==
+  * add: Add contacts. {{{add "Jim Raynor, jimmy@noreaster.com" contacts.csv}}}
+	* delete: Delete contacts. {{{delete --title Jerkface}}}
+	* list: List contacts. {{{list name,email --title ".*bob.*" > the_bobs.csv}}}
 
-List the albums that your friend has (See below for more info on the list task)
-> picasa list title,url -u friend.username
+==Docs==
+  * delete: Delete docs. {{{delete --title "Evidence"}}}
+	* edit: Edit or view a document. {{{edit --title "Shopping list" --editor vim}}}
+	* get: Download docs. {{{get --title "Homework [0-9]*"}}}
+	* list: List documents. {{{list title,url-direct --delimiter ": "}}}
+	* upload: Upload documents. {{{upload the_bobs.csv ~/work/docs_to_share/*}}}
 
-List your events for a given week
-> calendar list --date 2010-05-25,2010-06-02
+==Picasa==
+  * create: Create an album. {{{create --title "Summer Vacation 2009" --tags Vermont ~/photos/vacation2009/*}}}
+	* delete: Delete photos or albums. {{{delete --title "Stupid album"}}}
+  * get: Download photos. {{{get --title "My Album" /path/to/download/folder}}}
+	* list: List photos or albums. {{{list title,url-direct --query "A tag"}}}
+	* post: Add photos to an album. {{{post --title Summer Vacation 2008" ~/old_photos/*.jpg}}}
+	* tag: Tag photos. {{{tag --title "Album I forgot to tag" --tags oops}}}
 
-3. The 'list' task
+==Youtube==
+  * delete: Delete videos. {{{delete --title ".*"}}}
+  * list: List your videos. {{{list}}}
+	* post: Post a video. {{{post --category Education --devtags GoogleCL killer_robots.avi}}}
+  * tag: Tag videos. {{{tag -n ".*robot.*" --tags robot}}}
+
+===The List task===
 The list task can be given additional arguments to specify what exactly is being listed. For example,
 
-> <service> list style1,style2,style3
+{{{$ ./google.py <service> list style1,style2,style3 --delimiter ": "}}}
 
-will output those styles, in that order, with a comma delimiter. Valid values for <style1> etc. are:
-        'title' - title of the entry.
-        'url' - treated as 'url-direct' or 'url-site' depending on setting in preferences file.
-        'url-site' - url of the site associated with the entry.
-        'url-direct' - url directly to the resource.
-        'author' - author(s) of the entry.
-        'when' - "when" data for the entry (typically calendar-only, for start and end date of the event).
+will output those styles, in that order, with ": " as a delimiter. Valid values for `<`style1`>` etc. are:
+  * 'title' - title of the entry.
+  * 'url' - treated as 'url-direct' or 'url-site' depending on setting in preferences file.
+  * 'url-site' - url of the site associated with the entry.
+  * 'url-direct' - url directly to the resource.
+  * 'author' - author(s) of the entry.
+  * 'when' - "when" data for the entry (typically calendar-only, for start and end date of the event).
         'where' - "where" data for the entry (typically calendar-only, for where the event takes place).
 
 The difference between 'url-site' and 'url-direct' is best exemplified by a picasa PhotoEntry: 'url-site' gives a link to the photo in the user's album, 'url-direct' gives a link to the image url. If 'url-direct' is specified but is not applicable, 'url-site' is placed in its stead, and vice-versa.

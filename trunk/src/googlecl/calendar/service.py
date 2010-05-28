@@ -73,7 +73,7 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
 
   QuickAddEvent = quick_add_event
 
-  def get_events(self, date=None, title=None, query=None):
+  def get_events(self, date=None, title=None, query=None, calendar=None):
     """Get events.
     
     Keyword arguments:
@@ -89,7 +89,7 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
              titles and content.
                  
     Returns:
-      List of events from all calendars that match the given params.
+      List of events from primary calendar that match the given params.
                   
     """
     query = gdata.calendar.service.CalendarEventQuery(text_query=query)
