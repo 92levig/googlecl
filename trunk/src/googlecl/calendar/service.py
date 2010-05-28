@@ -43,24 +43,22 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
     
     Keyword arguments:
       quick_add_strings: List of strings to be parsed by the Calendar service,
-                         as if it was entered via the "Quick Add" function.
+                        cal_name as if it was entered via the "Quick Add" function.
       calendar: Name of the calendar to add to. 
                 Default None for primary calendar.
 
     Returns:
-      The event that was added.
+      The event that was added, or None if the event was not added. 
     
     """
     import atom
     request_feed = gdata.calendar.CalendarEventFeed()
     if calendar:
-      cal = self.GetEntries('/calendar/feeds/default/allcalendars/full',
-                            calendar,
-                            converter=gdata.calendar.CalendarListFeedFromString)
-      if len(cal) > 1:
-        print 'More than one result for calendar ' + calendar +\
-              ' only adding event to ' + cal[0].title.text
-      cal_uri = cal[0].content.src
+      cal = self.get_calendar(calendar)
+      if not cal:
+        return None
+      else:
+        cal_uri = cal.content.src
     else:
       cal_uri = '/calendar/feeds/default/private/full'
     for i, event_str in enumerate(quick_add_strings):
@@ -72,6 +70,22 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
     return response_feed.entry
 
   QuickAddEvent = quick_add_event
+
+  def get_calendar(self, cal_name):
+    """Get one calendar entry.
+    
+    Keyword arguments:
+      cal_name: Name of the calendar to match.
+      
+    Returns:
+      Single CalendarEntry, or None of there were no matches for cal_name.
+    
+    """
+    return self.GetSingleEntry('/calendar/feeds/default/allcalendars/full',
+                               cal_name,
+                            converter=gdata.calendar.CalendarListFeedFromString)
+
+  GetCalendar = get_calendar
 
   def get_events(self, date=None, title=None, query=None, calendar=None):
     """Get events.
@@ -87,12 +101,24 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
              Default None for any title.
       query: Query string (not encoded) for doing full-text searches on event
              titles and content.
+      calendar: Name of the calendar to get events for. Default None for the
+                primary calendar.
                  
     Returns:
       List of events from primary calendar that match the given params.
                   
     """
-    query = gdata.calendar.service.CalendarEventQuery(text_query=query)
+    import urllib
+    user = 'default'
+    if calendar:
+      cal = self.get_calendar(calendar)
+      if cal:
+        # Non-primary calendar feeds look like this:
+        # http:blah/blah/.../feeds/JUNK%40group.calendar.google.com/private/full
+        # So grab the part after /feeds/ and unquote it.
+        user = urllib.unquote(cal.content.src.split('/')[-3])
+    query = gdata.calendar.service.CalendarEventQuery(user=user,
+                                                      text_query=query)
     if date:
       start, end = date.split(',')
       if start:
@@ -100,7 +126,10 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
       if end:
         query.start_max = end
     else:
-      query.start_min = datetime.datetime.now().strftime(util.DATE_FORMAT)
+      query.futureevents = 'true'
+    query.orderby = 'starttime'
+    query.sortorder = 'ascend'
+    query.max_results = 100
     return self.GetEntries(query.ToUri(), title,
                            converter=gdata.calendar.CalendarEventFeedFromString)
 
@@ -129,12 +158,12 @@ service_class = CalendarServiceCL
 def _run_list(client, options, args):
   entries = client.get_events(date=options.date,
                               title=options.title,
-                              query=options.query)
+                              query=options.query,
+                              calendar=options.cal)
   if args:
     style_list = args[0].split(',')
   else:
     style_list = util.get_config_option(SECTION_HEADER, 'list_style').split(',')
-  entries.sort(key=lambda e: util.get_datetimes(e)[0])
   for e in entries:
     print util.entry_to_string(e, style_list, delimiter=options.delimiter)
 
@@ -152,7 +181,8 @@ def _run_add(client, options, args):
 
 
 def _run_delete(client, options, args):
-  events = client.get_events(options.date, options.title, options.query)
+  events = client.get_events(options.date, options.title,
+                             options.query, options.cal)
   client.Delete(events, 'event',
                 util.config.get('GENERAL', 'delete_by_default'))
 
@@ -165,6 +195,7 @@ tasks = {'list': util.Task('List events on primary calendar',
                             callback=_run_list_today,
                             required='delimiter', optional=['title', 'query']),
          'add': util.Task('Add event to primary calendar', callback=_run_add,
+                          optional='cal',
                           args_desc='QUICK_ADD_TEXT'),
          'delete': util.Task('Delete event from primary calendar',
                              callback=_run_delete,
