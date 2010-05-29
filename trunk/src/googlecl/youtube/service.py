@@ -220,7 +220,7 @@ def _run_post(client, options, args):
     print 'Must provide path to video to post!'
     return
   client.PostVideos(args, title=options.title, desc=options.summary,
-                   keywords=options.tags, category=options.category)
+                    tags=options.tags, category=options.category)
 
 
 def _run_tag(client, options, args):

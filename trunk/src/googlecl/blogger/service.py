@@ -174,7 +174,8 @@ def _run_post(client, options, args):
         title = 'New post'
       content = content_string
     entry = client.AddPost(options.title or title, content)
-    client.LabelPosts([entry], options.tags)
+    if options.tags:
+      client.LabelPosts([entry], options.tags)
 
 
 def _run_delete(client, options, args):
