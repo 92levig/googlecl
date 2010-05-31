@@ -303,9 +303,9 @@ def entry_to_string(entry, style_list, delimiter, missing_field_value=None):
   
   Keyword arguments:
     entry: Entry to convert to string.
-    style: List of strings that describe what the return string should be
+    style_list: List of strings that describe what the return string should be
            composed of. Valid style strings are:
-           'title' - title of the entry (entry.title.text).
+           'title', 'name' - title of the entry (entry.title.text).
            'url' - treated as 'url-direct' or 'url-site' depending on
                    setting in preferences file.
            'url-site' - url of the site associated with the entry
@@ -319,6 +319,10 @@ def entry_to_string(entry, style_list, delimiter, missing_field_value=None):
                      (entry.where[:].value_string).
            'when' - time of the entry
                     (entry.when[:].start_time - entry.when[:].end_time)
+           'summary', 'description', 'desc' - Summary / caption / description
+                    of the entry (entry.media.description.text or
+                    entry.summary.text).
+                    
            The difference between url-site and url-direct is best exemplified
            by a picasa PhotoEntry: 'url-site' gives a link to the photo in the
            user's album, 'url-direct' gives a link to the image url.
@@ -333,8 +337,10 @@ def entry_to_string(entry, style_list, delimiter, missing_field_value=None):
   
   """
   def _string_for_style(style, entry):
+    # We can access attributes willy-nilly, and catch the NoneTypes later.
+    value = ''
     if style == 'title' or style == 'name':
-      return entry.title.text or ''
+      value = entry.title.text
     elif style[:3] == 'url':
       substyle = style[4:] or config.get('GENERAL', 'url_style')
       try:
@@ -345,36 +351,44 @@ def entry_to_string(entry, style_list, delimiter, missing_field_value=None):
         else:
           raise
       if substyle == 'direct':
-        return entry.content.src or href or ''
+        value = entry.content.src or href
       else:
-        return href or entry.content.src or ''
+        value = href or entry.content.src
     elif style == 'author' and entry.author:
       author_string = str([a.name.text for a in entry.author])[1:-1]
-      author_string = author_string.replace("'", '')
-      return author_string
+      value = author_string.replace("'", '')
     elif style == 'email':
       if hasattr(entry, 'email'):
         email_string = str([e.address for e in entry.email])[1:-1]
-        email_string = email_string.replace("'", '')
-      else:
-        email_string = ''
-      return email_string
+        value= email_string.replace("'", '')
     elif style == 'when':
       start_time_data, end_time_data, freq = get_datetimes(entry)
       print_format = config.get('GENERAL', 'date_print_format')
       start_time = time.strftime(print_format, start_time_data)
       end_time = time.strftime(print_format, end_time_data)
-      time_string = start_time + ' - ' + end_time
+      value = start_time + ' - ' + end_time
       if freq:
         if freq.has_key('BYDAY'):
-          time_string += ' (' + freq['BYDAY'].lower() + ')'
+          value += ' (' + freq['BYDAY'].lower() + ')'
         else:
-          time_string += ' (' + freq['FREQ'].lower() + ')'
-      return time_string
+          value += ' (' + freq['FREQ'].lower() + ')'
     elif style == 'where':
-      return ';'.join([w.value_string for w in entry.where if w.value_string])
+      value = ';'.join([w.value_string for w in entry.where if w.value_string])
+    elif style == 'summary' or style[:4] == 'desc':
+      try:
+        # Try to access the "default" description
+        value = entry.media.description.text
+      except:
+        # If it's not there, try the summary attribute
+        value = entry.summary.text
+      else:
+        if not value:
+          # If the "default" description was there, but it was empty,
+          # try the summary attribute.
+          value = entry.summary.text
     else:
       raise ValueError("'Unknown listing style: '" + style + "'")
+    return value
 
   return_string = ''
   missing_field_value = missing_field_value or config.get('GENERAL',
@@ -382,7 +396,9 @@ def entry_to_string(entry, style_list, delimiter, missing_field_value=None):
   for style in style_list:
     value = ''
     try:
-      value = _string_for_style(style, entry)
+      # Get the value, replacing NoneTypes and empty strings
+      # with the missing field value.
+      value = _string_for_style(style, entry) or missing_field_value
     except ValueError as e:
       print e.args[0] + ' (Did not add value for style ' + style + ')'
     except AttributeError as e:
@@ -390,8 +406,8 @@ def entry_to_string(entry, style_list, delimiter, missing_field_value=None):
         return_string += missing_field_value
       else:
         raise
-    return_string += (value.replace(delimiter, ' ') or missing_field_value) +\
-                     delimiter
+    # Ensure the delimiter won't appear in a non-delineation role.
+    return_string += value.replace(delimiter, ' ') + delimiter
   return return_string.rstrip(delimiter)
 
 

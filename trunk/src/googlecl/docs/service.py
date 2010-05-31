@@ -72,7 +72,7 @@ class DocsClientCL(gdata.docs.client.DocsClient):
     
     """
     for entry in entries:
-      format = get_extension(entry)
+      format = get_extension(entry.GetDocumentType())
       path = os.path.join(base_path, entry.title.text + '.' + format)
       print 'Downloading ' + entry.title.text + ' to ' + path
       try:

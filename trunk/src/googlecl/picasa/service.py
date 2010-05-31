@@ -281,7 +281,20 @@ def _run_delete(client, options, args):
 def _run_list(client, options, args):
   entries = client.build_entry_list(user=options.user,
                                     title=options.title,
-                                    query=options.encoded_query)
+                                    query=options.encoded_query,
+                                    force_photos=True)
+  if args:
+    style_list = args[0].split(',')
+  else:
+    style_list = util.get_config_option(SECTION_HEADER, 'list_style').split(',')
+  for item in entries:
+    print util.entry_to_string(item, style_list, delimiter=options.delimiter)
+
+
+def _run_list_albums(client, options, args):
+  entries = client.build_entry_list(user=options.user,
+                                    title=options.title,
+                                    force_photos=False)
   if args:
     style_list = args[0].split(',')
   else:
@@ -335,10 +348,14 @@ tasks = {'create': util.Task('Create an album', callback=_run_create,
                            args_desc='PATH_TO_PHOTOS'), 
          'delete': util.Task('Delete photos or albums', callback=_run_delete,
                              required=[['title', 'query']]),
-         'list': util.Task('List photos or albums', callback=_run_list,
+         'list': util.Task('List photos', callback=_run_list,
                            required=['user', 'delimiter'],
                            optional=['title', 'query'], 
                            login_required=False),
+         'list-albums': util.Task('List albums', callback=_run_list_albums,
+                                  required=['user', 'delimiter'],
+                                  optional=['title'],
+                                  login_required=False),
          'get': util.Task('Download photos', callback=_run_get,
                           required='user', optional=['title', 'query'], 
                           login_required=False,
