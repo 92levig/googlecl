@@ -37,7 +37,11 @@ class YouTubeServiceCL(YouTubeService, util.BaseServiceCL):
     """ 
     YouTubeService.__init__(self)
     util.BaseServiceCL.set_params(self, regex, tags_prompt, delete_prompt)
-
+    # Developer keys have to be provided for API calls. You can get one for free
+    # at http://code.google.com/apis/youtube/dashboard, 
+    # so please don't take this one.
+    self.developer_key = 'AI39si4d9dBo0dX7TnGyfQ68bNiKfEeO7wORCfY3HAgSStFboTgTgAi9nQwJMfMSizdGIs35W9wVGkygEw8ei3_fWGIiGSiqnQ'
+  
   def build_category(self, category):
     """Build a single-item list of a YouTube category.
     
@@ -75,8 +79,10 @@ class YouTubeServiceCL(YouTubeService, util.BaseServiceCL):
       try:
         self.UpdateVideoEntry(video)
       except gdata.service.RequestError as e:
-        print ('Category update failed, probably because ' + category +
-               ' is not a category.') 
+        if e.args[0]['body'].find('invalid_value') != -1:
+          print 'Category update failed, ' + category + ' is not a category.'
+        else:
+          raise
 
   CategorizeVideos = categorize_videos
 
@@ -104,29 +110,6 @@ class YouTubeServiceCL(YouTubeService, util.BaseServiceCL):
 
   IsTokenValid = is_token_valid
 
-  def login(self, email, password):
-    """Try to use programmatic login to log into YouTube.
-    
-    Keyword arguments:
-      email: Email account to log in with. If no domain is specified, gmail.com
-             is inferred.
-      password: Un-encrypted password to log in with.
-    
-    Returns:
-      Nothing, but sets self.logged_in to True if login was a success.
-    
-    """
-    #Developer keys can only be gained via request, but should be secret...
-    #a problem for the open-source program.
-    #If you would like the devkey, e-mail me at tom.h.miller (gmail)
-    with open(os.path.expanduser('~/google/devkey'), 'r') as devkey_file:
-      #Strip the !*&!@# newline character
-      devkey = devkey_file.read().strip()
-    self.developer_key = devkey
-    util.BaseServiceCL.Login(self, email, password)
-
-  Login = login
-
   def post_videos(self, paths, category, title=None, desc=None, tags=None,
                  devtags=None):
     """Post video(s) to YouTube.
@@ -144,7 +127,7 @@ class YouTubeServiceCL(YouTubeService, util.BaseServiceCL):
     for path in paths:
       filename = os.path.basename(path).split('.')[0]
       my_media_group = Group(title=Title(text=title or filename),
-                             description=Description(text=desc),
+                             description=Description(text=desc or 'A video'),
                              keywords=Keywords(text=tags),
                              category=self.build_category(category))
   
@@ -153,7 +136,6 @@ class YouTubeServiceCL(YouTubeService, util.BaseServiceCL):
         taglist = devtags.replace(', ', ',')
         taglist = taglist.split(',')
         video_entry.AddDeveloperTags(taglist)
-            
       print 'Loading ' + path
       self.InsertVideoEntry(video_entry, path)
 
@@ -237,13 +219,14 @@ def _run_delete(client, options, args):
                 util.config.get('GENERAL', 'delete_by_default'))
 
 
-tasks = {'post': util.Task('Post a video', callback=_run_post,
+tasks = {'post': util.Task('Post a video.', callback=_run_post,
                            required='category',
                            optional=['title', 'summary', 'tags'],
                            args_desc='PATH_TO_VIDEO'),
-         'list': util.Task('List videos by user', callback=_run_list,
+         'list': util.Task('List videos by user.', callback=_run_list,
                            required='delimiter', optional='title'),
-         'tag': util.Task('Add tags to a video', callback=_run_tag,
+         'tag': util.Task('Add tags to a video and/or change its category.',
+                          callback=_run_tag,
                           required=['title', ['category', 'tags']]),
-         'delete': util.Task('Delete videos', callback=_run_delete,
+         'delete': util.Task('Delete videos.', callback=_run_delete,
                              optional='title')}  
