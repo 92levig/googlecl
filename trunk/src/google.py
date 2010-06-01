@@ -219,6 +219,9 @@ def setup_parser():
   usage = 'usage: %prog ' + str(_available_services).replace("'", '') +\
           ' TASK [options]' 
   parser = optparse.OptionParser(usage=usage)
+  parser.add_option('--blog', dest='blog',
+                    help='Blogger only - specify a blog other than your' +
+                    ' primary for tasks.')
   parser.add_option('--cal', dest='cal',
                     help='Calendar only - specify a calendar other than your' +
                     ' primary for retrieving/adding events.')

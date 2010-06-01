@@ -37,18 +37,21 @@ class BloggerServiceCL(util.BaseServiceCL):
     util.BaseServiceCL.__init__(self)
     self.service = 'blogger'
     self.server = 'www.blogger.com'
+    self.account_type = 'GOOGLE'
     util.BaseServiceCL.set_params(self, regex, tags_prompt, delete_prompt)
     
-  def add_post(self, title, content, is_draft=False):
+  def add_post(self, blog, title, content, is_draft=False):
     """Add a post.
     
     Keyword arguments:
+      blog: Title of the blog to post to.
       title: Title to give the post.
       content: String to get posted. This may be contents from a file, but NOT
                the path itself!
       is_draft: If this content is a draft post or not. (Default False)
     
     """
+    blog_id = self._get_blog_id(blog)
     entry = gdata.GDataEntry()
     entry.title = atom.Title(title_type='xhtml', text=title)
     entry.content = atom.Content(content_type='html', text=content)
@@ -56,26 +59,30 @@ class BloggerServiceCL(util.BaseServiceCL):
       control = atom.Control()
       control.draft = atom.Draft(text='yes')
       entry.control = control
-    return self.Post(entry, '/feeds/' + self.blog_id + '/posts/default')
+    return self.Post(entry, '/feeds/' + blog_id + '/posts/default')
 
   AddPost = add_post
 
+  def _get_blog_id(self, blog_title, user='default'):
+    """Return the blog ID of the blog that matches blog_title.
+    
+    Keyword arguments:
+      blog_title: Name or title of the blog.
+      user: Owner of the blog. Default 'default' for the authenticated user.
+    
+    """
+    blog_entry = self.GetSingleEntry('/feeds/' + user + '/blogs', blog_title)
+    return blog_entry.GetSelfLink().href.split('/')[-1]
+    
   def is_token_valid(self):
     """Check that the token being used is valid."""
-    if util.BaseServiceCL.IsTokenValid(self, '/feeds/default/blogs'):
-      feed = self.Get('/feeds/default/blogs')
-      self_link = feed.entry[0].GetSelfLink()
-      if self_link:
-        self.blog_id = self_link.href.split('/')[-1]
-      return True
-    else:
-      return False
+    return util.BaseServiceCL.IsTokenValid(self, '/feeds/default/blogs')
 
   IsTokenValid = is_token_valid
 
-  def delete_post(self, title, delete_default=False):
+  def delete_post(self, blog_title, title, delete_default=False):
     """Delete post(s) based on a title."""
-    to_delete = self.GetPosts(title)
+    to_delete = self.GetPosts(blog_title, title)
     if not to_delete:
       print 'No matches found for title ' + title
     else: 
@@ -85,7 +92,7 @@ class BloggerServiceCL(util.BaseServiceCL):
 
   DeletePost = delete_post
     
-  def get_posts(self, title=None):
+  def get_posts(self, blog_title, title=None):
     """Get entries for posts that match a title.
     
     This will only get posts for the user that has logged in. It's apparently
@@ -93,13 +100,15 @@ class BloggerServiceCL(util.BaseServiceCL):
     logged in.
     
     Keyword arguments:
+      blog_title: Name or title of the blog the post is in.
       title: Title that the post should have. (Default None, for all posts)
          
     Returns:
       List of posts that match parameters, or [] if none do.
       
     """
-    uri = '/feeds/' + self.blog_id + '/posts/default'
+    blog_id = self._get_blog_id(blog_title)
+    uri = '/feeds/' + blog_id + '/posts/default'
     return self.GetEntries(uri, title)
 
   GetPosts = get_posts
@@ -138,18 +147,6 @@ class BloggerServiceCL(util.BaseServiceCL):
 
   LabelPosts = label_posts
 
-  def login(self, email, password):
-    """Extends util.BaseServiceCL.Login to also set the blog ID."""
-    util.BaseServiceCL.Login(self, email, password)
-    
-    if self.logged_in:
-      feed = self.Get('/feeds/default/blogs')    
-      self_link = feed.entry[0].GetSelfLink()
-      if self_link:
-        self.blog_id = self_link.href.split('/')[-1]
-
-  Login = login
-
 
 service_class = BloggerServiceCL
 
@@ -173,19 +170,20 @@ def _run_post(client, options, args):
       if not options.title:
         title = 'New post'
       content = content_string
-    entry = client.AddPost(options.title or title, content)
+    entry = client.AddPost(options.blog, options.title or title, content)
     if options.tags:
       client.LabelPosts([entry], options.tags)
 
 
 def _run_delete(client, options, args):
-  client.DeletePost(title=options.title,
-                    delete_default=util.config.getboolean('GENERAL',
-                                                          'delete_by_default'))
+  post_entries = client.GetPosts(options.blog, options.title)
+  client.Delete(post_entries, entry_type = 'post',
+                delete_default=util.get_config_option('GENERAL',
+                                                      'delete_by_default'))
 
 
 def _run_list(client, options, args):
-  entries = client.GetPosts(options.title)
+  entries = client.GetPosts(options.blog, options.title)
   if args:
     style_list = args[0].split(',')
   else:
@@ -195,16 +193,17 @@ def _run_list(client, options, args):
 
 
 def _run_tag(client, options, args):
-  entries = client.GetPosts(options.title)
+  entries = client.GetPosts(options.blog, options.title)
   client.LabelPosts(entries, options.tags)
 
 
 tasks = {'delete': util.Task('Delete a post.', callback=_run_delete,
-                             required='title'),
+                             required=['title', 'blog']),
          'post': util.Task('Post content.', callback=_run_post,
+                           required='blog',
                            optional=['title', 'tags'],
                            args_desc='PATH_TO_CONTENT or CONTENT'),
          'list': util.Task('List posts in your blog', callback=_run_list,
-                           required='delimiter', optional='title'),
+                           required=['blog', 'delimiter'], optional='title'),
          'tag': util.Task('Label posts', callback=_run_tag,
-                          required=['tags', 'title'])}
+                          required=['blog', 'tags', 'title'])}
