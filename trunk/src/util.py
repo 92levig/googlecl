@@ -312,8 +312,7 @@ def entry_to_string(entry, style_list, delimiter, missing_field_value=None):
                         (entry.GetHtmlLink().href).
            'url-direct' - url directly to the resource 
                           (entry.content.src).
-           'author' - author of the entry 
-                      (e.name.text for every e in entry.author).
+           'author' - author of the entry (entry.author[:].name.text).
            'email' - email addresses of entry (entry.email[:].address),
            'where' - location associated with the entry
                      (entry.where[:].value_string).
@@ -322,7 +321,10 @@ def entry_to_string(entry, style_list, delimiter, missing_field_value=None):
            'summary', 'description', 'desc' - Summary / caption / description
                     of the entry (entry.media.description.text or
                     entry.summary.text).
-                    
+           'tags', 'labels' - Keywords / tags / labels of the entry
+                              (entry.media.description.keywords.text or
+                              entry.categories[:].term).
+                               
            The difference between url-site and url-direct is best exemplified
            by a picasa PhotoEntry: 'url-site' gives a link to the photo in the
            user's album, 'url-direct' gives a link to the image url.
@@ -336,7 +338,7 @@ def entry_to_string(entry, style_list, delimiter, missing_field_value=None):
     
   
   """
-  def _string_for_style(style, entry):
+  def _string_for_style(style, entry, join_string):
     # We can access attributes willy-nilly, and catch the NoneTypes later.
     value = ''
     if style == 'title' or style == 'name':
@@ -373,7 +375,8 @@ def entry_to_string(entry, style_list, delimiter, missing_field_value=None):
         else:
           value += ' (' + freq['FREQ'].lower() + ')'
     elif style == 'where':
-      value = ';'.join([w.value_string for w in entry.where if w.value_string])
+      value = join_string.join([w.value_string for w in entry.where
+                                if w.value_string])
     elif style == 'summary' or style[:4] == 'desc':
       try:
         # Try to access the "default" description
@@ -386,6 +389,12 @@ def entry_to_string(entry, style_list, delimiter, missing_field_value=None):
           # If the "default" description was there, but it was empty,
           # try the summary attribute.
           value = entry.summary.text
+    elif style == 'tags' or style == 'labels':
+      try:
+        value = entry.media.description.keywords.text
+      except:
+        # Blogger uses categories.
+        value = join_string.join([c.term for c in entry.category if c.term])
     else:
       raise ValueError("'Unknown listing style: '" + style + "'")
     return value
@@ -393,12 +402,16 @@ def entry_to_string(entry, style_list, delimiter, missing_field_value=None):
   return_string = ''
   missing_field_value = missing_field_value or config.get('GENERAL',
                                                           'missing_field_value')
+  if delimiter.strip() == ',':
+    join_string = ';'
+  else:
+    join_string = ','
   for style in style_list:
     value = ''
     try:
       # Get the value, replacing NoneTypes and empty strings
       # with the missing field value.
-      value = _string_for_style(style, entry) or missing_field_value
+      value = _string_for_style(style, entry, join_string) or missing_field_value
     except ValueError as e:
       print e.args[0] + ' (Did not add value for style ' + style + ')'
     except AttributeError as e:

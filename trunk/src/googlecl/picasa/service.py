@@ -213,6 +213,7 @@ class PhotosServiceCL(PhotosService, util.BaseServiceCL):
       tags: String representation of tags in a comma separated list.
             For how tags are generated from the string, 
             see util.generate_tag_sets().
+    
     """
     from gdata.media import Group, Keywords
     remove_set, add_set, replace_tags = util.generate_tag_sets(tags)
