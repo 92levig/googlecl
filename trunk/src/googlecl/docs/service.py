@@ -128,6 +128,36 @@ class DocsClientCL(gdata.docs.client.DocsClient):
                    if title == entry.title.text]
     return entries
 
+  def get_single_doc(self, title=None, folder=None):
+    """Return exactly one file.
+    
+    Uses GetEntries to retrieve the entries, then asks the user to select one of
+    them by entering a number.
+    
+    Keyword arguments:
+      title: Title to match on. See get_doclist. (Default None).
+      folder: Folders to look in. See get_doclist. (Default None).
+    
+    Returns:
+      None if there were no matches, or one entry matching the given title.
+    
+    """
+    entries = self.get_doclist(title, folder)
+    if not entries:
+      return None
+    elif len(entries) == 1:
+      return entries[0]
+    elif len(entries) > 1:
+      print 'More than one match for title ' + (title or '')
+      for num, entry in enumerate(entries):
+        print '%i) %s' % (num, entry.title.text)
+      selection = -1
+      while selection < 0 or selection > len(entries)-1: 
+        selection = int(raw_input('Please select one of the items by number: '))
+      return entries[selection]
+
+  GetSingleDoc = get_single_doc
+
   def is_token_valid(self):
     """Check that the token being used is valid."""
     try:
@@ -322,20 +352,17 @@ def _run_edit(client, options, args):
   from gdata.docs.data import MIMETYPES
   from gdata.data import MediaSource
   
-  entries = client.get_doclist(options.title)
-  if len(entries) > 1:
-    print 'More than one match, only editing the first result.'
-  e = entries[0]
-  format = options.format or get_extension(e.GetDocumentType())
-  editor = options.editor or get_editor(e.GetDocumentType())
+  doc_entry = client.get_single_doc(options.title, options.folder)
+  format = options.format or get_extension(doc_entry.GetDocumentType())
+  editor = options.editor or get_editor(doc_entry.GetDocumentType())
   if not editor:
     print 'No editor defined!'
     print 'Define an "editor" option in your config file, set the ' +\
           'EDITOR environment variable, or pass an editor in with --editor.'
     return
   temp_dir = tempfile.mkdtemp()
-  path = os.path.join(temp_dir, e.title.text + '.' + format)
-  client.export(e, path)
+  path = os.path.join(temp_dir, doc_entry.title.text + '.' + format)
+  client.export(doc_entry, path)
   create_time = os.stat(path).st_mtime
   subprocess.call([editor, path])
   if create_time == os.stat(path).st_mtime:
@@ -351,7 +378,7 @@ def _run_edit(client, options, args):
                            ' for a content type to upload as.')
       content_type = MIMETYPES[format]
     mediasource = MediaSource(file_path=path, content_type=content_type)
-    client.Update(e, media_source=mediasource)
+    client.Update(doc_entry, media_source=mediasource)
   try:
     # Good faith effort to keep the temp directory clean.
     shutil.rmtree(temp_dir)

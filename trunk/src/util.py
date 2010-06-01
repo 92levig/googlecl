@@ -96,17 +96,11 @@ class BaseServiceCL(gdata.service.GDataService):
       converter: Conversion function to apply to feed. See GetEntries.
     
     Returns:
-      None if there were TOO many matches, None if there were no matches, or
-      one entry matching the given title.
+      None if there were no matches, or one entry matching the given title.
     
     """
-    # upper_limit was picked semi-arbitrarily - it was the biggest multiple of
-    # ten less than Ubuntu's default number of terminal rows.
-    upper_limit = 20
     entries = self.GetEntries(uri, title, converter)
-    if len(entries) > upper_limit:
-      print 'Way too many matches (more than ' + str(upper_limit) + ')'
-      print 'Please give a more specific title.'
+    if not entries:
       return None
     elif len(entries) == 1:
       return entries[0]
@@ -118,8 +112,6 @@ class BaseServiceCL(gdata.service.GDataService):
       while selection < 0 or selection > len(entries)-1: 
         selection = int(raw_input('Please select one of the items by number: '))
       return entries[selection]
-    else:
-      return None
 
   def IsTokenValid(self, test_uri):
     """Check that the token being used is valid.
