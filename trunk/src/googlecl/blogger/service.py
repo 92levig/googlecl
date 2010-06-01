@@ -50,8 +50,13 @@ class BloggerServiceCL(util.BaseServiceCL):
                the path itself!
       is_draft: If this content is a draft post or not. (Default False)
     
+    Returns:
+      Entry of post. (Returns same results as self.Post())
+     
     """
     blog_id = self._get_blog_id(blog)
+    if not blog_id:
+      return None
     entry = gdata.GDataEntry()
     entry.title = atom.Title(title_type='xhtml', text=title)
     entry.content = atom.Content(content_type='html', text=content)
@@ -70,27 +75,21 @@ class BloggerServiceCL(util.BaseServiceCL):
       blog_title: Name or title of the blog.
       user: Owner of the blog. Default 'default' for the authenticated user.
     
+    Returns:
+      Blog ID (blog_entry.GetSelfLink().href.split('/')[-1]) if a blog is
+      found matching the user and blog_title. None otherwise.
     """
     blog_entry = self.GetSingleEntry('/feeds/' + user + '/blogs', blog_title)
-    return blog_entry.GetSelfLink().href.split('/')[-1]
+    if blog_entry:
+      return blog_entry.GetSelfLink().href.split('/')[-1]
+    else:
+      return None
     
   def is_token_valid(self):
     """Check that the token being used is valid."""
     return util.BaseServiceCL.IsTokenValid(self, '/feeds/default/blogs')
 
   IsTokenValid = is_token_valid
-
-  def delete_post(self, blog_title, title, delete_default=False):
-    """Delete post(s) based on a title."""
-    to_delete = self.GetPosts(blog_title, title)
-    if not to_delete:
-      print 'No matches found for title ' + title
-    else: 
-      util.BaseServiceCL.Delete(self, to_delete, 
-                                entry_type='post',
-                                delete_default=delete_default)
-
-  DeletePost = delete_post
     
   def get_posts(self, blog_title, title=None):
     """Get entries for posts that match a title.
@@ -108,8 +107,11 @@ class BloggerServiceCL(util.BaseServiceCL):
       
     """
     blog_id = self._get_blog_id(blog_title)
-    uri = '/feeds/' + blog_id + '/posts/default'
-    return self.GetEntries(uri, title)
+    if blog_id:
+      uri = '/feeds/' + blog_id + '/posts/default'
+      return self.GetEntries(uri, title)
+    else:
+      return []
 
   GetPosts = get_posts
 
@@ -171,7 +173,7 @@ def _run_post(client, options, args):
         title = 'New post'
       content = content_string
     entry = client.AddPost(options.blog, options.title or title, content)
-    if options.tags:
+    if entry and options.tags:
       client.LabelPosts([entry], options.tags)
 
 

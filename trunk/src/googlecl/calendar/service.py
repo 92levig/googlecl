@@ -43,7 +43,8 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
     
     Keyword arguments:
       quick_add_strings: List of strings to be parsed by the Calendar service,
-                        cal_name as if it was entered via the "Quick Add" function.
+                         cal_name as if it was entered via the "Quick Add"
+                         function.
       calendar: Name of the calendar to add to. 
                 Default None for primary calendar.
 
