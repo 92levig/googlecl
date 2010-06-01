@@ -317,11 +317,11 @@ def _run_edit(client, options, args):
   # This has not been incorporated as a function of DocsClientCL because it
   # does not work well yet.
   import subprocess
+  import tempfile
+  import shutil
   from gdata.docs.data import MIMETYPES
   from gdata.data import MediaSource
   
-  if not os.path.exists('/tmp/googlecl'):
-    os.mkdir('/tmp/googlecl')
   entries = client.get_doclist(options.title)
   if len(entries) > 1:
     print 'More than one match, only editing the first result.'
@@ -330,10 +330,11 @@ def _run_edit(client, options, args):
   editor = options.editor or get_editor(e.GetDocumentType())
   if not editor:
     print 'No editor defined!'
-    print 'Define a "default_editor" option in your config file, set the ' +\
+    print 'Define an "editor" option in your config file, set the ' +\
           'EDITOR environment variable, or pass an editor in with --editor.'
     return
-  path = '/tmp/googlecl/' + e.title.text + '.' + format
+  temp_dir = tempfile.mkdtemp()
+  path = os.path.join(temp_dir, e.title.text + '.' + format)
   client.export(e, path)
   create_time = os.stat(path).st_mtime
   subprocess.call([editor, path])
@@ -351,6 +352,12 @@ def _run_edit(client, options, args):
       content_type = MIMETYPES[format]
     mediasource = MediaSource(file_path=path, content_type=content_type)
     client.Update(e, media_source=mediasource)
+  try:
+    # Good faith effort to keep the temp directory clean.
+    shutil.rmtree(temp_dir)
+  except OSError:
+    # Only seen errors on Windows, but catch the more general OSError.
+    pass
 
 
 def _run_delete(client, options, args):

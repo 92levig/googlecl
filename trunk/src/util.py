@@ -17,7 +17,7 @@ import gdata.service
 
 
 config = ConfigParser.ConfigParser()
-_google_cl_dir = os.path.expanduser('~/.googlecl')
+_google_cl_dir = os.path.expanduser(os.path.join('~', '.googlecl'))
 _preferences_filename = 'prefs'
 _login_filename = 'creds'
 _auth_tokens_filename = 'auths'
