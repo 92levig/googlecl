@@ -116,7 +116,7 @@ def _run_add(client, options, args):
 def _run_delete(client, options, args):
   entries = client.GetContacts(options.title)
   client.Delete(entries, 'contact',
-                util.config.get('GENERAL', 'delete_by_default'))
+                util.config.getboolean('GENERAL', 'delete_by_default'))
 
 
 tasks = {'list': util.Task('List contacts', callback=_run_list,

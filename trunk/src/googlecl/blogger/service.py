@@ -178,7 +178,7 @@ def _run_post(client, options, args):
 def _run_delete(client, options, args):
   post_entries = client.GetPosts(options.blog, options.title)
   client.Delete(post_entries, entry_type = 'post',
-                delete_default=util.get_config_option('GENERAL',
+                delete_default=util.config.getboolean('GENERAL',
                                                       'delete_by_default'))
 
 

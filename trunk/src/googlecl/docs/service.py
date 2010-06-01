@@ -356,7 +356,7 @@ def _run_edit(client, options, args):
 def _run_delete(client, options, args):
   entries = client.get_doclist(options.title)
   client.Delete(entries, 'document',
-                util.config.get('GENERAL', 'delete_by_default'))
+                util.config.getboolean('GENERAL', 'delete_by_default'))
 
 
 tasks = {'upload': util.Task('Upload a document', callback=_run_upload,

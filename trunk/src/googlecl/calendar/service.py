@@ -184,7 +184,7 @@ def _run_delete(client, options, args):
   events = client.get_events(options.date, options.title,
                              options.query, options.cal)
   client.Delete(events, 'event',
-                util.config.get('GENERAL', 'delete_by_default'))
+                util.config.getboolean('GENERAL', 'delete_by_default'))
 
 
 tasks = {'list': util.Task('List events on primary calendar',

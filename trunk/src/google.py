@@ -180,16 +180,20 @@ def run_once(options, args):
     return
   
   if task.login_required:
-    token = util.read_auth_token(service)
-    if token:
-      try:
-        client.SetClientLoginToken(token)
-      except AttributeError:
-        client.auth_token = token
-      if client.IsTokenValid():
-        client.logged_in = True
-      else:
-        util.remove_auth_token(service)
+    # Only use tokens for the "default user" stored in the creds file.
+    # Don't want to keep semi-permanent tokens for what are essentially guest
+    # users.
+    if not options.user:
+      token = util.read_auth_token(service)
+      if token:
+        try:
+          client.SetClientLoginToken(token)
+        except AttributeError:
+          client.auth_token = token
+        if client.IsTokenValid():
+          client.logged_in = True
+        else:
+          util.remove_auth_token(service)
     if not client.logged_in:
       util.try_login(client, options.user, options.password)
       if client.logged_in:

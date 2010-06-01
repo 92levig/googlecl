@@ -84,7 +84,7 @@ class BaseServiceCL(gdata.service.GDataService):
       entries = [entry for entry in f.entry if title == entry.title.text]
     return entries
 
-  def GetSingleEntry(self, uri, title, converter=None):
+  def GetSingleEntry(self, uri, title=None, converter=None):
     """Return exactly one entry.
     
     Uses GetEntries to retrieve the entries, then asks the user to select one of
@@ -92,7 +92,7 @@ class BaseServiceCL(gdata.service.GDataService):
     
     Keyword arguments:
       uri: URI to get feed from. See GetEntries.
-      title: Title to match on. See GetEntries.
+      title: Title to match on. See GetEntries. (Default None).
       converter: Conversion function to apply to feed. See GetEntries.
     
     Returns:
@@ -111,7 +111,7 @@ class BaseServiceCL(gdata.service.GDataService):
     elif len(entries) == 1:
       return entries[0]
     elif len(entries) > 1:
-      print 'More than one match for title ' + title
+      print 'More than one match for title ' + (title or '')
       for num, entry in enumerate(entries):
         print '%i) %s' % (num, entry.title.text)
       selection = -1

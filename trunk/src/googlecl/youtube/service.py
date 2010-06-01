@@ -216,7 +216,7 @@ def _run_tag(client, options, args):
 def _run_delete(client, options, args):
   entries = client.GetVideos(title=options.title)
   client.Delete(entries, 'video',
-                util.config.get('GENERAL', 'delete_by_default'))
+                util.config.getboolean('GENERAL', 'delete_by_default'))
 
 
 tasks = {'post': util.Task('Post a video.', callback=_run_post,
