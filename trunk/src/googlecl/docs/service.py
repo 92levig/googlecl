@@ -59,6 +59,50 @@ class DocsClientCL(gdata.docs.client.DocsClient):
     self.use_regex = regex
     self.prompt_for_tags = tags_prompt
     self.prompt_for_delete = delete_prompt
+  
+  def edit_doc(self, doc_entry, editor, format):
+    """Edit a document.
+    
+    Keyword arguments:
+      doc_entry: DocEntry of the document to edit.
+      editor: Name of the editor to use. Should be executable from the user's
+              working directory.
+      format: Suffix of the file to download. For example, "txt", "csv", "xcl".
+    
+    """ 
+    import subprocess
+    import tempfile
+    import shutil
+    from gdata.docs.data import MIMETYPES
+    from gdata.data import MediaSource
+    
+    temp_dir = tempfile.mkdtemp()
+    path = os.path.join(temp_dir, doc_entry.title.text + '.' + format)
+    self.export(doc_entry, path)
+    create_time = os.stat(path).st_mtime
+    subprocess.call([editor, path])
+    if create_time == os.stat(path).st_mtime:
+      print 'No modifications to file, not uploading.'
+      return
+    else:
+      try:
+        content_type = MIMETYPES[format.upper()]
+      except KeyError:
+        print 'Could not find mimetype for ' + format
+        while format not in MIMETYPES.keys():
+          format = raw_input('Please enter one of ' + MIMETYPES.keys() + 
+                             ' for a content type to upload as.')
+        content_type = MIMETYPES[format]
+      mediasource = MediaSource(file_path=path, content_type=content_type)
+      self.Update(doc_entry, media_source=mediasource)
+    try:
+      # Good faith effort to keep the temp directory clean.
+      shutil.rmtree(temp_dir)
+    except OSError:
+      # Only seen errors on Windows, but catch the more general OSError.
+      pass
+
+  EditDoc = edit_doc
 
   def get_docs(self, base_path, entries, default_format='txt'):
     """Download documents.
@@ -323,6 +367,10 @@ def _run_get(client, options, args):
       print 'Path ' + path + ' does not exist!'
       return
   entries = client.get_doclist(options.title, options.folder)
+  print 'Removing spreadsheets from list of documents...'
+  print '(Downloading spreadsheets through the API is currently broken, sorry).'
+  entries = [e for e in entries
+             if e.GetDocumentType() != gdata.docs.data.SPREADSHEET_LABEL]
   client.get_docs(path, entries)
 
 
@@ -344,47 +392,22 @@ def _run_upload(client, options, args):
 
 
 def _run_edit(client, options, args):
-  # This has not been incorporated as a function of DocsClientCL because it
-  # does not work well yet.
-  import subprocess
-  import tempfile
-  import shutil
-  from gdata.docs.data import MIMETYPES
-  from gdata.data import MediaSource
-  
   doc_entry = client.get_single_doc(options.title, options.folder)
-  format = options.format or get_extension(doc_entry.GetDocumentType())
-  editor = options.editor or get_editor(doc_entry.GetDocumentType())
-  if not editor:
-    print 'No editor defined!'
-    print 'Define an "editor" option in your config file, set the ' +\
-          'EDITOR environment variable, or pass an editor in with --editor.'
-    return
-  temp_dir = tempfile.mkdtemp()
-  path = os.path.join(temp_dir, doc_entry.title.text + '.' + format)
-  client.export(doc_entry, path)
-  create_time = os.stat(path).st_mtime
-  subprocess.call([editor, path])
-  if create_time == os.stat(path).st_mtime:
-    print 'No modifications to file, not uploading.'
+  doc_type = doc_entry.GetDocumentType()
+  # Spreadsheet exporting is still broken (on the client library side)
+  # so we can't let users specify spreadsheets.
+  if doc_type == gdata.docs.data.SPREADSHEET_LABEL:
+    print 'Sorry, cannot edit or download spreadsheets.'
     return
   else:
-    try:
-      content_type = MIMETYPES[format.upper()]
-    except KeyError:
-      print 'Could not find mimetype for ' + format
-      while format not in MIMETYPES.keys():
-        format = raw_input('Please enter one of ' + MIMETYPES.keys() + 
-                           ' for a content type to upload as.')
-      content_type = MIMETYPES[format]
-    mediasource = MediaSource(file_path=path, content_type=content_type)
-    client.Update(doc_entry, media_source=mediasource)
-  try:
-    # Good faith effort to keep the temp directory clean.
-    shutil.rmtree(temp_dir)
-  except OSError:
-    # Only seen errors on Windows, but catch the more general OSError.
-    pass
+    format = options.format or get_extension(doc_type)
+    editor = options.editor or get_editor(doc_type)
+    if not editor:
+      print 'No editor defined!'
+      print 'Define an "editor" option in your config file, set the ' +\
+            'EDITOR environment variable, or pass an editor in with --editor.'
+      return
+    client.edit_doc(doc_entry, editor, format)
 
 
 def _run_delete(client, options, args):
