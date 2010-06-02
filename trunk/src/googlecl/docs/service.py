@@ -240,14 +240,7 @@ class DocsClientCL(gdata.docs.client.DocsClient):
       print 'Too many failed logins; Captcha required.'
     else:
       self.logged_in = True
-    
-    # Map folder titles to IDs
-    if self.logged_in:
-      folder_feed = self.GetDocList(uri='/feeds/default/private/full/-/folder')
-      self.folder_id = {}
-      for f in folder_feed.entry:
-        self.folder_id[f.title.text] = f.resource_id.text
-    
+
   Login = login
 
   def upload_docs(self, paths, title=None, folder=None, convert=True):
@@ -256,8 +249,8 @@ class DocsClientCL(gdata.docs.client.DocsClient):
     Keyword arguments:
       paths: Paths of files to upload.
       title: Title to give the files once uploaded.
-             (Defaults to the names of the files).
-      folder: Folder to put the files in. (Defaults to the root folder).
+             (Default None for the names of the files).
+      folder: Folder to put the files in. (Default None for the root folder).
       convert: If True, converts the files to the native Google Docs format.
                Otherwise, leaves as arbitrary file type. Only Google Apps
                Premier users can specify a value other than True. (Default True)
@@ -267,11 +260,23 @@ class DocsClientCL(gdata.docs.client.DocsClient):
     
     """
     from gdata.docs.data import MIMETYPES
-    if folder and self.folder_id.has_key(folder):
-      folder_id = self.folder_id[folder]
-      uri = (gdata.docs.client.FOLDERS_FEED_TEMPLATE % 
-             urllib.quote_plus(folder_id))
-    else:
+    uri = ''
+    if folder:
+      folder_feed = self.GetDocList(uri='/feeds/default/private/full/-/folder')
+      folder_entry = None
+      for f in folder_feed.entry:
+        if f.title.text == folder:
+          folder_entry = f
+          break
+      if not folder_entry:
+        create_folder = raw_input('Folder ' + folder + 
+                                  ' not found. Create it? (y/N): ')
+        if create_folder.lower() == 'y':
+          folder_entry = self.create(gdata.docs.data.FOLDER_LABEL, folder)
+      if folder_entry:
+        uri = (gdata.docs.client.FOLDERS_FEED_TEMPLATE % 
+               urllib.quote_plus(folder_entry.resource_id.text))
+    if not uri:
       uri = gdata.docs.client.DOCLIST_FEED_URI
     uri += '?convert=' + str(convert).lower()
     url_locs = {}
