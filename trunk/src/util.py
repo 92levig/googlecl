@@ -568,14 +568,14 @@ def get_datetimes(cal_entry):
   calendar entry.
   
   Keyword arguments:
-    cal_entry: A CalendarEventEntry
+    cal_entry: A CalendarEventEntry.
   
   Returns:
     (start_time, end_time, freq) where
-      start_time - datetime object of the start of the event
-      end_time - datetime object of the end of the event
+      start_time - datetime object of the start of the event.
+      end_time - datetime object of the end of the event.
       freq - string that tells how often the event repeats (NoneType if the
-           event does not repeat)
+           event does not repeat (does not have a gd:recurrence element)).
   
   """
   if cal_entry.recurrence:

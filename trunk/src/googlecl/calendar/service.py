@@ -88,7 +88,8 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
 
   GetCalendar = get_calendar
 
-  def get_events(self, date=None, title=None, query=None, calendar=None):
+  def get_events(self, date=None, title=None, query=None, calendar=None,
+                 max_results=100):
     """Get events.
     
     Keyword arguments:
@@ -97,13 +98,14 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
               '<format>' - set a start date.
               '<format>,<format>' - set a start and end date.
               ',<format>' - set an end date.
-            Default None for setting a start date of today.
+            Default None for only getting future events.
       title: Title to look for in the event, supporting regular expressions.
              Default None for any title.
       query: Query string (not encoded) for doing full-text searches on event
              titles and content.
       calendar: Name of the calendar to get events for. Default None for the
                 primary calendar.
+      max_results: Maximum number of events to get. Default 100.
                  
     Returns:
       List of events from primary calendar that match the given params.
@@ -120,17 +122,35 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
         user = urllib.unquote(cal.content.src.split('/')[-3])
     query = gdata.calendar.service.CalendarEventQuery(user=user,
                                                       text_query=query)
-    if date:
-      start, end = date.split(',')
-      if start:
-        query.start_min = start
+    
+    # Setting the recurrence-expand-start and end params don't actually seem to
+    # do anything. So... hope there aren't a lot of recurring events?
+    # I've just commented out the related statements instead of removing them.
+    #max_recur_expand = datetime.timedelta(days=31)
+    if date and date != ',':
+      # Partition won't choke on date == '2010-06-05', split will.
+      start, junk, end = date.partition(',')
       if end:
         query.start_max = end
+        #recur_exp_end = datetime.datetime.strptime(end, util.DATE_FORMAT)
+      if start:
+        query.start_min = start
+        #recur_exp_start = datetime.datetime.strptime(start, util.DATE_FORMAT)
+        #recur_exp_end = recur_exp_start + max_recur_expand
+      #else:
+        #recur_exp_start = recur_exp_end - max_recur_expand
     else:
-      query.futureevents = 'true'
+      query.start_min = datetime.datetime.today().strftime(util.DATE_FORMAT)
+      #recur_exp_start = datetime.datetime.today()
+      #recur_exp_end = recur_exp_start + max_recur_expand
+    
+    query.singleevents = 'true'
+    #query.recurrence_expansion_start = recur_exp_start.strftime(
+    #                                                           util.DATE_FORMAT)
+    #query.recurrence_expansion_end = recur_exp_end.strftime(util.DATE_FORMAT)
     query.orderby = 'starttime'
     query.sortorder = 'ascend'
-    query.max_results = 100
+    query.max_results = max_results
     return self.GetEntries(query.ToUri(), title,
                            converter=gdata.calendar.CalendarEventFeedFromString)
 
