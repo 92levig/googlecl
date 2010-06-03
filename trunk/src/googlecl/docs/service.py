@@ -60,6 +60,34 @@ class DocsClientCL(gdata.docs.client.DocsClient):
     self.prompt_for_tags = tags_prompt
     self.prompt_for_delete = delete_prompt
   
+  def delete(self, entries, entry_type, delete_default):
+    """Extends Delete to handle a list of entries.
+    
+    Keyword arguments:
+      entries: List of entries to delete.
+      entry_type: String describing the thing being deleted (e.g. album, post).
+      delete_default: Whether or not the default action should be deletion.
+      
+    """
+    if delete_default and self.prompt_for_delete:
+      prompt_str = '(Y/n)'
+    elif self.prompt_for_delete:
+      prompt_str = '(y/N)'
+    for item in entries:
+      if self.prompt_for_delete:
+        delete_str = raw_input('Are you SURE you want to delete %s "%s"? %s: ' % 
+                               (entry_type, item.title.text, prompt_str))
+        if not delete_str:
+          delete = delete_default
+        else:
+          delete = delete_str.lower() == 'y'
+      else:
+        delete = True
+      if delete:
+        gdata.docs.client.DocsClient.Delete(self, item)
+
+  Delete = delete
+
   def edit_doc(self, doc_entry, editor, format):
     """Edit a document.
     
@@ -398,6 +426,9 @@ def _run_upload(client, options, args):
 
 def _run_edit(client, options, args):
   doc_entry = client.get_single_doc(options.title, options.folder)
+  if not doc_entry:
+    print 'No matching documents found!'
+    return
   doc_type = doc_entry.GetDocumentType()
   # Spreadsheet exporting is still broken (on the client library side)
   # so we can't let users specify spreadsheets.
@@ -417,7 +448,7 @@ def _run_edit(client, options, args):
 
 def _run_delete(client, options, args):
   entries = client.get_doclist(options.title)
-  client.Delete(entries, 'document',
+  client.delete(entries, 'document',
                 util.config.getboolean('GENERAL', 'delete_by_default'))
 
 
