@@ -90,7 +90,7 @@ class PhotosServiceCL(PhotosService, util.BaseServiceCL):
             False, respectively. (Default False)
     
     """
-    entries = self.build_entry_list(title, query)
+    entries = self.build_entry_list(title=title, query=query)
     if query:
       entry_type = 'photo'
       search_string = query
@@ -176,6 +176,7 @@ class PhotosServiceCL(PhotosService, util.BaseServiceCL):
       album: The album entry of the album getting the photos.
       photo_list: A list of paths, each path a picture on the local host.
       tags: Text of the tags to be added to each photo, e.g. 'Islands, Vacation'
+            (Default '').
     
     """
     album_url = ('/data/feed/api/user/%s/albumid/%s' %

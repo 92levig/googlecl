@@ -192,6 +192,9 @@ def run_once(options, args):
           client.auth_token = token
         if client.IsTokenValid():
           client.logged_in = True
+          # Picasa requires email to be set to create an album, apparently.
+          # Might be true for other services, so set it up.
+          client.email, password = util.read_creds()
         else:
           util.remove_auth_token(service)
     if not client.logged_in:
@@ -201,7 +204,11 @@ def run_once(options, args):
           token = client.GetClientLoginToken()
         except AttributeError:
           token = client.auth_token
-        util.write_auth_token(service, token)
+        # Because we're only using auth tokens for the user specified in the
+        # creds file, don't write an auth token given to a user specified on
+        # the command line.
+        if not options.user:
+          util.write_auth_token(service, token)
       else:
         print 'Failed to log on!'
         return
