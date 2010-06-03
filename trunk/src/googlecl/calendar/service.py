@@ -120,6 +120,9 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
         # http:blah/blah/.../feeds/JUNK%40group.calendar.google.com/private/full
         # So grab the part after /feeds/ and unquote it.
         user = urllib.unquote(cal.content.src.split('/')[-3])
+      else:
+        print 'No calendar matching title ' + calendar + '.'
+        return
     query = gdata.calendar.service.CalendarEventQuery(user=user,
                                                       text_query=query)
     

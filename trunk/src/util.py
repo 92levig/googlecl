@@ -394,6 +394,8 @@ def entry_to_string(entry, style_list, delimiter, missing_field_value=None):
   return_string = ''
   missing_field_value = missing_field_value or config.get('GENERAL',
                                                           'missing_field_value')
+  if not delimiter:
+    delimiter = ','
   if delimiter.strip() == ',':
     join_string = ';'
   else:
@@ -413,6 +415,7 @@ def entry_to_string(entry, style_list, delimiter, missing_field_value=None):
         raise
     # Ensure the delimiter won't appear in a non-delineation role.
     return_string += value.replace(delimiter, ' ') + delimiter
+  
   return return_string.rstrip(delimiter)
 
 

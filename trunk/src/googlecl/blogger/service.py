@@ -78,6 +78,7 @@ class BloggerServiceCL(util.BaseServiceCL):
     Returns:
       Blog ID (blog_entry.GetSelfLink().href.split('/')[-1]) if a blog is
       found matching the user and blog_title. None otherwise.
+    
     """
     blog_entry = self.GetSingleEntry('/feeds/' + user + '/blogs', blog_title)
     if blog_entry:
