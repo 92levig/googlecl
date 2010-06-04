@@ -13,6 +13,8 @@ Created on May 20, 2010
 @author: Tom Miller
 
 """
+from __future__ import with_statement
+
 __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import gdata.contacts.service
 import util
@@ -61,7 +63,7 @@ class ContactsServiceCL(gdata.contacts.service.ContactsService,
       new_contact.email.append(gdata.contacts.Email(address=email.strip()))
       try:
         self.CreateContact(new_contact)
-      except gdata.service.RequestError as e:
+      except gdata.service.RequestError, e:
         if e.args[0]['reason'] == 'Conflict':
           print 'Already have a contact for e-mail address ' + email.strip()
         else:

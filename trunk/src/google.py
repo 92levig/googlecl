@@ -27,6 +27,8 @@ Some terminology in use:
 @author: Tom Miller
 
 """
+from __future__ import with_statement
+
 __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import optparse
 import os
@@ -147,7 +149,8 @@ def run_once(options, args):
   try:
     service = args.pop(0)
     task_name = args.pop(0)
-  except IndexError as e:
+  #except IndexError as e:
+  except IndexError:
     if service == 'help':
       print_help()
     else:

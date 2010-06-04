@@ -6,6 +6,8 @@ Created on Apr 20, 2010
 @author: Tom Miller
 
 """
+from __future__ import with_statement
+
 __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import os
 import urllib
@@ -193,7 +195,7 @@ class PhotosServiceCL(PhotosService, util.BaseServiceCL):
                                summary='',
                                filename_or_handle=file, 
                                keywords=keywords)
-      except GooglePhotosException as e:
+      except GooglePhotosException, e:
         print 'Failed to upload %s. (%s: %s)' % (file, e.reason, e.body) 
         failures.append(file)   
     return failures
@@ -258,7 +260,7 @@ def _run_create(client, options, args):
     import time
     try:
       timestamp = time.mktime(time.strptime(options.date, util.DATE_FORMAT))
-    except ValueError as e:
+    except ValueError, e:
       print e
       print 'Ignoring date option, using today'
       options.date = ''

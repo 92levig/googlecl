@@ -149,7 +149,7 @@ class DocsClientCL(gdata.docs.client.DocsClient):
       print 'Downloading ' + entry.title.text + ' to ' + path
       try:
         self.export(entry, path)
-      except Exception as e:
+      except Exception, e:
         print e
         print 'Download of ' + entry.title.text + ' failed'
 
@@ -234,7 +234,7 @@ class DocsClientCL(gdata.docs.client.DocsClient):
     """Check that the token being used is valid."""
     try:
       self.Get('/feeds/default/private/full')
-    except gdata.service.RequestError as e:
+    except gdata.service.RequestError, e:
       if e.args[0]['body'].find('Token invalid') != -1:
         return False
       else:
@@ -262,7 +262,7 @@ class DocsClientCL(gdata.docs.client.DocsClient):
     
     try:
       self.client_login(email, password, 'GoogleCL')
-    except BadAuthentication as e:
+    except BadAuthentication, e:
       print e
     except CaptchaChallenge:
       print 'Too many failed logins; Captcha required.'
@@ -320,7 +320,7 @@ class DocsClientCL(gdata.docs.client.DocsClient):
                             title or filename.split('.')[0],
                             content_type=content_type,
                             folder_or_uri=uri)
-      except Exception as e:
+      except Exception, e:
         print 'Failed to upload ' + path
         print e
       else:

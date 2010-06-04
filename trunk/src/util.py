@@ -4,6 +4,8 @@ Utility functions for the Google command line tool
 @author: Tom Miller
 
 """
+from __future__ import with_statement
+
 __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import ConfigParser
 import getpass
@@ -126,7 +128,7 @@ class BaseServiceCL(gdata.service.GDataService):
     """
     try:
       self.Get(test_uri)
-    except gdata.service.RequestError as e:
+    except gdata.service.RequestError, e:
       if e.args[0]['body'].find('Token invalid') != -1:
         return False
       else:
@@ -156,7 +158,7 @@ class BaseServiceCL(gdata.service.GDataService):
     
     try:
       self.ProgrammaticLogin()
-    except gdata.service.BadAuthentication as e:
+    except gdata.service.BadAuthentication, e:
       print e
     except gdata.service.CaptchaRequired:
       print 'Too many failed logins; Captcha required.'
@@ -406,9 +408,9 @@ def entry_to_string(entry, style_list, delimiter, missing_field_value=None):
       # Get the value, replacing NoneTypes and empty strings
       # with the missing field value.
       value = _string_for_style(style, entry, join_string) or missing_field_value
-    except ValueError as e:
+    except ValueError, e:
       print e.args[0] + ' (Did not add value for style ' + style + ')'
-    except AttributeError as e:
+    except AttributeError, e:
       if e.args[0].find("'NoneType' object has no attribute") != -1:
         return_string += missing_field_value
       else:
@@ -591,7 +593,7 @@ def get_datetimes(cal_entry):
                                       '%Y-%m-%dT%H:%M:%S')
       end_time_data = time.strptime(w.end_time[:-10],
                                     '%Y-%m-%dT%H:%M:%S')
-    except ValueError as e:
+    except ValueError, e:
       # Handle date format for all-day events
       if e.args[0].find('does not match format') != -1:
         start_time_data = time.strptime(w.start_time, '%Y-%m-%d')
@@ -613,11 +615,11 @@ def load_preferences():
     # keep them here.
     # REMEMBER: updating these means you need to update the CONFIG readme.
     _picasa = {'access': 'public'}
-    _general = {'regex': False,
-               'delete_by_default': False,
-               'delete_prompt': True,
-               'tags_prompt': False,
-               'use_default_username': True,
+    _general = {'regex': 'False',
+               'delete_by_default': 'False',
+               'delete_prompt': 'True',
+               'tags_prompt': 'False',
+               'use_default_username': 'True',
                'url_style': 'site',
                'list_style': 'title,url-site',
                'missing_field_value': 'N/A',

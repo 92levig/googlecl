@@ -6,6 +6,8 @@ Created on May 5, 2010
 @author: Tom Miller
 
 """
+from __future__ import with_statement
+
 __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import atom
 import gdata
