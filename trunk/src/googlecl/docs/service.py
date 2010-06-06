@@ -29,7 +29,7 @@ import gdata.docs.client
 import re
 import os
 import urllib
-import util
+import googlecl.util as util
 from gdata.client import BadAuthentication, CaptchaChallenge
 from googlecl.docs import SECTION_HEADER
 

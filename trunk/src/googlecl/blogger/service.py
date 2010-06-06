@@ -12,7 +12,7 @@ __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import atom
 import gdata
 import os
-import util
+import googlecl.util as util
 from googlecl.blogger import SECTION_HEADER
 
 

@@ -9,7 +9,7 @@ Created on May 3, 2010
 __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import gdata.youtube
 import os
-import util
+import googlecl.util as util
 from googlecl.youtube import SECTION_HEADER
 from gdata.youtube.service import YouTubeService
 
@@ -78,7 +78,7 @@ class YouTubeServiceCL(YouTubeService, util.BaseServiceCL):
       video.media.category = self.build_category(category)
       try:
         self.UpdateVideoEntry(video)
-      except gdata.service.RequestError as e:
+      except gdata.service.RequestError, e:
         if e.args[0]['body'].find('invalid_value') != -1:
           print 'Category update failed, ' + category + ' is not a category.'
         else:

@@ -33,7 +33,7 @@ __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import optparse
 import os
 import urllib
-import util
+import googlecl.util as util
 
 
 _available_services = ['picasa', 'blogger', 'youtube', 'docs', 'contacts',
@@ -149,7 +149,6 @@ def run_once(options, args):
   try:
     service = args.pop(0)
     task_name = args.pop(0)
-  #except IndexError as e:
   except IndexError:
     if service == 'help':
       print_help()

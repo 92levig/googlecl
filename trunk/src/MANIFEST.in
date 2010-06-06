@@ -1,0 +1,2 @@
+include google README README.config
+recursive-include googlecl *.py

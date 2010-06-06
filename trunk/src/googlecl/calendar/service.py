@@ -16,7 +16,7 @@ Created on May 24, 2010
 __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import datetime
 import gdata.calendar.service
-import util
+import googlecl.util as util
 from googlecl.calendar import SECTION_HEADER
 
 

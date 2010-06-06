@@ -17,7 +17,7 @@ from __future__ import with_statement
 
 __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import gdata.contacts.service
-import util
+import googlecl.util as util
 from googlecl.contacts import SECTION_HEADER
 
 

@@ -11,7 +11,7 @@ from __future__ import with_statement
 __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import os
 import urllib
-import util
+import googlecl.util as util
 from googlecl.picasa import SECTION_HEADER
 from gdata.photos.service import PhotosService, GooglePhotosException
 
