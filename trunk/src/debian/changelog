@@ -1,6 +1,6 @@
-googlecl (0.9-1) unstable; urgency=low
+googlecl (0.9-1) lucid; urgency=low
 
-  * Initial release (Closes: #nnnn)  <nnnn is the bug number of your ITP>
+  * Initial release (Closes: #123456)
 
- -- tom.h.miller <coila@unknown>  Sat, 05 Jun 2010 20:46:17 -0700
+ -- Jason E. Holt <jholt@google.com>  Sat, 05 Jun 2010 21:25:34 -0700
 
