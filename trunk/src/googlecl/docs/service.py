@@ -369,7 +369,7 @@ def _run_upload(client, options, args):
   if not args:
     print 'Need to tell me what to upload!'
     return
-  client.upload_docs(args, options.title, options.folder)
+  client.upload_docs(args, options.title)
 
 
 def _run_edit(client, options, args):

@@ -36,7 +36,7 @@ import urllib
 import googlecl.util as util
 
 
-_available_services = ['picasa', 'blogger', 'youtube', 'docs', 'contacts',
+AVAILABLE_SERVICES = ['picasa', 'blogger', 'youtube', 'docs', 'contacts',
                        'calendar']
 
 
@@ -106,7 +106,7 @@ def print_help(service=None, tasks=None):
     print '  the service is "picasa", the task is "post", the single ' + \
           'option is a name of "My Cat Photos", and the argument is the ' + \
           'path to the photos.'
-    print '  The available services are ' + str(_available_services)[1:-1]
+    print '  The available services are ' + str(AVAILABLE_SERVICES)[1:-1]
     print '  Enter "> help <service>" for more information on a service.'
     print '  Or, just "quit" to quit.'
   else:
@@ -167,8 +167,14 @@ def run_once(options, args):
   tags_prompt = util.config.getboolean('GENERAL', 'tags_prompt')
   delete_prompt = util.config.getboolean('GENERAL', 'delete_prompt')
   
-  service_module = __import__('googlecl.' + service + '.service',
-                              globals(), locals(), -1)
+  try:
+    service_module = __import__('googlecl.' + service + '.service',
+                                globals(), locals(), -1)
+  except ImportError, e:
+    print e.args[0]
+    print 'Did you remember to specify the service? Must be one of ' +\
+          str(AVAILABLE_SERVICES)[1:-1]
+    return
   if not service_module:
     return
   client = service_module.service_class(regex, tags_prompt, delete_prompt)
@@ -229,7 +235,7 @@ def setup_parser():
     optparse.OptionParser with options configured.
   
   """
-  usage = 'usage: %prog ' + str(_available_services).replace("'", '') +\
+  usage = 'usage: %prog ' + str(AVAILABLE_SERVICES).replace("'", '') +\
           ' TASK [options]' 
   parser = optparse.OptionParser(usage=usage)
   parser.add_option('--blog', dest='blog',
