@@ -16,6 +16,15 @@ import googlecl.util as util
 from googlecl.blogger import SECTION_HEADER
 
 
+class BlogNotFound(Exception):
+  def __str__(self):
+    if len(self.args) == 2:
+      return self.args[0] + ': ' + self.args[1]
+    else:
+      return self.args
+  pass
+
+
 class BloggerServiceCL(util.BaseServiceCL):
   
   """Command-line-friendly service for the Blogger API. 
@@ -86,7 +95,7 @@ class BloggerServiceCL(util.BaseServiceCL):
     if blog_entry:
       return blog_entry.GetSelfLink().href.split('/')[-1]
     else:
-      return None
+      raise BlogNotFound('No blog matching', blog_title)
     
   def is_token_valid(self):
     """Check that the token being used is valid."""
@@ -167,6 +176,9 @@ service_class = BloggerServiceCL
 #===============================================================================
 def _run_post(client, options, args):
   max_size = 500000
+  if not args:
+    print 'Must provide paths to files and/or string content to post'
+    return
   for content_string in args:
     if os.path.exists(content_string):
       with open(content_string, 'r') as content_file:
@@ -189,14 +201,22 @@ def _run_post(client, options, args):
 
 
 def _run_delete(client, options, args):
-  post_entries = client.GetPosts(options.blog, options.title)
+  try:
+    post_entries = client.GetPosts(options.blog, options.title)
+  except BlogNotFound, e:
+    print e
+    return
   client.Delete(post_entries, entry_type = 'post',
                 delete_default=util.config.getboolean('GENERAL',
                                                       'delete_by_default'))
 
 
 def _run_list(client, options, args):
-  entries = client.GetPosts(options.blog, options.title)
+  try:
+    entries = client.GetPosts(options.blog, options.title)
+  except BlogNotFound, e:
+    print e
+    return
   if args:
     style_list = args[0].split(',')
   else:
@@ -206,7 +226,11 @@ def _run_list(client, options, args):
 
 
 def _run_tag(client, options, args):
-  entries = client.GetPosts(options.blog, options.title)
+  try:
+    entries = client.GetPosts(options.blog, options.title)
+  except BlogNotFound, e:
+    print e
+    return
   client.LabelPosts(entries, options.tags)
 
 
