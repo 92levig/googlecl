@@ -166,18 +166,26 @@ service_class = BloggerServiceCL
 #        required
 #===============================================================================
 def _run_post(client, options, args):
+  max_size = 500000
   for content_string in args:
     if os.path.exists(content_string):
       with open(content_string, 'r') as content_file:
-        content = content_file.read()
+        content = content_file.read(max_size)
+        if content_file.read(1):
+          print 'Only read first ' + str(max_size) + ' bytes of file ' +\
+                content_string
       title = os.path.basename(content_string).split('.')[0]
     else:
       if not options.title:
         title = 'New post'
       content = content_string
-    entry = client.AddPost(options.blog, options.title or title, content)
-    if entry and options.tags:
-      client.LabelPosts([entry], options.tags)
+    try:
+      entry = client.AddPost(options.blog, options.title or title, content)
+    except Exception, e:
+      print 'Failed to post: ' + str(e)
+    else:
+      if entry and options.tags:
+        client.LabelPosts([entry], options.tags)
 
 
 def _run_delete(client, options, args):
