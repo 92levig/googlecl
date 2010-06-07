@@ -224,15 +224,15 @@ class DocsServiceCL(gdata.docs.service.DocsService, util.BaseServiceCL):
     url_locs = {}
     for path in paths:
       filename = os.path.basename(path)
-      extension = filename.split('.')[1].upper() 
       try:
+        extension = filename.split('.')[1].upper()
         content_type = SUPPORTED_FILETYPES[extension]
       except:
         content_type = 'text/plain'
       print 'Loading ' + path
       try:
         ms = gdata.MediaSource(file_path=path, content_type=content_type)
-        title = title or filename
+        title = title or filename.split('.')[0]
         if extension.lower() in ['csv', 'tsv', 'tab', 'ods', 'xls']:
           entry = self.UploadSpreadsheet(ms, title)
         elif extension.lower() in ['ppt', 'pps']:
@@ -369,7 +369,7 @@ def _run_upload(client, options, args):
   if not args:
     print 'Need to tell me what to upload!'
     return
-  client.upload_docs(args, options.title, options.folder, options.convert)
+  client.upload_docs(args, options.title, options.folder)
 
 
 def _run_edit(client, options, args):
@@ -399,7 +399,7 @@ def _run_edit(client, options, args):
 
 def _run_delete(client, options, args):
   entries = client.get_doclist(options.title)
-  client.delete(entries, 'document',
+  client.Delete(entries, 'document',
                 util.config.getboolean('GENERAL', 'delete_by_default'))
 
 
