@@ -1,12 +1,27 @@
-"""
-Service details and instances for the Docs service.
+# Copyright (C) 2010 Google Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+"""Service details and instances for the Docs service.
 
 COMPATABILTIY NOTE: This is one of the few Python modules that uses the 2.0
-gdata API, and is still in labs. It's likely that this will break often.
+client library (v3 of the gdata protocol), 
+and is still in labs. It's likely that this will break often.
 The code in this file tries to follow the style found in gdata.client and
 gdata.docs.client, instead of the rest of the GoogleCL project. The idea is
 that the other services/clients will also be updated to look like the 2.0
-compatable code in the near future.
+compatible code in the near future.
  
 Some use cases:
 Upload a document:
@@ -17,10 +32,6 @@ Edit a document in your word editor:
   
 Download docs:
   docs get --folder "Some folder"
-  
-Created on May 13, 2010
-
-@author: Tom Miller
 
 """
 __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
@@ -29,7 +40,7 @@ import gdata.docs.client
 import re
 import os
 import urllib
-import util
+import googlecl.util as util
 from gdata.client import BadAuthentication, CaptchaChallenge
 from googlecl.docs import SECTION_HEADER
 
