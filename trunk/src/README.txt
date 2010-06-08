@@ -1,7 +1,29 @@
+
+ Copyright (C) 2010 Google Inc.
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+
+1. INTRODUCTION
+Please visit the project homepage at http://code.google.com/p/googlecl/ for the most up-to-date information.
+
+For installation instructions, see INSTALL.txt
+
+For help with the configuration file, see README.config
+
+2. COMMANDS
 Some terminology:
   * service - The Google service being used (Picasa, Blogger, etc.)
 	* task - The task that the service will be doing (tag, post, delete, etc.)
-
 
 You can also access help by typing {{{$ ./google.py help}}} or help on a specific service with {{{$ ./google.py help <service>}}}. For help with available options and what they mean, use {{{$ ./google.py --help}}}
 
