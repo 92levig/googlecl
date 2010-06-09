@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.5
 #
 # Copyright (C) 2010 Google Inc.
 #
@@ -49,6 +49,7 @@ import os
 import urllib
 import googlecl.util as util
 
+VERSION = '0.9'
 
 AVAILABLE_SERVICES = ['picasa', 'blogger', 'youtube', 'docs', 'contacts',
                        'calendar']
@@ -249,9 +250,19 @@ def setup_parser():
     optparse.OptionParser with options configured.
   
   """
-  usage = 'usage: %prog ' + str(AVAILABLE_SERVICES).replace("'", '') +\
-          ' TASK [options]' 
-  parser = optparse.OptionParser(usage=usage)
+  available_services = str(AVAILABLE_SERVICES).replace("'", '')
+  # NOTE: Usage string formatted to work with help2man.  After changing it,
+  # please run 'help2man -N -n "one-line description" ./google > google.1'
+  # then 'man ./google.1' and make sure the generated manpage still looks
+  # reasonable.  Then save it to man/google.1
+  usage = 'Usage: %prog ' + available_services + ' TASK [options]\n' +\
+          '\n' +\
+          'This program allows command-line access to (some) google ' +\
+          'services via their gdata APIs.  For more help, try:\n' +\
+          '\n' +\
+          '%prog help ' + available_services + '\n\n' +\
+          '%prog # no arguments for interactive session'
+  parser = optparse.OptionParser(usage=usage, version='%prog ' + VERSION)
   parser.add_option('--blog', dest='blog',
                     help='Blogger only - specify a blog other than your' +
                     ' primary for tasks.')
@@ -285,7 +296,7 @@ def setup_parser():
   parser.add_option('--no-convert', dest='convert',
                     action='store_false', default=True,
                     help='Google Apps Premier only - do not convert the file' +
-                    ' on upload. (Else converts to native Google Docs format')
+                    ' on upload. (Else converts to native Google Docs format)')
   parser.add_option('-p', '--password', dest='password',
                     help='Password for the username specifed via -u option.')
   parser.add_option('-q', '--query', dest='query',

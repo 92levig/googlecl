@@ -1,6 +1,6 @@
-googlecl (0.9-1) lucid; urgency=low
+googlecl (0.9-1) unstable; urgency=low
 
   * Initial release (Closes: #123456)
 
- -- Jason E. Holt <jholt@google.com>  Sat, 05 Jun 2010 21:25:34 -0700
+ -- Tom H. Miller <tom.h.miller@gmail.com>  Sat, 05 Jun 2010 21:25:34 -0700
 

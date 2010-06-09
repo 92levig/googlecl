@@ -1,14 +1,14 @@
 Source: googlecl
 Section: python
 Priority: extra
-Maintainer: tom.h.miller <tom.h.miller@gmail.com>
-Build-Depends: debhelper (>= 5), python-support, python (>=2.5)
+Maintainer: Tom H. Miller <tom.h.miller@gmail.com>
+Build-Depends: debhelper (>= 7), python-support, python (>=2.5)
 Standards-Version: 3.8.4
 Homepage: http://code.google.com/p/googlecl/
 
 Package: googlecl
 Architecture: all
-Depends: ${misc:Depends}, ${python:Depends}  
+Depends: ${python:Depends} ${misc:Depends}
 Description: Command-line access to (some) Google services
  This package provides a user-friendly command-line interface to
  some of the Google gdata APIs.  It lets you do things like:
