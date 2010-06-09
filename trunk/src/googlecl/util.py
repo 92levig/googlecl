@@ -65,7 +65,6 @@ class BaseServiceCL(gdata.service.GDataService):
           delete = delete_str.lower() == 'y'
       else:
         delete = True
-      
       if delete:
         gdata.service.GDataService.Delete(self, item.GetEditLink().href)
         
@@ -156,15 +155,32 @@ class BaseServiceCL(gdata.service.GDataService):
     
     """
     import gdata.auth
+    import subprocess
     # Installed applications do not have a pre-registration and so follow
     # directions for unregistered applications
     self.SetOAuthInputParameters(gdata.auth.OAuthSignatureMethod.HMAC_SHA1,
-                                 consumer_key='anonymous',
+                                 consumer_key='aonymous',
                                  consumer_secret='anonymous')
-    request_token = self.FetchOAuthRequestToken()
+    try:
+      request_token = self.FetchOAuthRequestToken()
+    except gdata.service.FetchingOAuthRequestTokenFailed, e:
+      print e['body'].strip() + '; Request token retrieval failed!'
+      return False
     auth_url = self.GenerateOAuthAuthorizationURL(request_token=request_token)
-    junk = raw_input('Please log in at: ' + auth_url + ' then come back and'
-                    + ' hit enter.')
+    try:
+      browser = config.get('GENERAL', 'auth_browser') or os.getenv('BROWSER')
+    except:
+      browser = None
+    message_format = 'Please log in and/or grant access via your browser%s' +\
+                     ' then hit enter.'
+    if browser:
+      subprocess.call([browser, auth_url])
+      raw_input(message_format % '') 
+    else:
+      print '(Hint: You can automatically launch your browser by adding ' +\
+            '"auth_browser = <browser>" to your config file under the ' +\
+            'GENERAL section, or define the BROWSER environment variable.)'
+      raw_input(message_format % (' at: ' + auth_url))
     # This upgrades the token, and if successful, sets the access token
     try:
       self.UpgradeToOAuthAccessToken(request_token)
@@ -184,7 +200,7 @@ class BaseServiceCL(gdata.service.GDataService):
                    for tags on each item. (Default False)
       delete_prompt: Indicates if instance should prompt user before
                      deleting an item. (Default True)
-              
+    
     """
     self.source = 'GoogleCL'
     self.client_id = 'GoogleCL'

@@ -71,13 +71,6 @@ def fill_out_options(service_header, task, options, logged_in):
     Nothing, though options may be modified to hold the required fields.
     
   """
-  if not logged_in and task.requires('user') and not options.user:
-    if util.config.getboolean('GENERAL', 'use_default_username'):
-      email, password = util.read_creds()
-      if email:
-        options.user = email
-    if not options.user:
-      options.user = raw_input('Enter a username: ')
   # Grab all attributes from options that match two criteria:
   # 1) They contain no underscores at the beginning or end of the name
   # 2) They evaluate to False (NoneType or '')
