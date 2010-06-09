@@ -85,18 +85,22 @@ def fill_out_options(service_header, task, options, logged_in):
                         if attr.strip('_') == attr and
                         not getattr(options, attr)]
   for attr in missing_attributes:
-    if task.requires(attr, options):
+    # "user" is always a required option.
+    if task.requires(attr, options) or attr == 'user':
       value = util.get_config_option(service_header, attr)
       if value:
         setattr(options, attr, value)
       else:
         setattr(options, attr, raw_input('Please specify ' + attr + ': '))
+  # Expand those options that might be a filename in disguise.
+  max_file_size = 500000    # Value picked arbitrarily - no idea what the max
+                            # size in bytes of a summary is.
   if options.summary and os.path.exists(os.path.expanduser(options.summary)):
     with open(options.summary, 'r') as summary_file:
-      options.summary = summary_file.read()
+      options.summary = summary_file.read(max_file_size)
   if options.devkey and os.path.exists(os.path.expanduser(options.devkey)):
     with open(options.devkey, 'r') as key_file:
-      options.devkey = key_file.read().strip()
+      options.devkey = key_file.read(max_file_size).strip()
   if options.query:
     options.encoded_query = urllib.quote_plus(options.query)
   else:
@@ -202,39 +206,6 @@ def run_once(options, args):
           str(service_module.tasks.keys())
     return
   
-  if task.login_required:
-    # Only use tokens for the "default user" stored in the creds file.
-    # Don't want to keep semi-permanent tokens for what are essentially guest
-    # users.
-    if not options.user:
-      token = util.read_auth_token(service)
-      if token:
-        try:
-          client.SetClientLoginToken(token)
-        except AttributeError:
-          client.auth_token = token
-        if client.IsTokenValid():
-          client.logged_in = True
-          # Picasa requires email to be set to create an album, apparently.
-          # Might be true for other services, so set it up.
-          client.email, password = util.read_creds()
-        else:
-          util.remove_auth_token(service)
-    if not client.logged_in:
-      util.try_login(client, options.user, options.password)
-      if client.logged_in:
-        try:
-          token = client.GetClientLoginToken()
-        except AttributeError:
-          token = client.auth_token
-        # Because we're only using auth tokens for the user specified in the
-        # creds file, don't write an auth token given to a user specified on
-        # the command line.
-        if not options.user:
-          util.write_auth_token(service, token)
-      else:
-        print 'Failed to log on!'
-        return
   if task.requires('devkey'):
     # If a devkey is required, and there is none specified via an option
     # BEFORE fill_out_options, insert the key from file or the key given
@@ -247,6 +218,28 @@ def run_once(options, args):
   # fill_put_options will read the key from file if necessary, but will not set
   # it since it will always get a non-empty value beforehand.
   fill_out_options(package.SECTION_HEADER, task, options, client.logged_in)
+  if task.login_required:
+    token = util.read_access_token(service, options.user)
+    if token:
+      client.SetOAuthToken(token)
+      if client.IsTokenValid():
+        client.logged_in = True
+        # Picasa requires email to be set to create an album, apparently.
+        # Might be true for other services, so set it up.
+        client.email = options.user
+      else:
+        util.remove_access_token(service, options.user)
+    if not client.logged_in:
+      client.RequestAccess()
+      if client.IsTokenValid():
+          client.logged_in = True
+          # Picasa requires email to be set to create an album, apparently.
+          # Might be true for other services, so set it up.
+          client.email = options.user
+          util.write_access_token(service, options.user, client.current_token)
+      else:
+        print 'Failed to get valid access token!'
+        return
   if options.devkey:
     client.developer_key = options.devkey
     # This may save an invalid dev key -- it's up to the user to specify a

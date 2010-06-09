@@ -32,9 +32,8 @@ import gdata.service
 
 config = ConfigParser.ConfigParser()
 _google_cl_dir = os.path.expanduser(os.path.join('~', '.googlecl'))
-_preferences_filename = 'prefs'
-_login_filename = 'creds'
-_auth_tokens_filename = 'auths'
+_preferences_filename = 'config'
+_tokens_filename_format = 'access_tok_%s'
 _devkey_filename = 'yt_devkey'
 DATE_FORMAT = '%Y-%m-%d'
 
@@ -149,34 +148,31 @@ class BaseServiceCL(gdata.service.GDataService):
     else:
       return True
   
-  def Login(self, email, password):
-    """Extends programmatic login.
+  def RequestAccess(self):
+    """Do all the steps involved with getting an OAuth access token.
     
-    Keyword arguments:
-      email: Email account to log in with.
-      password: Un-encrypted password to log in with.
-    
-    Returns:
-      Sets self.logged_in to True if login was a success. Otherwise, sets it
-      to False.
+    Return:
+      True if access token was succesfully retrieved and set, otherwise False.
     
     """
-    self.logged_in = False
-    if not (email and password):
-      print ('You must give an email/password combo to log in with.')
-      return
-    
-    self.email = email
-    self.password = password
-    
+    import gdata.auth
+    # Installed applications do not have a pre-registration and so follow
+    # directions for unregistered applications
+    self.SetOAuthInputParameters(gdata.auth.OAuthSignatureMethod.HMAC_SHA1,
+                                 consumer_key='anonymous',
+                                 consumer_secret='anonymous')
+    request_token = self.FetchOAuthRequestToken()
+    auth_url = self.GenerateOAuthAuthorizationURL(request_token=request_token)
+    junk = raw_input('Please log in at: ' + auth_url + ' then come back and'
+                    + ' hit enter.')
+    # This upgrades the token, and if successful, sets the access token
     try:
-      self.ProgrammaticLogin()
-    except gdata.service.BadAuthentication, e:
-      print e
-    except gdata.service.CaptchaRequired:
-      print 'Too many failed logins; Captcha required.'
+      self.UpgradeToOAuthAccessToken(request_token)
+    except gdata.service.TokenUpgradeFailed:
+      print 'Token upgrade failed! Could not get OAuth access token.'
+      return False
     else:
-      self.logged_in = True
+      return True
 
   def set_params(self, regex=False, tags_prompt=False, delete_prompt=True):
     """Set constructor and basic parameters.
@@ -657,13 +653,14 @@ def load_preferences():
       for opt in missing_opts:
         config.set(section_name, opt, section[opt])
     return made_changes
-      
+  
   if not os.path.exists(_google_cl_dir):
     os.makedirs(_google_cl_dir)
-  pref_path = os.path.join(_google_cl_dir, _preferences_filename)
-  if os.path.exists(pref_path):
-    config.read(pref_path)
-      
+  config_path = os.path.join(_google_cl_dir, _preferences_filename)
+  if os.path.exists(config_path):
+    config.read(config_path)
+  else:
+    print 'Did not find config / preferences file at ' + config_path
   made_changes = set_options()
   if made_changes:
     with open(pref_path, 'w') as pref_file:
@@ -702,30 +699,19 @@ def parse_recurrence(time_string):
   return (start_time, end_time, freq)
 
 
-def read_creds():
-  """Return the email/password found in the credentials file."""
-  cred_path = os.path.join(_google_cl_dir, _login_filename)
-  if os.path.exists(cred_path):
-    with open(cred_path, 'r') as cred_file:
-      (email, password) = pickle.load(cred_file)
-  else:
-    email = None
-    password = None
-  return (email, password)
-
-
-def read_auth_token(service):
+def read_access_token(service, user):
   """Try to read an authorization token from a file.
   
   Keyword arguments:
-    service: Service the token is for. E.g. picasa, docs, blogger.
+    service: Service the token is for. E.g. 'picasa', 'docs', 'blogger'.
+    user: Username / email the token is associated with.
   
   Returns:
-    The authorization token, if it exists. If there is no authorization token,
+    The access token, if it exists. If there is no access token,
     return NoneType.
   
   """
-  token_path = os.path.join(_google_cl_dir, _auth_tokens_filename)
+  token_path = os.path.join(_google_cl_dir, _tokens_filename_format % user)
   if os.path.exists(token_path):
     with open(token_path, 'r') as token_file:
       token_dict = pickle.load(token_file)
@@ -749,9 +735,9 @@ def read_devkey():
   return devkey
 
 
-def remove_auth_token(service):
-  """Remove an auth token for a particular service."""
-  token_path = os.path.join(_google_cl_dir, _auth_tokens_filename)
+def remove_access_token(service, user):
+  """Remove an auth token for a particular user and service."""
+  token_path = os.path.join(_google_cl_dir, _tokens_filename_format % user)
   success = False
   if os.path.exists(token_path):
     with open(token_path, 'r+') as token_file:
@@ -766,45 +752,15 @@ def remove_auth_token(service):
   return success
 
 
-def try_login(client, email=None, password=None):
-  """Try to log into a service via the client.
-  
-  Keyword arguments:
-    client: Client for the service.
-    email: E-mail used to log in. If '@my-mail.com' is not included,
-           the domain is inferred. (Default None - will first check for a file
-           containing email/password, or prompt for one)  
-    password: Password used to authenticate the account given by email.
-          (Default None - will first check for a file containing email/password,
-          or prompt for one) 
-
-  """
-  got_creds_from_file= False
-  if not email:
-    (email, password) = read_creds()
-    if email and password:
-      got_creds_from_file = True
-  if not email:
-    email = raw_input('Enter your username: ')
-  if not password:
-    password = getpass.getpass('Enter your password: ')
-      
-  client.Login(email, password)
-  cred_path = os.path.join(_google_cl_dir, _login_filename)
-  if got_creds_from_file and not client.logged_in:
-    os.remove(cred_path)
-  elif not os.path.exists(cred_path) and client.logged_in:
-    write_creds(email, password, cred_path)
-
-
-def write_auth_token(service, token):
+def write_access_token(service, user, token):
   """Write an authorization token to a file.
   
   Keyword arguments:
-    service: Service the token is for. E.g. picasa, docs, blogger.
+    service: Service the token is for. E.g. 'picasa', 'docs', 'blogger'.
+    user: Username / email the token is associated with.
   
   """
-  token_path = os.path.join(_google_cl_dir, _auth_tokens_filename)
+  token_path = os.path.join(_google_cl_dir, _tokens_filename_format % user)
   if os.path.exists(token_path):
     with open(token_path, 'r') as token_file:
       token_dict = pickle.load(token_file)
@@ -815,14 +771,6 @@ def write_auth_token(service, token):
     # Ensure only the owner of the file has read/write permission
     os.chmod(token_path, stat.S_IRUSR | stat.S_IWUSR)
     pickle.dump(token_dict, token_file)
-
-
-def write_creds(email, password, cred_path):
-  """Write the email/password to the credentials file."""
-  with open(cred_path, 'w') as cred_file:
-    # Ensure only the owner of the file has read/write permission
-    os.chmod(cred_path, stat.S_IRUSR | stat.S_IWUSR)
-    pickle.dump((email, password), cred_file)
 
 
 def write_devkey(devkey):
