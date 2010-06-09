@@ -78,11 +78,6 @@ def fill_out_options(service_header, task, options, logged_in):
         options.user = email
     if not options.user:
       options.user = raw_input('Enter a username: ')
-  
-  if options.summary and os.path.exists(os.path.expanduser(options.summary)):
-    with open(options.summary, 'r') as summary_file:
-      options.summary = summary_file.read()
-
   # Grab all attributes from options that match two criteria:
   # 1) They contain no underscores at the beginning or end of the name
   # 2) They evaluate to False (NoneType or '')
@@ -96,6 +91,12 @@ def fill_out_options(service_header, task, options, logged_in):
         setattr(options, attr, value)
       else:
         setattr(options, attr, raw_input('Please specify ' + attr + ': '))
+  if options.summary and os.path.exists(os.path.expanduser(options.summary)):
+    with open(options.summary, 'r') as summary_file:
+      options.summary = summary_file.read()
+  if options.devkey and os.path.exists(os.path.expanduser(options.devkey)):
+    with open(options.devkey, 'r') as key_file:
+      options.devkey = key_file.read().strip()
   if options.query:
     options.encoded_query = urllib.quote_plus(options.query)
   else:
@@ -234,11 +235,24 @@ def run_once(options, args):
       else:
         print 'Failed to log on!'
         return
-  
+  if task.requires('devkey'):
+    # If a devkey is required, and there is none specified via an option
+    # BEFORE fill_out_options, insert the key from file or the key given
+    # to GoogleCL.
+    # You can get your own key at http://code.google.com/apis/youtube/dashboard 
+    if not options.devkey:
+      options.devkey = util.read_devkey() or 'AI39si4d9dBo0dX7TnGyfQ68bNiKfEeO7wORCfY3HAgSStFboTgTgAi9nQwJMfMSizdGIs35W9wVGkygEw8ei3_fWGIiGSiqnQ'
   # Not sure why the fromlist keyword argument became necessary...
   package = __import__('googlecl.' + service, fromlist=['SECTION_HEADER'])
+  # fill_put_options will read the key from file if necessary, but will not set
+  # it since it will always get a non-empty value beforehand.
   fill_out_options(package.SECTION_HEADER, task, options, client.logged_in)
-  
+  if options.devkey:
+    client.developer_key = options.devkey
+    # This may save an invalid dev key -- it's up to the user to specify a
+    # valid dev key eventually.
+    # TODO: It would be nice to make this more efficient.
+    util.write_devkey(options.devkey)
   task.run(client, options, args)
 
 
@@ -264,6 +278,8 @@ def setup_parser():
   parser.add_option('--devtags', dest='devtags',
                     help='YouTube only - specify developer tags' +
                     ' as a comma-separated list.')
+  parser.add_option('--devkey', dest='devkey',
+                    help='YouTube only - specify a developer key')
   parser.add_option('-d', '--date', dest='date',
                     help='Date in YYYY-MM-DD format.' + 
                     ' Picasa only - sets the date of the album\n' +

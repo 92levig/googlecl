@@ -47,10 +47,6 @@ class YouTubeServiceCL(YouTubeService, util.BaseServiceCL):
     """ 
     YouTubeService.__init__(self)
     util.BaseServiceCL.set_params(self, regex, tags_prompt, delete_prompt)
-    # Developer keys have to be provided for API calls. You can get one for free
-    # at http://code.google.com/apis/youtube/dashboard, 
-    # so please don't take this one.
-    self.developer_key = 'AI39si4d9dBo0dX7TnGyfQ68bNiKfEeO7wORCfY3HAgSStFboTgTgAi9nQwJMfMSizdGIs35W9wVGkygEw8ei3_fWGIiGSiqnQ'
   
   def build_category(self, category):
     """Build a single-item list of a YouTube category.
@@ -230,13 +226,13 @@ def _run_delete(client, options, args):
 
 
 tasks = {'post': util.Task('Post a video.', callback=_run_post,
-                           required='category',
+                           required=['category', 'devkey'],
                            optional=['title', 'summary', 'tags'],
                            args_desc='PATH_TO_VIDEO'),
          'list': util.Task('List videos by user.', callback=_run_list,
                            required='delimiter', optional='title'),
          'tag': util.Task('Add tags to a video and/or change its category.',
                           callback=_run_tag,
-                          required=['title', ['category', 'tags']]),
+                          required=['devkey', 'title', ['category', 'tags']]),
          'delete': util.Task('Delete videos.', callback=_run_delete,
-                             optional='title')}  
+                             required='devkey', optional='title')}

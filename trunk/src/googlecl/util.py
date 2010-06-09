@@ -1,9 +1,21 @@
-"""
-Utility functions for the Google command line tool
+# Copyright (C) 2010 Google Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-@author: Tom Miller
 
-"""
+"""Utility functions for the Google command line tool"""
+
+
 from __future__ import with_statement
 
 __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
@@ -23,6 +35,7 @@ _google_cl_dir = os.path.expanduser(os.path.join('~', '.googlecl'))
 _preferences_filename = 'prefs'
 _login_filename = 'creds'
 _auth_tokens_filename = 'auths'
+_devkey_filename = 'yt_devkey'
 DATE_FORMAT = '%Y-%m-%d'
 
 
@@ -726,6 +739,16 @@ def read_auth_token(service):
     return None
 
 
+def read_devkey():
+  """Return the cached YouTube developer's key."""
+  key_path = os.path.join(_google_cl_dir, _devkey_filename)
+  devkey = None
+  if os.path.exists(key_path):
+    with open(key_path, 'r') as key_file:
+      devkey = key_file.read().strip()
+  return devkey
+
+
 def remove_auth_token(service):
   """Remove an auth token for a particular service."""
   token_path = os.path.join(_google_cl_dir, _auth_tokens_filename)
@@ -800,3 +823,11 @@ def write_creds(email, password, cred_path):
     # Ensure only the owner of the file has read/write permission
     os.chmod(cred_path, stat.S_IRUSR | stat.S_IWUSR)
     pickle.dump((email, password), cred_file)
+
+
+def write_devkey(devkey):
+  """Write the devkey to the youtube devkey file."""
+  key_path = os.path.join(_google_cl_dir, _devkey_filename)
+  with open(key_path, 'w') as key_file:
+    os.chmod(key_path, stat.S_IRUSR | stat.S_IWUSR)
+    key_file.write(devkey)

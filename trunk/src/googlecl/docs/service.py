@@ -310,8 +310,8 @@ def get_editor(doctype_label):
   
   Editor is determined in an order of preference:
   1) Try to load the editor for the specific type (spreadsheet, document, etc.)
-  2) If no specification, try to load the "default_editor" option.
-  3) If no default_editor, try to load the EDITOR environment variable.
+  2) If no specification, try to load the "editor" option from config file.
+  3) If no default editor, try to load the EDITOR environment variable.
   4) If no EDITOR variable, return None.
   
   Keyword arguments:
