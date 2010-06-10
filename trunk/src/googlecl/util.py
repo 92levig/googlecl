@@ -66,7 +66,10 @@ class BaseServiceCL(gdata.service.GDataService):
       else:
         delete = True
       if delete:
-        gdata.service.GDataService.Delete(self, item.GetEditLink().href)
+        try:
+          gdata.service.GDataService.Delete(self, item.GetEditLink().href)
+        except gdata.service.RequestError, e:
+          print 'Could not delete event: ' + e[0]['body']
         
   def GetEntries(self, uri, title=None, converter=None):
     """Get a list of entries from a feed uri.
