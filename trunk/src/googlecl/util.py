@@ -159,12 +159,12 @@ class BaseServiceCL(gdata.service.GDataService):
     # Installed applications do not have a pre-registration and so follow
     # directions for unregistered applications
     self.SetOAuthInputParameters(gdata.auth.OAuthSignatureMethod.HMAC_SHA1,
-                                 consumer_key='aonymous',
+                                 consumer_key='anonymous',
                                  consumer_secret='anonymous')
     try:
       request_token = self.FetchOAuthRequestToken()
     except gdata.service.FetchingOAuthRequestTokenFailed, e:
-      print e['body'].strip() + '; Request token retrieval failed!'
+      print e[0]['body'].strip() + '; Request token retrieval failed!'
       return False
     auth_url = self.GenerateOAuthAuthorizationURL(request_token=request_token)
     try:

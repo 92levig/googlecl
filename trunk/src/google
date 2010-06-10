@@ -224,11 +224,8 @@ def run_once(options, args):
       else:
         util.remove_access_token(service, options.user)
     if not client.logged_in:
-      client.RequestAccess()
-      if client.IsTokenValid():
+      if client.RequestAccess():
           client.logged_in = True
-          # Picasa requires email to be set to create an album, apparently.
-          # Might be true for other services, so set it up.
           client.email = options.user
           util.write_access_token(service, options.user, client.current_token)
       else:
