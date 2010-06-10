@@ -48,6 +48,52 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
     gdata.calendar.service.CalendarService.__init__(self)
     util.BaseServiceCL.set_params(self, regex, tags_prompt, delete_prompt)
 
+  def _batch_delete_recur(self, date, event, calendar):
+    request_feed = gdata.calendar.CalendarEventFeed()
+    single_events = self.get_events(date, event.title.text,
+                                    calendar=calendar,
+                                    expand_recurrence=True)
+    delete_events = [e for e in single_events if e.original_event and
+                     e.original_event.id == event.id.text.split('/')[-1]]
+    # For some reason, batch requests always fail...
+    for d in delete_events:
+      gdata.service.GDataService.Delete(self, d.GetEditLink().href)
+
+  def delete_events(self, events, date, calendar):
+    single_events = [e for e in events if not e.recurrence and
+                     e.event_status.value != 'CANCELED']
+    recurring_events = [e for e in events if e.recurrence]
+    # Not sure which is faster/better: above approach, or using set subtraction
+    # recurring_events = set(events) - set(single_events)
+    delete_default = util.config.getboolean('GENERAL', 'delete_by_default')
+    self.Delete(single_events, 'event', delete_default)
+    
+    start_date, end_date = get_start_and_end(date)
+    if not end_date:
+      end_date = 'the distant future'
+    if not start_date:
+      start_date = 'the dawn of time'
+    prompt_str = ('1) Instances between %s and %s\n' +
+                  '2) All events in this series\n' +
+                  '3) All events following %s\n' +
+                  '4) Do not delete') % (start_date, end_date, end_date)
+    for event in recurring_events:
+      if self.prompt_for_delete:
+        delete_selection = 0
+        while delete_selection < 1 or delete_selection > 4:
+          delete_selection = int(raw_input('Delete "%s"?\n%s\n' % 
+                                           (event.title.text, prompt_str)))
+        if delete_selection == 1:
+          self._batch_delete_recur(date, event, calendar)
+        elif delete_selection == 2:
+          gdata.service.GDataService.Delete(self, event.GetEditLink().href)
+        elif delete_selection == 3:
+          self._batch_delete_recur(start_date, event, calendar)
+      else:
+        gdata.service.GDataService.Delete(self, event.GetEditLink().href)
+
+  DeleteEvents = delete_events
+
   def quick_add_event(self, quick_add_strings, calendar=None):
     """Add an event using the Calendar Quick Add feature.
     
@@ -99,7 +145,7 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
   GetCalendar = get_calendar
 
   def get_events(self, date=None, title=None, query=None, calendar=None,
-                 max_results=100):
+                 max_results=100, expand_recurrence=True):
     """Get events.
     
     Keyword arguments:
@@ -135,32 +181,13 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
         return
     query = gdata.calendar.service.CalendarEventQuery(user=user,
                                                       text_query=query)
-    
-    # Setting the recurrence-expand-start and end params don't actually seem to
-    # do anything. So... hope there aren't a lot of recurring events?
-    # I've just commented out the related statements instead of removing them.
-    #max_recur_expand = datetime.timedelta(days=31)
-    if date and date != ',':
-      # Partition won't choke on date == '2010-06-05', split will.
-      start, junk, end = date.partition(',')
-      if end:
-        query.start_max = end
-        #recur_exp_end = datetime.datetime.strptime(end, util.DATE_FORMAT)
-      if start:
-        query.start_min = start
-        #recur_exp_start = datetime.datetime.strptime(start, util.DATE_FORMAT)
-        #recur_exp_end = recur_exp_start + max_recur_expand
-      #else:
-        #recur_exp_start = recur_exp_end - max_recur_expand
-    else:
-      query.start_min = datetime.datetime.today().strftime(util.DATE_FORMAT)
-      #recur_exp_start = datetime.datetime.today()
-      #recur_exp_end = recur_exp_start + max_recur_expand
-    
-    query.singleevents = 'true'
-    #query.recurrence_expansion_start = recur_exp_start.strftime(
-    #                                                           util.DATE_FORMAT)
-    #query.recurrence_expansion_end = recur_exp_end.strftime(util.DATE_FORMAT)
+    start_min, start_max = get_start_and_end(date)
+    if start_min:
+      query.start_min = start_min
+    if start_max:
+      query.start_max = start_max
+    if expand_recurrence:
+      query.singleevents = 'true'
     query.orderby = 'starttime'
     query.sortorder = 'ascend'
     query.max_results = max_results
@@ -178,6 +205,27 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
 
 
 service_class = CalendarServiceCL
+
+
+def get_start_and_end(date):
+  """Split a string representation of a date or range of dates.
+  
+  Ranges should be designated via a comma. For example, '2010-06-01,2010-06-20'
+  will set return ('2010-06-01', '2010-06-20')
+  
+  Returns:
+    Tuple of (start, end) where start is either the starting date or None and
+                                end is either the ending date or None
+  
+  """
+  if date and date != ',':
+    # Partition won't choke on date == '2010-06-05', split will.
+    start, junk, end = date.partition(',')
+  else:
+    # If no date is given, set a start of today.
+    start = datetime.datetime.today().strftime(util.DATE_FORMAT)
+    end = None
+  return (start, end)
 
 
 #===============================================================================
@@ -216,9 +264,9 @@ def _run_add(client, options, args):
 
 def _run_delete(client, options, args):
   events = client.get_events(options.date, options.title,
-                             options.query, options.cal)
-  client.Delete(events, 'event',
-                util.config.getboolean('GENERAL', 'delete_by_default'))
+                             options.query, options.cal,
+                             expand_recurrence=False)
+  client.delete_events(events, options.date, options.cal)
 
 
 tasks = {'list': util.Task('List events on primary calendar',
