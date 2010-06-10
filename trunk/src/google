@@ -216,7 +216,13 @@ def run_once(options, args):
     token = util.read_access_token(service, options.user)
     if token:
       client.SetOAuthToken(token)
-      if client.IsTokenValid():
+      try:
+        token_valid = client.IsTokenValid()
+      except AttributeError:
+        # Attribute errors crop up when using different gdata libraries
+        # but the same token.
+        token_valid = False 
+      if token_valid:
         client.logged_in = True
         # Picasa requires email to be set to create an album, apparently.
         # Might be true for other services, so set it up.
