@@ -677,10 +677,11 @@ def load_preferences():
     config.read(config_path)
   else:
     print 'Did not find config / preferences file at ' + config_path
+    print '... making new one.'
   made_changes = set_options()
   if made_changes:
-    with open(pref_path, 'w') as pref_file:
-      config.write(pref_file)
+    with open(config_path, 'w') as config_file:
+      config.write(config_file)
 
 
 def parse_recurrence(time_string):
