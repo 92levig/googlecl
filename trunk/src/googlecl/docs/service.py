@@ -423,6 +423,6 @@ tasks = {'upload': util.Task('Upload a document', callback=_run_upload,
                           required=[['title', 'folder']],
                           args_desc='LOCATION'),
          'list': util.Task('List documents', callback=_run_list,
-                           required='delimiter', optional='title'),
+                           required='delimiter', optional=['title', 'folder']),
          'delete': util.Task('Delete documents', callback=_run_delete,
                              optional='title')}

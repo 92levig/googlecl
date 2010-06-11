@@ -30,6 +30,10 @@ import googlecl.util as util
 from googlecl.calendar import SECTION_HEADER
 
 
+USER_BATCH_URL_FORMAT = \
+               gdata.calendar.service.DEFAULT_BATCH_URL.replace('default', '%s')
+
+
 class CalendarServiceCL(gdata.calendar.service.CalendarService,
                         util.BaseServiceCL):
 
@@ -48,26 +52,34 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
     gdata.calendar.service.CalendarService.__init__(self)
     util.BaseServiceCL.set_params(self, regex, tags_prompt, delete_prompt)
 
-  def _batch_delete_recur(self, date, event, calendar):
+  def _batch_delete_recur(self, date, event, cal_user):
     """Delete a subset of instances of recurring events."""
-    single_events = self.get_events(date, event.title.text,
-                                    calendar=calendar,
+    request_feed = gdata.calendar.CalendarEventFeed()
+    single_events = self.get_events(cal_user, date=date, 
+                                    title=event.title.text,
                                     expand_recurrence=True)
     delete_events = [e for e in single_events if e.original_event and
                      e.original_event.id == event.id.text.split('/')[-1]]
+    map(request_feed.AddDelete, [None], delete_events, [None])
+    response_feed = self.ExecuteBatch(request_feed,
+                                      USER_BATCH_URL_FORMAT % cal_user)
+    for entry in response_feed.entry:
+      print 'batch id: %s' % (entry.batch_id.text,)
+      print 'status: %s' % (entry.batch_status.code,)
+      print 'reason: %s' % (entry.batch_status.reason,)
     # For some reason, batch requests always fail...
     # Do it the slow way.
-    for d in delete_events:
-      gdata.service.GDataService.Delete(self, d.GetEditLink().href)
+    #for d in delete_events:
+    #  gdata.service.GDataService.Delete(self, d.GetEditLink().href)
 
-  def delete_events(self, events, date, calendar):
+  def delete_events(self, events, date, calendar_user):
     """Delete events from a calendar.
     
     Keyword arguments:
       events: List of non-expanded calendar events to delete.
       date: Date string specifying the date range of the events, as the date
             option.
-      calendar: Name of the calendar to delete events from.
+      calendar_user: "User" of the calendar to delete events from.
     
     """
     single_events = [e for e in events if not e.recurrence and
@@ -94,71 +106,81 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
           delete_selection = int(raw_input('Delete "%s"?\n%s\n' % 
                                            (event.title.text, prompt_str)))
         if delete_selection == 1:
-          self._batch_delete_recur(date, event, calendar)
+          self._batch_delete_recur(date, event, calendar_user)
         elif delete_selection == 2:
           gdata.service.GDataService.Delete(self, event.GetEditLink().href)
         elif delete_selection == 3:
-          self._batch_delete_recur(start_date, event, calendar)
+          self._batch_delete_recur(start_date, event, calendar_user)
       else:
         gdata.service.GDataService.Delete(self, event.GetEditLink().href)
 
   DeleteEvents = delete_events
 
-  def quick_add_event(self, quick_add_strings, calendar=None):
+  def quick_add_event(self, quick_add_strings, calendar_user):
     """Add an event using the Calendar Quick Add feature.
     
     Keyword arguments:
       quick_add_strings: List of strings to be parsed by the Calendar service,
-                         cal_name as if it was entered via the "Quick Add"
-                         function.
-      calendar: Name of the calendar to add to. 
-                Default None for primary calendar.
-
+                         as if it was entered via the "Quick Add" function.
+      calendar_user: "User" of the calendar to add to.
+    
     Returns:
       The event that was added, or None if the event was not added. 
     
     """
     import atom
     request_feed = gdata.calendar.CalendarEventFeed()
-    if calendar:
-      cal = self.get_calendar(calendar)
-      if not cal:
-        return None
-      else:
-        cal_uri = cal.content.src
-    else:
-      cal_uri = '/calendar/feeds/default/private/full'
     for i, event_str in enumerate(quick_add_strings):
       event = gdata.calendar.CalendarEventEntry()
       event.content = atom.Content(text=event_str)
       event.quick_add = gdata.calendar.QuickAdd(value='true')
       request_feed.AddInsert(event, 'insert-request' + str(i))
-    response_feed = self.ExecuteBatch(request_feed, cal_uri + '/batch')
+    response_feed = self.ExecuteBatch(request_feed,
+                                      USER_BATCH_URL_FORMAT % calendar_user)
     return response_feed.entry
 
   QuickAddEvent = quick_add_event
 
-  def get_calendar(self, cal_name):
-    """Get one calendar entry.
+  def get_calendar_user(self, cal_name=None):
+    """Get "user" name for one calendar.
+    
+    The "user" for a calendar is an awful misnomer for the ID for the calendar.
+    To get events for a calendar, you can form a query with
+      user = self.get_calendar_user('my calendar name')
+      if user:
+        query = gdata.calendar.CalendarEventQuery(user=user)
     
     Keyword arguments:
-      cal_name: Name of the calendar to match.
+      cal_name: Name of the calendar to match. Default None to return the 
+                uri of the default / main calendar.
       
     Returns:
       Single CalendarEntry, or None of there were no matches for cal_name.
     
     """
-    return self.GetSingleEntry('/calendar/feeds/default/allcalendars/full',
-                               cal_name,
+    import urllib
+    if not cal_name or cal_name == 'default':
+      return 'default'
+    else:
+      cal = self.GetSingleEntry('/calendar/feeds/default/allcalendars/full',
+                                 cal_name,
                             converter=gdata.calendar.CalendarListFeedFromString)
+      if cal:
+        # Non-primary calendar feeds look like this:
+        # http:blah/blah/.../feeds/JUNK%40group.calendar.google.com/private/full
+        # So grab the part after /feeds/ and unquote it.
+        return urllib.unquote(cal.content.src.split('/')[-3])
+      else:
+        return None
 
-  GetCalendar = get_calendar
+  GetCalendarUser = get_calendar_user
 
-  def get_events(self, date=None, title=None, query=None, calendar=None,
+  def get_events(self, calendar_user, date=None, title=None, query=None, 
                  max_results=100, expand_recurrence=True):
     """Get events.
     
     Keyword arguments:
+      calendar_user: "user" of the calendar to get events for.
       date: Date of the event(s). Sets one or both of start-min or start-max in
             the uri. Must follow the format 'YYYY-MM-DD' in one of three ways:
               '<format>' - set a start date.
@@ -169,27 +191,15 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
              Default None for any title.
       query: Query string (not encoded) for doing full-text searches on event
              titles and content.
-      calendar: Name of the calendar to get events for. Default None for the
-                primary calendar.
       max_results: Maximum number of events to get. Default 100.
-                 
+      expand_recurrence: If true, expand recurring events per the 'singleevents'
+                         query parameter. Otherwise, don't.
+    
     Returns:
       List of events from primary calendar that match the given params.
                   
     """
-    import urllib
-    user = 'default'
-    if calendar:
-      cal = self.get_calendar(calendar)
-      if cal:
-        # Non-primary calendar feeds look like this:
-        # http:blah/blah/.../feeds/JUNK%40group.calendar.google.com/private/full
-        # So grab the part after /feeds/ and unquote it.
-        user = urllib.unquote(cal.content.src.split('/')[-3])
-      else:
-        print 'No calendar matching title ' + calendar + '.'
-        return
-    query = gdata.calendar.service.CalendarEventQuery(user=user,
+    query = gdata.calendar.service.CalendarEventQuery(user=calendar_user,
                                                       text_query=query)
     start_min, start_max = get_start_and_end(date)
     if start_min:
@@ -248,10 +258,14 @@ def get_start_and_end(date):
 #        required
 #===============================================================================
 def _run_list(client, options, args):
-  entries = client.get_events(date=options.date,
+  cal_user = client.get_calendar_user(options.cal)
+  if not cal_user:
+    print 'No calendar matches "' + options.cal + '"'
+    return
+  entries = client.get_events(cal_user,
+                              date=options.date,
                               title=options.title,
-                              query=options.query,
-                              calendar=options.cal)
+                              query=options.query)
   if args:
     style_list = args[0].split(',')
   else:
@@ -269,14 +283,22 @@ def _run_list_today(client, options, args):
 
 
 def _run_add(client, options, args):
-  client.quick_add_event(args, options.cal)
+  cal_user = client.get_calendar_user(options.cal)
+  if not cal_user:
+    print 'No calendar matches "' + options.cal + '"'
+    return
+  client.quick_add_event(args, cal_user)
 
 
 def _run_delete(client, options, args):
-  events = client.get_events(options.date, options.title,
-                             options.query, options.cal,
+  cal_user = client.get_calendar_user(options.cal)
+  if not cal_user:
+    print 'No calendar matches "' + options.cal + '"'
+    return
+  events = client.get_events(cal_user, date=options.date,
+                             title=options.title, query=options.query,
                              expand_recurrence=False)
-  client.delete_events(events, options.date, options.cal)
+  client.delete_events(events, options.date, cal_user)
 
 
 tasks = {'list': util.Task('List events on primary calendar',

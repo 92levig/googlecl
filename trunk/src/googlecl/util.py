@@ -310,7 +310,7 @@ class Task(object):
         return True
       else:
         return choices
-      
+
   def _not_impl(self, *args):
     """Just use this as a place-holder for Task callbacks."""
     print 'Sorry, this task is not yet implemented!'
