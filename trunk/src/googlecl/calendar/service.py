@@ -49,17 +49,27 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
     util.BaseServiceCL.set_params(self, regex, tags_prompt, delete_prompt)
 
   def _batch_delete_recur(self, date, event, calendar):
-    request_feed = gdata.calendar.CalendarEventFeed()
+    """Delete a subset of instances of recurring events."""
     single_events = self.get_events(date, event.title.text,
                                     calendar=calendar,
                                     expand_recurrence=True)
     delete_events = [e for e in single_events if e.original_event and
                      e.original_event.id == event.id.text.split('/')[-1]]
     # For some reason, batch requests always fail...
+    # Do it the slow way.
     for d in delete_events:
       gdata.service.GDataService.Delete(self, d.GetEditLink().href)
 
   def delete_events(self, events, date, calendar):
+    """Delete events from a calendar.
+    
+    Keyword arguments:
+      events: List of non-expanded calendar events to delete.
+      date: Date string specifying the date range of the events, as the date
+            option.
+      calendar: Name of the calendar to delete events from.
+    
+    """
     single_events = [e for e in events if not e.recurrence and
                      e.event_status.value != 'CANCELED']
     recurring_events = [e for e in events if e.recurrence]

@@ -270,10 +270,6 @@ class Task(object):
       args_desc = '\tArguments: ' + args_desc
     self.usage = 'Requires: ' + req_str + opt_str + args_desc
     
-  def mentions(self, attribute):
-    """See if an attribute is optional or required."""
-    return self.is_optional(attribute) or self.requires(attribute)
-  
   def is_optional(self, attribute):
     """See if an attribute is optional"""
     # No list of lists in the optional fields
@@ -290,7 +286,7 @@ class Task(object):
                checks if the attribute is necessary, given the attributes
                already in options. (Default None)
     Returns:
-      True if the attribute is required.
+      True if the attribute is always required.
       False or [] if the attribute is never required
       If options is provided, a list of lists, where each sublist contains the
         name of the attribute that is required. For example, if either 'title'
