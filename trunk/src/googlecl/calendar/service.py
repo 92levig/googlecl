@@ -34,6 +34,13 @@ USER_BATCH_URL_FORMAT = \
                gdata.calendar.service.DEFAULT_BATCH_URL.replace('default', '%s')
 
 
+class CalendarError(Exception):
+  pass
+
+class EventsNotFound(CalendarError):
+  pass
+
+
 class CalendarServiceCL(gdata.calendar.service.CalendarService,
                         util.BaseServiceCL):
 
@@ -60,17 +67,11 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
                                     expand_recurrence=True)
     delete_events = [e for e in single_events if e.original_event and
                      e.original_event.id == event.id.text.split('/')[-1]]
+    if not delete_events:
+      raise EventsNotFound
     map(request_feed.AddDelete, [None], delete_events, [None])
     response_feed = self.ExecuteBatch(request_feed,
                                       USER_BATCH_URL_FORMAT % cal_user)
-    for entry in response_feed.entry:
-      print 'batch id: %s' % (entry.batch_id.text,)
-      print 'status: %s' % (entry.batch_status.code,)
-      print 'reason: %s' % (entry.batch_status.reason,)
-    # For some reason, batch requests always fail...
-    # Do it the slow way.
-    #for d in delete_events:
-    #  gdata.service.GDataService.Delete(self, d.GetEditLink().href)
 
   def delete_events(self, events, date, calendar_user):
     """Delete events from a calendar.
@@ -84,33 +85,48 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
     """
     single_events = [e for e in events if not e.recurrence and
                      e.event_status.value != 'CANCELED']
-    recurring_events = [e for e in events if e.recurrence]
+    recurring_events = [e for e in events if e.recurrence and e.when]
     # Not sure which is faster/better: above approach, or using set subtraction
     # recurring_events = set(events) - set(single_events)
+    if not single_events and not recurring_events:
+      raise EventsNotFound
     delete_default = util.config.getboolean('GENERAL', 'delete_by_default')
     self.Delete(single_events, 'event', delete_default)
     
     start_date, end_date = get_start_and_end(date)
-    if not end_date:
-      end_date = 'the distant future'
-    if not start_date:
-      start_date = 'the dawn of time'
-    prompt_str = ('1) Instances between %s and %s\n' +
-                  '2) All events in this series\n' +
-                  '3) All events following %s\n' +
-                  '4) Do not delete') % (start_date, end_date, end_date)
+    # option_list is a list of tuples, (prompt_string, deletion_instruction)
+    # prompt_string gets displayed to the user,
+    # deletion_instruction is a special string that will let the program know
+    #   what to do. 'ALL' and 'NONE' are obvious -- but it might also be
+    #   a date range similar to the date range initially passed in. That value
+    #   will ultimately be passed to get_events to get events to delete.
+    option_list = [('All events in this series', 'ALL')]
+    if start_date and end_date:
+      option_list.append(('Instances between ' + start_date + ' and ' +
+                          end_date, date))
+    elif start_date or end_date:
+      delete_date = (start_date or end_date)
+      option_list.append(('Instances on ' + delete_date,
+                          _tomorrowize(delete_date)))
+      option_list.append(('All events on and after ' + delete_date, delete_date))
+    option_list.append(('Do not delete', 'NONE'))
+    prompt_str = ''
+    for i,option in enumerate(option_list):
+      prompt_str += str(i) + ') ' + option[0] + '\n' 
     for event in recurring_events:
       if self.prompt_for_delete:
-        delete_selection = 0
-        while delete_selection < 1 or delete_selection > 4:
-          delete_selection = int(raw_input('Delete "%s"?\n%s\n' % 
+        delete_selection = -1
+        while delete_selection < 0 or delete_selection > len(option_list)-1:
+          delete_selection = int(raw_input('Delete "%s"?\n%s' % 
                                            (event.title.text, prompt_str)))
-        if delete_selection == 1:
-          self._batch_delete_recur(date, event, calendar_user)
-        elif delete_selection == 2:
+        option = option_list[delete_selection]
+        if option[1] == 'ALL':
           gdata.service.GDataService.Delete(self, event.GetEditLink().href)
-        elif delete_selection == 3:
-          self._batch_delete_recur(start_date, event, calendar_user)
+        elif option[1] != 'NONE':
+          try:
+            self._batch_delete_recur(option[1], event, calendar_user)
+          except EventsNotFound:
+            print 'No events found matching request!'
       else:
         gdata.service.GDataService.Delete(self, event.GetEditLink().href)
 
@@ -248,6 +264,26 @@ def get_start_and_end(date):
   return (start, end)
 
 
+def _tomorrowize(date=None):
+  """Return a date range from given date until tomorrow.
+  
+  Keyword arguments:
+    date: Date to start at, following util.DATE_FORMAT format.
+          Default None, for today.
+    
+  Returns:
+    A string that will be interpreted as "from <date> until <date + 1 day>"
+    
+  """
+  if not date:
+    date_data = datetime.datetime.now()
+  else:
+    date_data = datetime.datetime.strptime(date, util.DATE_FORMAT)
+  tomorrow_data = date_data + datetime.timedelta(days=1)
+  return date_data.strftime(util.DATE_FORMAT) + ',' + \
+         tomorrow_data.strftime(util.DATE_FORMAT)
+
+
 #===============================================================================
 # Each of the following _run_* functions execute a particular task.
 #  
@@ -275,10 +311,7 @@ def _run_list(client, options, args):
 
 
 def _run_list_today(client, options, args):
-  now = datetime.datetime.now()
-  tomorrow = now + datetime.timedelta(days=1)
-  options.date = now.strftime(util.DATE_FORMAT) + ',' + \
-                 tomorrow.strftime(util.DATE_FORMAT)
+  options.date = _tomorrowize()
   _run_list(client, options, args)
 
 
@@ -298,7 +331,10 @@ def _run_delete(client, options, args):
   events = client.get_events(cal_user, date=options.date,
                              title=options.title, query=options.query,
                              expand_recurrence=False)
-  client.delete_events(events, options.date, cal_user)
+  try:
+    client.delete_events(events, options.date, cal_user)
+  except EventsNotFound:
+    print 'No events found that match your options!'
 
 
 tasks = {'list': util.Task('List events on primary calendar',
