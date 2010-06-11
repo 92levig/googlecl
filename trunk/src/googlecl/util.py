@@ -625,10 +625,11 @@ def get_datetimes(cal_entry):
   return (start_time_data, end_time_data, freq)
 
 
-def load_preferences():
+def load_preferences(path=None):
   """Load preferences / configuration file.
   
-  Sets up the global ConfigParser.ConfigParser, config.
+  Keyword arguments:
+    path: Path to the configuration file. Default None for the default location.
   
   """
   def set_options():
@@ -669,18 +670,26 @@ def load_preferences():
         config.set(section_name, opt, section[opt])
     return made_changes
   
-  if not os.path.exists(_google_cl_dir):
-    os.makedirs(_google_cl_dir)
-  config_path = os.path.join(_google_cl_dir, _preferences_filename)
-  if os.path.exists(config_path):
-    config.read(config_path)
+  if path:
+    try:
+      config.read(path)
+    except Exception, e:
+      print e
+      return False
   else:
-    print 'Did not find config / preferences file at ' + config_path
-    print '... making new one.'
+    if not os.path.exists(_google_cl_dir):
+      os.makedirs(_google_cl_dir)
+    config_path = os.path.join(_google_cl_dir, _preferences_filename)
+    if os.path.exists(config_path):
+      config.read(config_path)
+    else:
+      print 'Did not find config / preferences file at ' + config_path
+      print '... making new one.'
   made_changes = set_options()
   if made_changes:
     with open(config_path, 'w') as config_file:
       config.write(config_file)
+  return True
 
 
 def parse_recurrence(time_string):

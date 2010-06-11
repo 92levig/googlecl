@@ -275,6 +275,8 @@ def setup_parser():
   parser.add_option('-c', '--category', dest='category',
                     help='YouTube only - specify video categories' + 
                     ' as a comma-separated list, e.g. "Film, Travel"')
+  parser.add_option('--config', dest='config',
+                    help='Specify location of config file.')
   parser.add_option('--devtags', dest='devtags',
                     help='YouTube only - specify developer tags' +
                     ' as a comma-separated list.')
@@ -319,10 +321,12 @@ def setup_parser():
 
 
 def main():
-  util.load_preferences()
   parser = setup_parser()
-    
   (options, args) = parser.parse_args()
+  if not util.load_preferences(options.config):
+    if options.config:
+      print 'Could not read config file at ' + options.config
+    return
   if not args:
     try:
       run_interactive(parser)
