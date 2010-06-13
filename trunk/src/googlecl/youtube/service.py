@@ -48,26 +48,6 @@ class YouTubeServiceCL(YouTubeService, util.BaseServiceCL):
     YouTubeService.__init__(self)
     util.BaseServiceCL.set_params(self, regex, tags_prompt, delete_prompt)
   
-  def build_category(self, category):
-    """Build a single-item list of a YouTube category.
-    
-    This refers to the Category of a video entry, such as "Film" or "Comedy",
-    not the atom/gdata element. This does not check if the category provided
-    is valid.
-    
-    Keyword arguments:
-      category: String representing the category.
-    
-    Returns:
-      A single-item list of a YouTube category (type gdata.media.Category).
-      
-    """
-    from gdata.media import Category
-    return [Category(
-                  text=category,
-                  scheme='http://gdata.youtube.com/schemas/2007/categories.cat',
-                  label=category)]
-
   def categorize_videos(self, video_entries, category):
     """Change the categories of a list of videos to a single category.
     
@@ -81,11 +61,11 @@ class YouTubeServiceCL(YouTubeService, util.BaseServiceCL):
     
     """
     for video in video_entries:
-      video.media.category = self.build_category(category)
+      video.media.category = build_category(category)
       try:
         self.UpdateVideoEntry(video)
-      except gdata.service.RequestError, e:
-        if e.args[0]['body'].find('invalid_value') != -1:
+      except gdata.service.RequestError, err:
+        if err.args[0]['body'].find('invalid_value') != -1:
           print 'Category update failed, ' + category + ' is not a category.'
         else:
           raise
@@ -181,7 +161,28 @@ class YouTubeServiceCL(YouTubeService, util.BaseServiceCL):
   TagVideos = tag_videos
 
 
-service_class = YouTubeServiceCL
+SERVICE_CLASS = YouTubeServiceCL
+
+
+def build_category(category):
+  """Build a single-item list of a YouTube category.
+  
+  This refers to the Category of a video entry, such as "Film" or "Comedy",
+  not the atom/gdata element. This does not check if the category provided
+  is valid.
+  
+  Keyword arguments:
+    category: String representing the category.
+  
+  Returns:
+    A single-item list of a YouTube category (type gdata.media.Category).
+    
+  """
+  from gdata.media import Category
+  return [Category(
+                text=category,
+                scheme='http://gdata.youtube.com/schemas/2007/categories.cat',
+                label=category)]
 
 
 #===============================================================================
@@ -225,7 +226,7 @@ def _run_delete(client, options, args):
                 util.config.getboolean('GENERAL', 'delete_by_default'))
 
 
-tasks = {'post': util.Task('Post a video.', callback=_run_post,
+TASKS = {'post': util.Task('Post a video.', callback=_run_post,
                            required=['category', 'devkey'],
                            optional=['title', 'summary', 'tags'],
                            args_desc='PATH_TO_VIDEO'),

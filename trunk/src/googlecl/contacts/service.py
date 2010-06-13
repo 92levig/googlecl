@@ -33,6 +33,13 @@ from googlecl.contacts import SECTION_HEADER
 
 class ContactsServiceCL(gdata.contacts.service.ContactsService,
                         util.BaseServiceCL):
+  
+  """Extends gdata.contacts.service.ContactsService for the command line.
+
+  This class adds some features focused on using Contacts via an installed
+  app with a command line interface.
+
+  """
 
   def __init__(self, regex=False, tags_prompt=False, delete_prompt=True):
     """Constructor.
@@ -62,8 +69,8 @@ class ContactsServiceCL(gdata.contacts.service.ContactsService,
     import atom
     import os.path
     if os.path.exists(string_or_csv_file):
-      with open(string_or_csv_file, 'r') as file:
-        for line in file:
+      with open(string_or_csv_file, 'r') as contacts_csv_file:
+        for line in contacts_csv_file:
           if line.strip():    # filter out empty lines
             self.add_contact(line)
     else:
@@ -77,8 +84,8 @@ class ContactsServiceCL(gdata.contacts.service.ContactsService,
       new_contact.email.append(gdata.contacts.Email(address=email.strip()))
       try:
         self.CreateContact(new_contact)
-      except gdata.service.RequestError, e:
-        if e.args[0]['reason'] == 'Conflict':
+      except gdata.service.RequestError, err:
+        if err.args[0]['reason'] == 'Conflict':
           print 'Already have a contact for e-mail address ' + email.strip()
         else:
           raise 
@@ -86,6 +93,7 @@ class ContactsServiceCL(gdata.contacts.service.ContactsService,
   AddContact = add_contact
 
   def get_contacts(self, name):
+    """Get all contacts that match a name."""
     # The API only states that to return all the contacts, pass a large number
     # to max_results. Multiple queries never seem to run out of contacts...
     # so here we are.
@@ -102,7 +110,7 @@ class ContactsServiceCL(gdata.contacts.service.ContactsService,
   IsTokenValid = is_token_valid
 
 
-service_class = ContactsServiceCL
+SERVICE_CLASS = ContactsServiceCL
 
 
 #===============================================================================
@@ -120,8 +128,8 @@ def _run_list(client, options, args):
     style_list = args[0].split(',')
   else:
     style_list = util.get_config_option(SECTION_HEADER, 'list_style').split(',')
-  for e in entries:
-    print util.entry_to_string(e, style_list, delimiter=options.delimiter)
+  for entry in entries:
+    print util.entry_to_string(entry, style_list, delimiter=options.delimiter)
 
 
 def _run_add(client, options, args):
@@ -135,7 +143,7 @@ def _run_delete(client, options, args):
                 util.config.getboolean('GENERAL', 'delete_by_default'))
 
 
-tasks = {'list': util.Task('List contacts', callback=_run_list,
+TASKS = {'list': util.Task('List contacts', callback=_run_list,
                            required='delimiter', optional='title'),
          'add': util.Task('Add contacts', callback=_run_add,
                           args_desc='CONTACT DATA or CSV FILE'),

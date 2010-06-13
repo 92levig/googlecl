@@ -35,14 +35,23 @@ USER_BATCH_URL_FORMAT = \
 
 
 class CalendarError(Exception):
+  """Base error for Calendar errors."""
   pass
 
 class EventsNotFound(CalendarError):
+  """No events matching given parameters were found."""
   pass
 
 
 class CalendarServiceCL(gdata.calendar.service.CalendarService,
                         util.BaseServiceCL):
+
+  """Extends gdata.calendar.service.CalendarService for the command line.
+
+  This class adds some features focused on using Calendar via an installed
+  app with a command line interface.
+
+  """
 
   def __init__(self, regex=False, tags_prompt=False, delete_prompt=True):
     """Constructor.
@@ -70,8 +79,7 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
     if not delete_events:
       raise EventsNotFound
     map(request_feed.AddDelete, [None], delete_events, [None])
-    response_feed = self.ExecuteBatch(request_feed,
-                                      USER_BATCH_URL_FORMAT % cal_user)
+    self.ExecuteBatch(request_feed, USER_BATCH_URL_FORMAT % cal_user)
 
   def delete_events(self, events, date, calendar_user):
     """Delete events from a calendar.
@@ -108,10 +116,11 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
       delete_date = (start_date or end_date)
       option_list.append(('Instances on ' + delete_date,
                           _tomorrowize(delete_date)))
-      option_list.append(('All events on and after ' + delete_date, delete_date))
+      option_list.append(('All events on and after ' + delete_date,
+                          delete_date))
     option_list.append(('Do not delete', 'NONE'))
     prompt_str = ''
-    for i,option in enumerate(option_list):
+    for i, option in enumerate(option_list):
       prompt_str += str(i) + ') ' + option[0] + '\n' 
     for event in recurring_events:
       if self.prompt_for_delete:
@@ -240,7 +249,7 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
   IsTokenValid = is_token_valid
 
 
-service_class = CalendarServiceCL
+SERVICE_CLASS = CalendarServiceCL
 
 
 def get_start_and_end(date):
@@ -306,8 +315,8 @@ def _run_list(client, options, args):
     style_list = args[0].split(',')
   else:
     style_list = util.get_config_option(SECTION_HEADER, 'list_style').split(',')
-  for e in entries:
-    print util.entry_to_string(e, style_list, delimiter=options.delimiter)
+  for entry in entries:
+    print util.entry_to_string(entry, style_list, delimiter=options.delimiter)
 
 
 def _run_list_today(client, options, args):
@@ -337,7 +346,7 @@ def _run_delete(client, options, args):
     print 'No events found that match your options!'
 
 
-tasks = {'list': util.Task('List events on primary calendar',
+TASKS = {'list': util.Task('List events on primary calendar',
                            callback=_run_list,
                            required=['delimiter'],
                            optional=['title', 'query', 'date', 'cal']),

@@ -35,6 +35,18 @@ from googlecl import util
 from googlecl.docs import SECTION_HEADER
 
 
+class DocsError(Exception):
+  """Base error for Docs errors."""
+  pass
+
+class UnexpectedExtension(DocsError):
+  def __str__(self):
+    if len(self.args) == 1:
+      return 'Unexpected extension: ' + self.args[0]
+    else:
+      return str(self.args)
+
+
 # These definitions are from gdata.docs.data in higher versions of gdata.
 DOCUMENT_LABEL = 'document'
 SPREADSHEET_LABEL = 'spreadsheet'
@@ -67,14 +79,15 @@ class DocsServiceCL(gdata.docs.service.DocsService, util.BaseServiceCL):
     gdata.docs.service.DocsService.__init__(self, source='GoogleCL')
     util.BaseServiceCL.set_params(self, regex, tags_prompt, delete_prompt)
 
-  def edit_doc(self, doc_entry, editor, format):
+  def edit_doc(self, doc_entry, editor, file_format):
     """Edit a document.
     
     Keyword arguments:
       doc_entry: DocEntry of the document to edit.
       editor: Name of the editor to use. Should be executable from the user's
               working directory.
-      format: Suffix of the file to download. For example, "txt", "csv", "xcl".
+      file_format: Suffix of the file to download.
+                   For example, "txt", "csv", "xcl".
     
     """ 
     import subprocess
@@ -83,7 +96,7 @@ class DocsServiceCL(gdata.docs.service.DocsService, util.BaseServiceCL):
     from gdata.docs.service import SUPPORTED_FILETYPES
     
     temp_dir = tempfile.mkdtemp()
-    path = os.path.join(temp_dir, doc_entry.title.text + '.' + format)
+    path = os.path.join(temp_dir, doc_entry.title.text + '.' + file_format)
     self.Export(doc_entry, path)
     create_time = os.stat(path).st_mtime
     subprocess.call([editor, path])
@@ -92,13 +105,14 @@ class DocsServiceCL(gdata.docs.service.DocsService, util.BaseServiceCL):
       return
     else:
       try:
-        content_type = SUPPORTED_FILETYPES[format.upper()]
+        content_type = SUPPORTED_FILETYPES[file_format.upper()]
       except KeyError:
-        print 'Could not find mimetype for ' + format
-        while format not in SUPPORTED_FILETYPES.keys():
-          format = raw_input('Please enter one of ' + SUPPORTED_FILETYPES.keys() + 
-                             ' for a content type to upload as.')
-        content_type = SUPPORTED_FILETYPES[format]
+        print 'Could not find mimetype for ' + file_format
+        while file_format not in SUPPORTED_FILETYPES.keys():
+          file_format = raw_input('Please enter one of ' +
+                                  SUPPORTED_FILETYPES.keys() + 
+                                  ' for a content type to upload as.')
+        content_type = SUPPORTED_FILETYPES[file_format]
       mediasource = gdata.MediaSource(file_path=path, content_type=content_type)
       self.Update(doc_entry, media_source=mediasource)
     try:
@@ -122,53 +136,53 @@ class DocsServiceCL(gdata.docs.service.DocsService, util.BaseServiceCL):
     
     """
     for entry in entries:
-      format = get_extension(get_document_type(entry))
-      path = os.path.join(base_path, entry.title.text + '.' + format)
+      file_format = get_extension(get_document_type(entry)) or default_format
+      path = os.path.join(base_path, entry.title.text + '.' + file_format)
       print 'Downloading ' + entry.title.text + ' to ' + path
       try:
         self.Export(entry, path)
-      except Exception, e:
-        print e
+      except gdata.service.RequestError, err:
+        print err
         print 'Download of ' + entry.title.text + ' failed'
 
   GetDocs = get_docs
 
-  def get_doclist(self, title=None, folder=None):
+  def get_doclist(self, title=None, folder_name=None):
     """Get a list of document entries from a feed.
     
     Keyword arguments:
       title: String to use when looking for entries to return. Will be compared
              to entry.title.text, using regular expressions if self.use_regex.
              (Default None for all entries from feed).
-      folder: String to match against folder titles. Only files found in folders
-              with matching titles will be returned. (Default None for all
-              folders).
+      folder_name: String to match against folder titles. Only files found
+                   in folders with matching titles will be returned.
+                   (Default None for all folders).
                  
     Returns:
       List of entries.
       
     """
-    if folder:
-      q = gdata.docs.service.DocumentQuery(categories=['folder'],
-                                           params={'showfolders': 'true'})
-      feed = self.Query(q.ToUri())
+    if folder_name:
+      query = gdata.docs.service.DocumentQuery(categories=['folder'],
+                                               params={'showfolders': 'true'})
+      feed = self.Query(query.ToUri())
       entries = []
-      for f in feed.entry:
+      for folder in feed.entry:
         # Skip folders that do not match the name we're looking for
-        if ((self.use_regex and re.match(folder,f.title.text)) or
-            (not self.use_regex and folder == f.title.text)):
-          contents = self.QueryDocumentListFeed(uri=f.content.src)
+        if ((self.use_regex and re.match(folder_name, folder.title.text)) or
+            (not self.use_regex and folder_name == folder.title.text)):
+          contents = self.QueryDocumentListFeed(uri=folder.content.src)
           if not title:
             entries.extend(contents.entry)
           elif self.use_regex:
             entries.extend([entry for entry in contents.entry
-                            if re.match(title,entry.title.text)])
+                            if re.match(title, entry.title.text)])
           else:
             entries.extend([entry for entry in contents.entry
                             if title == entry.title.text])
     else:
-      q = gdata.docs.service.DocumentQuery()
-      entries = self.GetEntries(q.ToUri(),
+      query = gdata.docs.service.DocumentQuery()
+      entries = self.GetEntries(query.ToUri(),
                                 title,
                                 converter=gdata.docs.DocumentListFeedFromString)
     return entries
@@ -206,10 +220,10 @@ class DocsServiceCL(gdata.docs.service.DocsService, util.BaseServiceCL):
   def is_token_valid(self):
     """Check that the token being used is valid."""
     try:
-      q = gdata.docs.service.DocumentQuery()
-      self.Get(q.ToUri())
-    except gdata.service.RequestError, e:
-      if e.args[0]['body'].find('Token invalid') != -1:
+      query = gdata.docs.service.DocumentQuery()
+      self.Get(query.ToUri())
+    except gdata.service.RequestError, err:
+      if err.args[0]['body'].find('Token invalid') != -1:
         return False
       else:
         raise
@@ -234,27 +248,34 @@ class DocsServiceCL(gdata.docs.service.DocsService, util.BaseServiceCL):
     url_locs = {}
     for path in paths:
       filename = os.path.basename(path)
+      content_type = ''
       try:
         extension = filename.split('.')[1].upper()
-        content_type = SUPPORTED_FILETYPES[extension]
-      except:
+      except IndexError:
+        print 'No extension on filename!'
+      else:
+        try:
+          content_type = SUPPORTED_FILETYPES[extension]
+        except KeyError:
+          pass
+      if not content_type:
         content_type = 'text/plain'
       print 'Loading ' + path
       try:
-        ms = gdata.MediaSource(file_path=path, content_type=content_type)
+        media = gdata.MediaSource(file_path=path, content_type=content_type)
         title = title or filename.split('.')[0]
         if extension.lower() in ['csv', 'tsv', 'tab', 'ods', 'xls']:
-          entry = self.UploadSpreadsheet(ms, title)
+          entry = self.UploadSpreadsheet(media, title)
         elif extension.lower() in ['ppt', 'pps']:
-          entry = self.UploadPresentation(ms, title)
+          entry = self.UploadPresentation(media, title)
         elif extension.lower() in ['doc', 'odt', 'rtf', 'sxw',
                                    'txt', 'htm', 'html']:
-          entry = self.UploadDocument(ms, title)
+          entry = self.UploadDocument(media, title)
         else:
-          raise Exception('Unexpected extension: ' + extension)
-      except Exception, e:
+          raise UnexpectedExtension(extension)
+      except (gdata.service.RequestError, UnexpectedExtension), err:
         print 'Failed to upload ' + path
-        print e
+        print err
       else:
         print 'Upload success! Direct link: ' + entry.GetAlternateLink().href
         url_locs[filename] = entry.GetAlternateLink().href
@@ -263,7 +284,7 @@ class DocsServiceCL(gdata.docs.service.DocsService, util.BaseServiceCL):
   UploadDocs = upload_docs
 
 
-service_class = DocsServiceCL
+SERVICE_CLASS = DocsServiceCL
 
 
 def get_document_type(entry):
@@ -298,10 +319,12 @@ def get_extension(doctype_label):
       return 'pdf'
     elif doctype_label == PRESENTATION_LABEL:
       return util.config.get(SECTION_HEADER, 'presentation_format')
-  except ConfigParser.NoOptionError:
+  except ConfigParser.ParsingError, err:
+    print err
     try:
       return util.config.get(SECTION_HEADER, 'format')
-    except:
+    except ConfigParser.ParsingError, err2:
+      print err2
       return None
 
 
@@ -371,8 +394,8 @@ def _run_list(client, options, args):
     style_list = args[0].split(',')
   else:
     style_list = util.get_config_option(SECTION_HEADER, 'list_style').split(',')
-  for e in entries:
-    print util.entry_to_string(e, style_list, delimiter=options.delimiter)
+  for entry in entries:
+    print util.entry_to_string(entry, style_list, delimiter=options.delimiter)
 
 
 def _run_upload(client, options, args):
@@ -397,14 +420,14 @@ def _run_edit(client, options, args):
     print 'Sorry, cannot edit or download spreadsheets.'
     return
   else:
-    format = options.format or get_extension(doc_type)
+    format_ext = options.format or get_extension(doc_type)
     editor = options.editor or get_editor(doc_type)
     if not editor:
       print 'No editor defined!'
       print 'Define an "editor" option in your config file, set the ' +\
             'EDITOR environment variable, or pass an editor in with --editor.'
       return
-    client.edit_doc(doc_entry, editor, format)
+    client.edit_doc(doc_entry, editor, format_ext)
 
 
 def _run_delete(client, options, args):
@@ -413,7 +436,7 @@ def _run_delete(client, options, args):
                 util.config.getboolean('GENERAL', 'delete_by_default'))
 
 
-tasks = {'upload': util.Task('Upload a document', callback=_run_upload,
+TASKS = {'upload': util.Task('Upload a document', callback=_run_upload,
                              optional=['title', 'folder', 'no-convert'],
                              args_desc='PATH_TO_FILE'),
          'edit': util.Task('Edit a document', callback=_run_edit,

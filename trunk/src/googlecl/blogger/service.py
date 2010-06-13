@@ -27,12 +27,12 @@ from googlecl.blogger import SECTION_HEADER
 
 
 class BlogNotFound(Exception):
+  """Specified blog is not found."""
   def __str__(self):
     if len(self.args) == 2:
       return self.args[0] + ': ' + self.args[1]
     else:
       return self.args
-  pass
 
 
 class BloggerServiceCL(util.BaseServiceCL):
@@ -172,7 +172,7 @@ class BloggerServiceCL(util.BaseServiceCL):
   LabelPosts = label_posts
 
 
-service_class = BloggerServiceCL
+SERVICE_CLASS = BloggerServiceCL
 
 
 #===============================================================================
@@ -203,8 +203,8 @@ def _run_post(client, options, args):
       content = content_string
     try:
       entry = client.AddPost(options.blog, options.title or title, content)
-    except Exception, e:
-      print 'Failed to post: ' + str(e)
+    except gdata.service.RequestError, err:
+      print 'Failed to post: ' + str(err)
     else:
       if entry and options.tags:
         client.LabelPosts([entry], options.tags)
@@ -213,8 +213,8 @@ def _run_post(client, options, args):
 def _run_delete(client, options, args):
   try:
     post_entries = client.GetPosts(options.blog, options.title)
-  except BlogNotFound, e:
-    print e
+  except BlogNotFound, err:
+    print err
     return
   client.Delete(post_entries, entry_type = 'post',
                 delete_default=util.config.getboolean('GENERAL',
@@ -224,8 +224,8 @@ def _run_delete(client, options, args):
 def _run_list(client, options, args):
   try:
     entries = client.GetPosts(options.blog, options.title)
-  except BlogNotFound, e:
-    print e
+  except BlogNotFound, err:
+    print err
     return
   if args:
     style_list = args[0].split(',')
@@ -238,13 +238,13 @@ def _run_list(client, options, args):
 def _run_tag(client, options, args):
   try:
     entries = client.GetPosts(options.blog, options.title)
-  except BlogNotFound, e:
-    print e
+  except BlogNotFound, err:
+    print err
     return
   client.LabelPosts(entries, options.tags)
 
 
-tasks = {'delete': util.Task('Delete a post.', callback=_run_delete,
+TASKS = {'delete': util.Task('Delete a post.', callback=_run_delete,
                              required=['title', 'blog']),
          'post': util.Task('Post content.', callback=_run_post,
                            required='blog',

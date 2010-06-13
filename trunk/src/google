@@ -55,7 +55,7 @@ AVAILABLE_SERVICES = ['picasa', 'blogger', 'youtube', 'docs', 'contacts',
                        'calendar']
 
 
-def fill_out_options(service_header, task, options, logged_in):
+def fill_out_options(service_header, task, options):
   """Fill out required options via config file and command line prompts.
   
   If there are any required fields missing for a task, fill them in.
@@ -63,11 +63,11 @@ def fill_out_options(service_header, task, options, logged_in):
   preferences file, then prompting the user if the prior method fails.
   
   Keyword arguments:
+    service_header: 
     task: Requirements of the task (see class util.Task).
     options: Contains attributes that have been specified already, typically
              through options on the command line (see setup_parser()).
-    logged_in: If the client is logged in or not
-    
+  
   Returns:
     Nothing, though options may be modified to hold the required fields.
     
@@ -173,7 +173,7 @@ def run_once(options, args):
     service_module = __import__('googlecl.' + task_name + '.service',
                                 globals(), locals(), -1)
     if service_module:
-      print_help(task_name, service_module.tasks)
+      print_help(task_name, service_module.TASKS)
     return
   
   regex = util.config.getboolean('GENERAL', 'regex')
@@ -183,21 +183,21 @@ def run_once(options, args):
   try:
     service_module = __import__('googlecl.' + service + '.service',
                                 globals(), locals(), -1)
-  except ImportError, e:
-    print e.args[0]
+  except ImportError, err:
+    print err.args[0]
     print 'Did you remember to specify the service? Must be one of ' +\
           str(AVAILABLE_SERVICES)[1:-1]
     return
   if not service_module:
     return
-  client = service_module.service_class(regex, tags_prompt, delete_prompt)
+  client = service_module.SERVICE_CLASS(regex, tags_prompt, delete_prompt)
   
   try:
-    task = service_module.tasks[task_name]
+    task = service_module.TASKS[task_name]
     task.name = task_name
   except KeyError:
     print 'Did not recognize task, please use one of ' + \
-          str(service_module.tasks.keys())
+          str(service_module.TASKS.keys())
     return
   
   if task.requires('devkey'):
@@ -211,7 +211,7 @@ def run_once(options, args):
   package = __import__('googlecl.' + service, fromlist=['SECTION_HEADER'])
   # fill_put_options will read the key from file if necessary, but will not set
   # it since it will always get a non-empty value beforehand.
-  fill_out_options(package.SECTION_HEADER, task, options, client.logged_in)
+  fill_out_options(package.SECTION_HEADER, task, options)
   if task.login_required:
     token = util.read_access_token(service, options.user)
     if token:
@@ -231,9 +231,9 @@ def run_once(options, args):
         util.remove_access_token(service, options.user)
     if not client.logged_in:
       if client.RequestAccess():
-          client.logged_in = True
-          client.email = options.user
-          util.write_access_token(service, options.user, client.current_token)
+        client.logged_in = True
+        client.email = options.user
+        util.write_access_token(service, options.user, client.current_token)
       else:
         print 'Failed to get valid access token!'
         return
@@ -321,6 +321,7 @@ def setup_parser():
 
 
 def main():
+  """Entry point for GoogleCL script."""
   parser = setup_parser()
   (options, args) = parser.parse_args()
   if not util.load_preferences(options.config):

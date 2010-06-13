@@ -57,7 +57,7 @@ class BaseServiceCL(gdata.service.GDataService):
       prompt_str = '(y/N)'
     for item in entries:
       if self.prompt_for_delete:
-        delete_str = raw_input('Are you SURE you want to delete %s "%s"? %s: ' % 
+        delete_str = raw_input('Are you SURE you want to delete %s "%s"? %s: ' %
                                (entry_type, item.title.text, prompt_str))
         if not delete_str:
           delete = delete_default
@@ -427,11 +427,11 @@ def entry_to_string(entry, style_list, delimiter, missing_field_value=None):
   else:
     join_string = ','
   for style in style_list:
-    value = ''
+    val = ''
     try:
       # Get the value, replacing NoneTypes and empty strings
       # with the missing field value.
-      value = _string_for_style(style, entry, join_string) or missing_field_value
+      val = _string_for_style(style, entry, join_string) or missing_field_value
     except ValueError, e:
       print e.args[0] + ' (Did not add value for style ' + style + ')'
     except AttributeError, e:
@@ -440,7 +440,7 @@ def entry_to_string(entry, style_list, delimiter, missing_field_value=None):
       else:
         raise
     # Ensure the delimiter won't appear in a non-delineation role.
-    return_string += value.replace(delimiter, ' ') + delimiter
+    return_string += val.replace(delimiter, ' ') + delimiter
   
   return return_string.rstrip(delimiter)
 

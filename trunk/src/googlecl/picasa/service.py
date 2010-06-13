@@ -84,8 +84,8 @@ class PhotosServiceCL(PhotosService, util.BaseServiceCL):
         if query:
           uri += '&q=' + query
         for album in album_entry:
-          f = self.GetFeed(uri % album.gphoto_id.text)
-          entries.extend(f.entry)
+          photo_feed = self.GetFeed(uri % album.gphoto_id.text)
+          entries.extend(photo_feed.entry)
     else:
       entries = album_entry
       
@@ -141,17 +141,17 @@ class PhotosServiceCL(PhotosService, util.BaseServiceCL):
           album_concat += 1
       os.makedirs(album_path)
       
-      f = self.GetFeed('/data/feed/api/user/%s/albumid/%s?kind=photo' %
-                       (user, album.gphoto_id.text))
+      photo_feed = self.GetFeed('/data/feed/api/user/%s/albumid/%s?kind=photo' %
+                                (user, album.gphoto_id.text))
       
-      for photo in f.entry:
+      for photo in photo_feed.entry:
         #TODO: Test on Windows (upload from one OS, download from another)
         photo_name = os.path.split(photo.title.text)[1]
         photo_path = os.path.join(album_path, photo_name)
         # Check for a file extension, add it if it does not exist.
         if not '.' in photo_path:
-          type = photo.content.type
-          photo_path += '.' + type[type.find('/')+1:]
+          photo_ext = photo.content.type
+          photo_path += '.' + photo_ext[photo_ext.find('/')+1:]
         if os.path.exists(photo_path):
           base_photo_path = photo_path
           photo_concat = 1
@@ -195,18 +195,20 @@ class PhotosServiceCL(PhotosService, util.BaseServiceCL):
                  ('default', album.gphoto_id.text))
     keywords = tags
     failures = []
-    for file in photo_list:
+    for path in photo_list:
       if not tags and self.prompt_for_tags:
-        keywords = raw_input('Enter tags for photo %s: ' % file)
-      print 'Loading file %s to album %s' % (file, album.title.text)
+        keywords = raw_input('Enter tags for photo %s: ' % path)
+      print 'Loading file %s to album %s' % (path, album.title.text)
       try:
         self.InsertPhotoSimple(album_url, 
-                               title=os.path.split(file)[1], 
+                               title=os.path.split(path)[1], 
                                summary='',
                                filename_or_handle=file, 
                                keywords=keywords)
-      except GooglePhotosException, e:
-        print 'Failed to upload %s. (%s: %s)' % (file, e.reason, e.body) 
+      except GooglePhotosException, err:
+        print 'Failed to upload %s. (%s: %s)' % (path,
+                                                 err.args[0].reason,
+                                                 err.args[0].body) 
         failures.append(file)   
     return failures
 
@@ -253,7 +255,7 @@ class PhotosServiceCL(PhotosService, util.BaseServiceCL):
   TagPhotos = tag_photos
 
 
-service_class = PhotosServiceCL
+SERVICE_CLASS = PhotosServiceCL
 
 
 #===============================================================================
@@ -270,8 +272,8 @@ def _run_create(client, options, args):
     import time
     try:
       timestamp = time.mktime(time.strptime(options.date, util.DATE_FORMAT))
-    except ValueError, e:
-      print e
+    except ValueError, err:
+      print err
       print 'Ignoring date option, using today'
       options.date = ''
     else:
@@ -353,7 +355,7 @@ def _run_tag(client, options, args):
     print 'No matches for the title and/or query you gave.'
 
 
-tasks = {'create': util.Task('Create an album', callback=_run_create,
+TASKS = {'create': util.Task('Create an album', callback=_run_create,
                              required='title',
                              optional=['date', 'summary', 'tags'],
                              args_desc='PATH_TO_PHOTOS'), 
