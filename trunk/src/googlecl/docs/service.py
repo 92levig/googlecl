@@ -358,8 +358,8 @@ def get_editor(doctype_label):
       return util.config.get(SECTION_HEADER, 'editor')
     except ConfigParser.NoOptionError:
       return os.getenv('EDITOR')
-  
-    
+
+
 #===============================================================================
 # Each of the following _run_* functions execute a particular task.
 #  

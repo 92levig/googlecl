@@ -171,9 +171,9 @@ class BaseServiceCL(gdata.service.GDataService):
       return False
     auth_url = self.GenerateOAuthAuthorizationURL(request_token=request_token)
     try:
-      browser = config.get('GENERAL', 'auth_browser') or os.getenv('BROWSER')
-    except:
-      browser = None
+      browser = config.get('GENERAL', 'auth_browser')
+    except ConfigParser.NoOptionError:
+      browser = os.getenv('BROWSER')
     message_format = 'Please log in and/or grant access via your browser%s' +\
                      ' then hit enter.'
     if browser:
