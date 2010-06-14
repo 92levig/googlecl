@@ -115,7 +115,7 @@ class YouTubeServiceCL(YouTubeService, util.BaseServiceCL):
       my_media_group = Group(title=Title(text=title or filename),
                              description=Description(text=desc or 'A video'),
                              keywords=Keywords(text=tags),
-                             category=self.build_category(category))
+                             category=build_category(category))
   
       video_entry = gdata.youtube.YouTubeVideoEntry(media=my_media_group)
       if devtags:
