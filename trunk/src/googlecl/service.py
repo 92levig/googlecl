@@ -227,7 +227,7 @@ class Task(object):
   
   """
   
-  def __init__(self, description, callback=None, required=None, optional=None,
+  def __init__(self, description, callback=None, required=[], optional=[],
                login_required=True, args_desc=''):
     """Constructor.
     
