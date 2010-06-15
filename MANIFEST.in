@@ -1,2 +1,2 @@
-include google README README.config INSTALL.txt
+include src/google README.txt README.config INSTALL.txt
 recursive-include googlecl *.py

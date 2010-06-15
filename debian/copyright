@@ -1,7 +1,7 @@
 This package was debianized by Tom Miller <tom.h.miller@gmail.com> on
 Sun, 13 Jun 2010 18:47:53 -0400.
 
-It was downloaded from <download tarball does not yet exist!>
+It was downloaded from http://googlecl.googlecode.com/files/googlecl-0.9.1.tar.gz
 
 Upstream Authors:
 
@@ -28,10 +28,3 @@ License:
 
 On Debian systems, the complete text of the Apache version 2.0 license
 can be found in `/usr/share/common-licenses/Apache-2.0'.
-
-The Debian packaging is:
-
-    Copyright (C) 2010 Tom Miller <tom.h.miller@gmail.com>
-
-and is licensed under the GPL version 3, 
-see `/usr/share/common-licenses/GPL-3'.

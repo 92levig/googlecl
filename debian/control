@@ -1,6 +1,6 @@
 Source: googlecl
 Section: python
-Priority: extra
+Priority: optional
 Maintainer: Tom H. Miller <tom.h.miller@gmail.com>
 Build-Depends: debhelper (>= 7), python-support, python (>=2.5)
 Standards-Version: 3.8.4
@@ -9,9 +9,9 @@ Homepage: http://code.google.com/p/googlecl/
 Package: googlecl
 Architecture: all
 Depends: ${python:Depends}, ${misc:Depends}, python-gdata
-Description: Command-line access to (some) Google services
+Description: command-line tool for access to (some) Google services
  This package provides a user-friendly command-line interface to
- some of the Google gdata APIs.  It lets you do things like:
+ some of the Google Data Protocol (gdata) APIs.  It lets you do things like:
  .
  google blogger post --title "Test Post" "I'm posting from the command line"
  google calendar list --date 2010-06-01
