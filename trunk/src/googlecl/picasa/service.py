@@ -184,6 +184,13 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
 
   GetAlbum = get_album
 
+  def get_single_album(self, user='default', title=None):
+    """Get a single album."""
+    uri = '/data/feed/api/user/' + user + '?kind=album'
+    return self.GetSingleEntry(uri, title=title)
+
+  GetSingleAlbum = get_single_album
+
   def insert_photo_list(self, album, photo_list, tags=''):
     """Insert photos into an album.
     
@@ -206,7 +213,7 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
         self.InsertPhotoSimple(album_url, 
                                title=os.path.split(path)[1], 
                                summary='',
-                               filename_or_handle=file, 
+                               filename_or_handle=path, 
                                keywords=keywords)
       except GooglePhotosException, err:
         print 'Failed to upload %s. (%s: %s)' % (path,
@@ -332,16 +339,9 @@ def _run_post(client, options, args):
   if not args:
     print 'Must provide photos to post!'
     return
-  albums = client.GetAlbum(title=options.title)
-  if len(albums) == 1:
-    client.InsertPhotoList(albums[0], args, tags=options.tags)
-  elif len(albums) > 1:
-    print 'More than one album matches "%s"' % options.title
-    upload_all = raw_input('Would you like to upload photos ' + 
-                           'to each album? (Y/n) ')
-    if not upload_all or upload_all.lower() == 'y':
-      for album in albums:
-        client.InsertPhotoList(album, args, tags=options.tags)
+  album = client.GetSingleAlbum(title=options.title)
+  if album:
+    client.InsertPhotoList(album, args, tags=options.tags)
   else:
     print 'No albums found that match %s' % options.title
 

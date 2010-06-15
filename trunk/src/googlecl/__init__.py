@@ -70,7 +70,7 @@ def load_preferences(path=None):
     # REMEMBER: updating these means you need to update the CONFIG readme.
     _contacts = {'list_style': 'title,email'}
     _picasa = {'access': 'public'}
-    _general = {'regex': 'False',
+    _general = {'regex': 'True',
                'delete_by_default': 'False',
                'delete_prompt': 'True',
                'tags_prompt': 'False',
