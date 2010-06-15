@@ -184,6 +184,14 @@ def fill_out_options(service_header, task, options):
   else:
     options.encoded_query = None
 
+def get_task_help(service, tasks):
+  help = 'Available tasks for service ' + service + \
+         ': ' + str(tasks.keys())[1:-1] + '\n'
+  for task_name in tasks.keys():
+    help += '  ' + task_name + ': ' + tasks[task_name].description + '\n'
+    help += ' ' + tasks[task_name].usage + '\n\n'
+
+  return help
 
 def print_help(service=None, tasks=None):
   """Print help messages to the screen.
@@ -207,11 +215,12 @@ def print_help(service=None, tasks=None):
     print '  Enter "> help <service>" for more information on a service.'
     print '  Or, just "quit" to quit.'
   else:
-    print 'Available tasks for service ' + service + \
-          ': ' + str(tasks.keys())[1:-1]
-    for task_name in tasks.keys():
-      print '  ' + task_name + ': ' + tasks[task_name].description
-      print '\t' + tasks[task_name].usage
+    print get_task_help(service, tasks)
+#    print 'Available tasks for service ' + service + \
+#          ': ' + str(tasks.keys())[1:-1]
+#    for task_name in tasks.keys():
+#      print '  ' + task_name + ': ' + tasks[task_name].description
+#      print '\t' + tasks[task_name].usage
 
 
 def run_interactive(parser):
@@ -337,25 +346,34 @@ def setup_parser():
     optparse.OptionParser with options configured.
   
   """
-  available_services = str(AVAILABLE_SERVICES).replace("'", '')
+  available_services = '[' + '|'.join(AVAILABLE_SERVICES) + ']'
   # NOTE: Usage string formatted to work with help2man.  After changing it,
-  # please run 'help2man -N -n "one-line description" ./google > google.1'
+  # please run:
+  # 'help2man -N -n "command-line access to (some) Google services" \
+  #  ./google > google.1'
   # then 'man ./google.1' and make sure the generated manpage still looks
   # reasonable.  Then save it to man/google.1
   usage = 'Usage: %prog ' + available_services + ' TASK [options]\n' +\
           '\n' +\
-          'This program allows command-line access to (some) google ' +\
-          'services via their gdata APIs.  For more help, try:\n' +\
-          '\n' +\
-          '%prog help ' + available_services + '\n\n' +\
-          '%prog # no arguments for interactive session'
+          'This program provides command-line access to (some) google ' +\
+          'services via their gdata APIs.\n' +\
+          'Called without a service name, it starts an interactive session.\n\n'
+
+  # XXX: If we're going to bother doing an __import__ of all the modules, we
+  # might as well reuse the one the user actually wants to use.
+  for service in AVAILABLE_SERVICES:
+    service_module = __import__('googlecl.' + service + '.service',
+                                globals(), locals(), -1)
+    if service_module:
+      usage += get_task_help(service, service_module.TASKS) + '\n'
+
   parser = optparse.OptionParser(usage=usage, version='%prog ' + VERSION)
   parser.add_option('--blog', dest='blog',
                     help='Blogger only - specify a blog other than your' +
-                    ' primary for tasks.')
+                    ' primary.')
   parser.add_option('--cal', dest='cal',
                     help='Calendar only - specify a calendar other than your' +
-                    ' primary for retrieving/adding events.')
+                    ' primary.')
   parser.add_option('-c', '--category', dest='category',
                     help='YouTube only - specify video categories' + 
                     ' as a comma-separated list, e.g. "Film, Travel"')
@@ -371,7 +389,7 @@ def setup_parser():
                     ' Picasa only - sets the date of the album\n' +
                     ' Calendar only - date of the event to add / look for. ' +
                     '       Can also specify a range via YYYY-MM-DD,YYYY-MM-DD')
-  parser.add_option('--delimiter', dest='delimiter',
+  parser.add_option('--delimiter', dest='delimiter', default=',',
                     help='Specify a delimiter for the output of the list task.')
   parser.add_option('--editor', dest='editor',
                     help='Docs only - editor to use on a file.')
