@@ -35,7 +35,7 @@ USER_BATCH_URL_FORMAT = \
                gdata.calendar.service.DEFAULT_BATCH_URL.replace('default', '%s')
 
 
-class CalendarError(Exception):
+class CalendarError(googlecl.service.Error):
   """Base error for Calendar errors."""
   pass
 

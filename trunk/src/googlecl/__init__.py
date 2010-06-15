@@ -64,9 +64,11 @@ def load_preferences(path=None):
     """Set the most basic options in the config file."""
     import googlecl.picasa
     import googlecl.docs
+    import googlecl.contacts
     # These may be useful to define at the module level, but for now,
     # keep them here.
     # REMEMBER: updating these means you need to update the CONFIG readme.
+    _contacts = {'list_style': 'title,email'}
     _picasa = {'access': 'public'}
     _general = {'regex': 'False',
                'delete_by_default': 'False',
@@ -85,6 +87,7 @@ def load_preferences(path=None):
              'presentation_editor': 'openoffice.org'}
     config_defaults = {googlecl.docs.SECTION_HEADER: _docs,
                        googlecl.picasa.SECTION_HEADER: _picasa,
+                       googlecl.contacts.SECTION_HEADER: _contacts,
                        'GENERAL': _general}
     made_changes = False
     for section_name in config_defaults.keys():
@@ -173,6 +176,33 @@ def remove_access_token(service, user):
         pickle.dump(token_dict, token_file)
         success = True
   return success
+
+
+def set_missing_default_user(section, user, config_path=None):
+  """Set the default user for a section if not defined already.
+  
+  Keyword arguments:
+    section: Title of the section to set the user in.
+    user: Name to set for the user in the given section.
+    config_path: Path to the configuration file.
+                 Default None to use the default path defined in this module.
+  
+  """
+  default_user = ''
+  try:
+    default_user = CONFIG.get(section, 'user')
+  except ConfigParser.NoSectionError:
+    CONFIG.add_section(section)
+  except ConfigParser.NoOptionError:
+    # If there's no such option, that's fine. We'll fix that in a sec.
+    pass
+  if not default_user:
+    if not config_path:
+      config_path = os.path.join(GOOGLE_CL_DIR, CONFIG_FILENAME)
+    if os.path.exists(config_path):
+      CONFIG.set(section, 'user', user)
+      with open(config_path, 'w') as config_file:
+        CONFIG.write(config_file)
 
 
 def write_access_token(service, user, token):

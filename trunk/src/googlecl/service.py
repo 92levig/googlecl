@@ -25,6 +25,11 @@ import re
 DATE_FORMAT = '%Y-%m-%d'
 
 
+class Error(Exception):
+  """Base error for GoogleCL exceptions."""
+  pass
+
+
 class BaseServiceCL(gdata.service.GDataService):
 
   """Extension of gdata.GDataService specific to GoogleCL."""

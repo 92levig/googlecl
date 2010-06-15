@@ -36,7 +36,7 @@ import googlecl.service
 from googlecl.docs import SECTION_HEADER
 
 
-class DocsError(Exception):
+class DocsError(googlecl.service.Error):
   """Base error for Docs errors."""
   pass
 

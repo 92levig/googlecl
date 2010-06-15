@@ -27,7 +27,7 @@ import googlecl.service
 from googlecl.blogger import SECTION_HEADER
 
 
-class BlogNotFound(Exception):
+class BlogNotFound(googlecl.service.Error):
   """Specified blog is not found."""
   def __str__(self):
     if len(self.args) == 2:
