@@ -14,7 +14,8 @@ setup(name = "googlecl",
         'googlecl.docs',
         'googlecl.picasa',
         'googlecl.youtube'],
-    scripts = ["google"],
+    package_dir = {'googlecl':'src/googlecl'},
+    scripts = ["src/google"],
     long_description = """The Google Data APIs allow programmatic access to
 various Google services.  This package wraps a subset of those APIs into a
 command-line tool that makes it easy to do things like posting to a Blogger
