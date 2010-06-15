@@ -13,5 +13,5 @@
 # limitations under the License.
 
 
-SECTION_HEADER ='BLOGGER' 
+SECTION_HEADER = 'BLOGGER' 
 

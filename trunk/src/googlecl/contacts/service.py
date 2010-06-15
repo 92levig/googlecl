@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-"""Service details and instances for the Picasa service.
+"""Service details and instances for the Contacts service.
 
 Some use cases:
 Add contacts:
@@ -27,12 +27,13 @@ from __future__ import with_statement
 
 __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import gdata.contacts.service
-import googlecl.util as util
+import googlecl
+import googlecl.service
 from googlecl.contacts import SECTION_HEADER
 
 
 class ContactsServiceCL(gdata.contacts.service.ContactsService,
-                        util.BaseServiceCL):
+                        googlecl.service.BaseServiceCL):
   
   """Extends gdata.contacts.service.ContactsService for the command line.
 
@@ -54,7 +55,8 @@ class ContactsServiceCL(gdata.contacts.service.ContactsService,
               
     """
     gdata.contacts.service.ContactsService.__init__(self)
-    util.BaseServiceCL.set_params(self, regex, tags_prompt, delete_prompt)
+    googlecl.service.BaseServiceCL._set_params(self, regex,
+                                               tags_prompt, delete_prompt)
 
   def add_contact(self, string_or_csv_file):
     """Add contact(s).
@@ -103,9 +105,11 @@ class ContactsServiceCL(gdata.contacts.service.ContactsService,
 
   GetContacts = get_contacts
 
-  def is_token_valid(self):
+  def is_token_valid(self, test_uri=None):
     """Check that the token being used is valid."""
-    return util.BaseServiceCL.IsTokenValid(self, self.GetFeedUri())
+    if not test_uri:
+      test_uri = self.GetFeedUri()
+    return googlecl.service.BaseServiceCL.IsTokenValid(self, test_uri)
 
   IsTokenValid = is_token_valid
 
@@ -127,9 +131,11 @@ def _run_list(client, options, args):
   if args:
     style_list = args[0].split(',')
   else:
-    style_list = util.get_config_option(SECTION_HEADER, 'list_style').split(',')
+    style_list = googlecl.get_config_option(SECTION_HEADER,
+                                            'list_style').split(',')
   for entry in entries:
-    print util.entry_to_string(entry, style_list, delimiter=options.delimiter)
+    print googlecl.service.entry_to_string(entry, style_list,
+                                           delimiter=options.delimiter)
 
 
 def _run_add(client, options, args):
@@ -140,12 +146,13 @@ def _run_add(client, options, args):
 def _run_delete(client, options, args):
   entries = client.GetContacts(options.title)
   client.Delete(entries, 'contact',
-                util.config.getboolean('GENERAL', 'delete_by_default'))
+                googlecl.CONFIG.getboolean('GENERAL', 'delete_by_default'))
 
 
-TASKS = {'list': util.Task('List contacts', callback=_run_list,
-                           required='delimiter', optional='title'),
-         'add': util.Task('Add contacts', callback=_run_add,
-                          args_desc='CONTACT DATA or CSV FILE'),
-         'delete': util.Task('Delete contacts', callback=_run_delete,
-                             optional='title')}
+TASKS = {'list': googlecl.service.Task('List contacts', callback=_run_list,
+                                       required='delimiter', optional='title'),
+         'add': googlecl.service.Task('Add contacts', callback=_run_add,
+                                      args_desc='CONTACT DATA or CSV FILE'),
+         'delete': googlecl.service.Task('Delete contacts',
+                                         callback=_run_delete,
+                                         optional='title')}

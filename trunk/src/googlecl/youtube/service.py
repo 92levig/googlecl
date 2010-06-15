@@ -19,12 +19,13 @@
 __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import gdata.youtube
 import os
-import googlecl.util as util
+import googlecl
+import googlecl.service
 from googlecl.youtube import SECTION_HEADER
 from gdata.youtube.service import YouTubeService
 
 
-class YouTubeServiceCL(YouTubeService, util.BaseServiceCL):
+class YouTubeServiceCL(YouTubeService, googlecl.service.BaseServiceCL):
   
   """Extends gdata.youtube.service.YouTubeService for the command line.
   
@@ -46,7 +47,8 @@ class YouTubeServiceCL(YouTubeService, util.BaseServiceCL):
               
     """ 
     YouTubeService.__init__(self)
-    util.BaseServiceCL.set_params(self, regex, tags_prompt, delete_prompt)
+    googlecl.service.BaseServiceCL._set_params(self, regex,
+                                               tags_prompt, delete_prompt)
   
   def categorize_videos(self, video_entries, category):
     """Change the categories of a list of videos to a single category.
@@ -90,9 +92,9 @@ class YouTubeServiceCL(YouTubeService, util.BaseServiceCL):
 
   GetVideos = get_videos
 
-  def is_token_valid(self):
+  def is_token_valid(self, test_uri='/feeds/api/users/default'):
     """Check that the token being used is valid."""
-    return util.BaseServiceCL.IsTokenValid(self, '/feeds/api/users/default')
+    return googlecl.service.BaseServiceCL.IsTokenValid(self, test_uri)
 
   IsTokenValid = is_token_valid
 
@@ -133,11 +135,11 @@ class YouTubeServiceCL(YouTubeService, util.BaseServiceCL):
     Keyword arguments:
       video_entries: List of YouTubeVideoEntry objects. 
       tags: String representation of tags in a comma separated list. For how 
-            tags are generated from the string, see util.generate_tag_sets().
+            tags are generated from the string, see googlecl.service.generate_tag_sets().
     
     """
     from gdata.media import Group, Keywords
-    remove_set, add_set, replace_tags = util.generate_tag_sets(tags)
+    remove_set, add_set, replace_tags = googlecl.service.generate_tag_sets(tags)
     for video in video_entries:
       if not video.media:
         video.media = Group()
@@ -199,9 +201,11 @@ def _run_list(client, options, args):
   if args:
     style_list = args[0].split(',')
   else:
-    style_list = util.get_config_option(SECTION_HEADER, 'list_style').split(',')
+    style_list = googlecl.get_config_option(SECTION_HEADER,
+                                            'list_style').split(',')
   for vid in entries:
-    print util.entry_to_string(vid, style_list, delimiter=options.delimiter)
+    print googlecl.service.entry_to_string(vid, style_list,
+                                           delimiter=options.delimiter)
 
 
 def _run_post(client, options, args):
@@ -223,17 +227,20 @@ def _run_tag(client, options, args):
 def _run_delete(client, options, args):
   entries = client.GetVideos(title=options.title)
   client.Delete(entries, 'video',
-                util.config.getboolean('GENERAL', 'delete_by_default'))
+                googlecl.CONFIG.getboolean('GENERAL', 'delete_by_default'))
 
 
-TASKS = {'post': util.Task('Post a video.', callback=_run_post,
-                           required=['category', 'devkey'],
-                           optional=['title', 'summary', 'tags'],
-                           args_desc='PATH_TO_VIDEO'),
-         'list': util.Task('List videos by user.', callback=_run_list,
-                           required='delimiter', optional='title'),
-         'tag': util.Task('Add tags to a video and/or change its category.',
-                          callback=_run_tag,
-                          required=['devkey', 'title', ['category', 'tags']]),
-         'delete': util.Task('Delete videos.', callback=_run_delete,
-                             required='devkey', optional='title')}
+TASKS = {'post': googlecl.service.Task('Post a video.', callback=_run_post,
+                                       required=['category', 'devkey'],
+                                       optional=['title', 'summary', 'tags'],
+                                       args_desc='PATH_TO_VIDEO'),
+         'list': googlecl.service.Task('List videos by user.',
+                                       callback=_run_list,
+                                       required='delimiter', optional='title'),
+         'tag': googlecl.service.Task('Add tags to a video and/or ' +\
+                                      'change its category.',
+                                      callback=_run_tag,
+                                      required=['devkey', 'title',
+                                                ['category', 'tags']]),
+         'delete': googlecl.service.Task('Delete videos.', callback=_run_delete,
+                                         required='devkey', optional='title')}

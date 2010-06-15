@@ -31,7 +31,8 @@ import ConfigParser
 import gdata.docs.service
 import re
 import os
-from googlecl import util
+import googlecl
+import googlecl.service
 from googlecl.docs import SECTION_HEADER
 
 
@@ -40,6 +41,7 @@ class DocsError(Exception):
   pass
 
 class UnexpectedExtension(DocsError):
+  """Found an unexpected filename extension."""
   def __str__(self):
     if len(self.args) == 1:
       return 'Unexpected extension: ' + self.args[0]
@@ -55,7 +57,8 @@ FOLDER_LABEL = 'folder'
 PDF_LABEL = 'pdf'
 
 
-class DocsServiceCL(gdata.docs.service.DocsService, util.BaseServiceCL):
+class DocsServiceCL(gdata.docs.service.DocsService,
+                    googlecl.service.BaseServiceCL):
   
   """Extends gdata.docs.service.DocsClient for the command line.
   
@@ -77,7 +80,8 @@ class DocsServiceCL(gdata.docs.service.DocsService, util.BaseServiceCL):
               
     """ 
     gdata.docs.service.DocsService.__init__(self, source='GoogleCL')
-    util.BaseServiceCL.set_params(self, regex, tags_prompt, delete_prompt)
+    googlecl.service.BaseServiceCL._set_params(self, regex,
+                                               tags_prompt, delete_prompt)
 
   def edit_doc(self, doc_entry, editor, file_format):
     """Edit a document.
@@ -114,7 +118,7 @@ class DocsServiceCL(gdata.docs.service.DocsService, util.BaseServiceCL):
                                   ' for a content type to upload as.')
         content_type = SUPPORTED_FILETYPES[file_format]
       mediasource = gdata.MediaSource(file_path=path, content_type=content_type)
-      self.Update(doc_entry, media_source=mediasource)
+      self.Put(mediasource, doc_entry.GetEditMediaLink().href)
     try:
       # Good faith effort to keep the temp directory clean.
       shutil.rmtree(temp_dir)
@@ -217,19 +221,12 @@ class DocsServiceCL(gdata.docs.service.DocsService, util.BaseServiceCL):
 
   GetSingleDoc = get_single_doc
 
-  def is_token_valid(self):
+  def is_token_valid(self, test_uri=None):
     """Check that the token being used is valid."""
-    try:
-      query = gdata.docs.service.DocumentQuery()
-      self.Get(query.ToUri())
-    except gdata.service.RequestError, err:
-      if err.args[0]['body'].find('Token invalid') != -1:
-        return False
-      else:
-        raise
-    else:
-      return True
-  
+    if not test_uri:
+      test_uri = gdata.docs.service.DocumentQuery().ToUri()
+    return  googlecl.service.BaseServiceCL.IsTokenValid(self, test_uri)
+
   IsTokenValid = is_token_valid
 
   def upload_docs(self, paths, title=None):
@@ -312,17 +309,17 @@ def get_extension(doctype_label):
   """Return file extension based on document type and preferences file."""
   try:
     if doctype_label == SPREADSHEET_LABEL:
-      return util.config.get(SECTION_HEADER, 'spreadsheet_format')
+      return googlecl.CONFIG.get(SECTION_HEADER, 'spreadsheet_format')
     elif doctype_label == DOCUMENT_LABEL:
-      return util.config.get(SECTION_HEADER, 'document_format')
+      return googlecl.CONFIG.get(SECTION_HEADER, 'document_format')
     elif doctype_label == PDF_LABEL:
       return 'pdf'
     elif doctype_label == PRESENTATION_LABEL:
-      return util.config.get(SECTION_HEADER, 'presentation_format')
+      return googlecl.CONFIG.get(SECTION_HEADER, 'presentation_format')
   except ConfigParser.ParsingError, err:
     print err
     try:
-      return util.config.get(SECTION_HEADER, 'format')
+      return googlecl.CONFIG.get(SECTION_HEADER, 'format')
     except ConfigParser.ParsingError, err2:
       print err2
       return None
@@ -346,16 +343,16 @@ def get_editor(doctype_label):
   """
   try:
     if doctype_label == SPREADSHEET_LABEL:
-      return util.config.get(SECTION_HEADER, 'spreadsheet_editor')
+      return googlecl.CONFIG.get(SECTION_HEADER, 'spreadsheet_editor')
     elif doctype_label == DOCUMENT_LABEL:
-      return util.config.get(SECTION_HEADER, 'document_editor')
+      return googlecl.CONFIG.get(SECTION_HEADER, 'document_editor')
     elif doctype_label == PDF_LABEL:
-      return util.config.get(SECTION_HEADER, 'pdf_editor')
+      return googlecl.CONFIG.get(SECTION_HEADER, 'pdf_editor')
     elif doctype_label == PRESENTATION_LABEL:
-      return util.config.get(SECTION_HEADER, 'presentation_editor')
+      return googlecl.CONFIG.get(SECTION_HEADER, 'presentation_editor')
   except ConfigParser.NoOptionError:
     try:
-      return util.config.get(SECTION_HEADER, 'editor')
+      return googlecl.CONFIG.get(SECTION_HEADER, 'editor')
     except ConfigParser.NoOptionError:
       return os.getenv('EDITOR')
 
@@ -393,9 +390,11 @@ def _run_list(client, options, args):
   if args:
     style_list = args[0].split(',')
   else:
-    style_list = util.get_config_option(SECTION_HEADER, 'list_style').split(',')
+    style_list = googlecl.get_config_option(SECTION_HEADER,
+                                            'list_style').split(',')
   for entry in entries:
-    print util.entry_to_string(entry, style_list, delimiter=options.delimiter)
+    print googlecl.service.entry_to_string(entry, style_list,
+                                           delimiter=options.delimiter)
 
 
 def _run_upload(client, options, args):
@@ -433,19 +432,23 @@ def _run_edit(client, options, args):
 def _run_delete(client, options, args):
   entries = client.get_doclist(options.title)
   client.Delete(entries, 'document',
-                util.config.getboolean('GENERAL', 'delete_by_default'))
+                googlecl.CONFIG.getboolean('GENERAL', 'delete_by_default'))
 
 
-TASKS = {'upload': util.Task('Upload a document', callback=_run_upload,
-                             optional=['title', 'folder', 'no-convert'],
-                             args_desc='PATH_TO_FILE'),
-         'edit': util.Task('Edit a document', callback=_run_edit,
-                           required=['title'],
-                           optional=['format', 'editor']),
-         'get': util.Task('Download a document', callback=_run_get,
-                          required=[['title', 'folder']],
-                          args_desc='LOCATION'),
-         'list': util.Task('List documents', callback=_run_list,
-                           required='delimiter', optional=['title', 'folder']),
-         'delete': util.Task('Delete documents', callback=_run_delete,
-                             optional='title')}
+TASKS = {'upload': googlecl.service.Task('Upload a document',
+                                         callback=_run_upload,
+                                         optional=['title', 'folder',
+                                                   'no-convert'],
+                                         args_desc='PATH_TO_FILE'),
+         'edit': googlecl.service.Task('Edit a document', callback=_run_edit,
+                                       required=['title'],
+                                       optional=['format', 'editor']),
+         'get': googlecl.service.Task('Download a document', callback=_run_get,
+                                      required=[['title', 'folder']],
+                                      args_desc='LOCATION'),
+         'list': googlecl.service.Task('List documents', callback=_run_list,
+                                       required='delimiter',
+                                       optional=['title', 'folder']),
+         'delete': googlecl.service.Task('Delete documents',
+                                         callback=_run_delete,
+                                         optional='title')}

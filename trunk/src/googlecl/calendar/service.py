@@ -26,7 +26,8 @@ List events for today:
 __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import datetime
 import gdata.calendar.service
-import googlecl.util as util
+import googlecl
+import googlecl.service
 from googlecl.calendar import SECTION_HEADER
 
 
@@ -44,7 +45,7 @@ class EventsNotFound(CalendarError):
 
 
 class CalendarServiceCL(gdata.calendar.service.CalendarService,
-                        util.BaseServiceCL):
+                        googlecl.service.BaseServiceCL):
 
   """Extends gdata.calendar.service.CalendarService for the command line.
 
@@ -66,7 +67,8 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
               
     """
     gdata.calendar.service.CalendarService.__init__(self)
-    util.BaseServiceCL.set_params(self, regex, tags_prompt, delete_prompt)
+    googlecl.service.BaseServiceCL._set_params(self, regex,
+                                               tags_prompt, delete_prompt)
 
   def _batch_delete_recur(self, date, event, cal_user):
     """Delete a subset of instances of recurring events."""
@@ -98,7 +100,7 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
     # recurring_events = set(events) - set(single_events)
     if not single_events and not recurring_events:
       raise EventsNotFound
-    delete_default = util.config.getboolean('GENERAL', 'delete_by_default')
+    delete_default = googlecl.CONFIG.getboolean('GENERAL', 'delete_by_default')
     self.Delete(single_events, 'event', delete_default)
     
     start_date, end_date = get_start_and_end(date)
@@ -241,15 +243,48 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
 
   GetEvents = get_events
 
-  def is_token_valid(self):
+  def is_token_valid(self, test_uri='/calendar/feeds/default/private/full'):
     """Check that the token being used is valid."""
-    return util.BaseServiceCL.IsTokenValid(self,
-                                         '/calendar/feeds/default/private/full')
+    return googlecl.service.BaseServiceCL.IsTokenValid(self, test_uri)
 
   IsTokenValid = is_token_valid
 
 
 SERVICE_CLASS = CalendarServiceCL
+
+
+def get_datetimes(cal_entry):
+  """Get datetime objects for the start and end of the event specified by a
+  calendar entry.
+  
+  Keyword arguments:
+    cal_entry: A CalendarEventEntry.
+  
+  Returns:
+    (start_time, end_time, freq) where
+      start_time - datetime object of the start of the event.
+      end_time - datetime object of the end of the event.
+      freq - string that tells how often the event repeats (NoneType if the
+           event does not repeat (does not have a gd:recurrence element)).
+  
+  """
+  import time
+  if cal_entry.recurrence:
+    return parse_recurrence(cal_entry.recurrence.text)
+  else:
+    freq = None
+    when = cal_entry.when[0]
+    try:
+      start_time_data = time.strptime(when.start_time[:-10],
+                                      '%Y-%m-%dT%H:%M:%S')
+      end_time_data = time.strptime(when.end_time[:-10],
+                                    '%Y-%m-%dT%H:%M:%S')
+    except ValueError, err:
+      # Handle date format for all-day events
+      if err.args[0].find('does not match format') != -1:
+        start_time_data = time.strptime(when.start_time, '%Y-%m-%d')
+        end_time_data = time.strptime(when.end_time, '%Y-%m-%d')
+  return (start_time_data, end_time_data, freq)
 
 
 def get_start_and_end(date):
@@ -268,16 +303,49 @@ def get_start_and_end(date):
     start, junk, end = date.partition(',')
   else:
     # If no date is given, set a start of today.
-    start = datetime.datetime.today().strftime(util.DATE_FORMAT)
+    start = datetime.datetime.today().strftime(googlecl.service.DATE_FORMAT)
     end = None
   return (start, end)
+
+
+def parse_recurrence(time_string):
+  """Parse recurrence data found in event entry.
+  
+  Keyword arguments:
+    time_string: Value of entry's recurrence.text field.
+  
+  Returns:
+    Tuple of (start_time, end_time, frequency). All values are in the user's
+    current timezone (I hope). start_time and end_time are datetime objects,
+    and frequency is a dictionary mapping RFC 2445 RRULE parameters to their
+    values. (http://www.ietf.org/rfc/rfc2445.txt, section 4.3.10)
+  
+  """
+  import time
+  # Google calendars uses a pretty limited section of RFC 2445, and I'm
+  # abusing that here. This will probably break if Google ever changes how
+  # they handle recurrence, or how the recurrence string is built.
+  data = time_string.split('\n')
+  start_time_string = data[0].split(':')[-1]
+  start_time = time.strptime(start_time_string,'%Y%m%dT%H%M%S')
+  
+  end_time_string = data[1].split(':')[-1]
+  end_time = time.strptime(end_time_string,'%Y%m%dT%H%M%S')
+  
+  freq_string = data[2][6:]
+  freq_properties = freq_string.split(';')
+  freq = {}
+  for prop in freq_properties:
+    key, value = prop.split('=')
+    freq[key] = value
+  return (start_time, end_time, freq)
 
 
 def _tomorrowize(date=None):
   """Return a date range from given date until tomorrow.
   
   Keyword arguments:
-    date: Date to start at, following util.DATE_FORMAT format.
+    date: Date to start at, following googlecl.service.DATE_FORMAT format.
           Default None, for today.
     
   Returns:
@@ -287,10 +355,10 @@ def _tomorrowize(date=None):
   if not date:
     date_data = datetime.datetime.now()
   else:
-    date_data = datetime.datetime.strptime(date, util.DATE_FORMAT)
+    date_data = datetime.datetime.strptime(date, googlecl.service.DATE_FORMAT)
   tomorrow_data = date_data + datetime.timedelta(days=1)
-  return date_data.strftime(util.DATE_FORMAT) + ',' + \
-         tomorrow_data.strftime(util.DATE_FORMAT)
+  return date_data.strftime(googlecl.service.DATE_FORMAT) + ',' + \
+         tomorrow_data.strftime(googlecl.service.DATE_FORMAT)
 
 
 #===============================================================================
@@ -314,9 +382,11 @@ def _run_list(client, options, args):
   if args:
     style_list = args[0].split(',')
   else:
-    style_list = util.get_config_option(SECTION_HEADER, 'list_style').split(',')
+    style_list = googlecl.get_config_option(SECTION_HEADER,
+                                            'list_style').split(',')
   for entry in entries:
-    print util.entry_to_string(entry, style_list, delimiter=options.delimiter)
+    print googlecl.service.entry_to_string(entry, style_list,
+                                           delimiter=options.delimiter)
 
 
 def _run_list_today(client, options, args):
@@ -346,18 +416,20 @@ def _run_delete(client, options, args):
     print 'No events found that match your options!'
 
 
-TASKS = {'list': util.Task('List events on primary calendar',
-                           callback=_run_list,
-                           required=['delimiter'],
-                           optional=['title', 'query', 'date', 'cal']),
-         'today': util.Task('List events for today',
-                            callback=_run_list_today,
-                            required='delimiter',
-                            optional=['title', 'query', 'cal']),
-         'add': util.Task('Add event to primary calendar', callback=_run_add,
-                          optional='cal',
-                          args_desc='QUICK_ADD_TEXT'),
-         'delete': util.Task('Delete event from calendar',
-                             callback=_run_delete,
-                             required=[['title', 'query']],
-                             optional=['date', 'cal'])}
+TASKS = {'list': googlecl.service.Task('List events on primary calendar',
+                                       callback=_run_list,
+                                       required=['delimiter'],
+                                       optional=['title', 'query',
+                                                 'date', 'cal']),
+         'today': googlecl.service.Task('List events for today',
+                                        callback=_run_list_today,
+                                        required='delimiter',
+                                        optional=['title', 'query', 'cal']),
+         'add': googlecl.service.Task('Add event to primary calendar',
+                                      callback=_run_add,
+                                      optional='cal',
+                                      args_desc='QUICK_ADD_TEXT'),
+         'delete': googlecl.service.Task('Delete event from calendar',
+                                         callback=_run_delete,
+                                         required=[['title', 'query']],
+                                         optional=['date', 'cal'])}

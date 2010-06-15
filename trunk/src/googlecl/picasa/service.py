@@ -21,12 +21,13 @@ from __future__ import with_statement
 __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import os
 import urllib
-import googlecl.util as util
+import googlecl
+import googlecl.service
 from googlecl.picasa import SECTION_HEADER
 from gdata.photos.service import PhotosService, GooglePhotosException
 
 
-class PhotosServiceCL(PhotosService, util.BaseServiceCL):
+class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
   
   """Extends gdata.photos.service.PhotosService for the command line.
   
@@ -48,7 +49,8 @@ class PhotosServiceCL(PhotosService, util.BaseServiceCL):
               
     """ 
     PhotosService.__init__(self)
-    util.BaseServiceCL.set_params(self, regex, tags_prompt, delete_prompt)
+    googlecl.service.BaseServiceCL._set_params(self, regex,
+                                               tags_prompt, delete_prompt)
         
   def build_entry_list(self, user='default', title=None, query=None,
                        force_photos=False):
@@ -111,7 +113,8 @@ class PhotosServiceCL(PhotosService, util.BaseServiceCL):
       search_string = title
     if not entries:
       print 'No %ss matching %s' % (entry_type, search_string)
-    util.BaseServiceCL.Delete(self, entries, entry_type, delete_default)
+    googlecl.service.BaseServiceCL.Delete(self, entries,
+                                          entry_type, delete_default)
 
   Delete = delete
 
@@ -214,9 +217,9 @@ class PhotosServiceCL(PhotosService, util.BaseServiceCL):
 
   InsertPhotoList = insert_photo_list
 
-  def is_token_valid(self):
+  def is_token_valid(self, test_uri='/data/feed/api/user/default'):
     """Check that the token being used is valid."""
-    return util.BaseServiceCL.IsTokenValid(self, '/data/feed/api/user/default')
+    return googlecl.service.BaseServiceCL.IsTokenValid(self, test_uri)
 
   IsTokenValid = is_token_valid
 
@@ -227,11 +230,11 @@ class PhotosServiceCL(PhotosService, util.BaseServiceCL):
       photo_entries: List of photo entry objects. 
       tags: String representation of tags in a comma separated list.
             For how tags are generated from the string, 
-            see util.generate_tag_sets().
+            see googlecl.service.generate_tag_sets().
     
     """
     from gdata.media import Group, Keywords
-    remove_set, add_set, replace_tags = util.generate_tag_sets(tags)
+    remove_set, add_set, replace_tags = googlecl.service.generate_tag_sets(tags)
     for photo in photo_entries:
       if not photo.media:
         photo.media = Group()
@@ -271,7 +274,8 @@ def _run_create(client, options, args):
   if options.date:
     import time
     try:
-      timestamp = time.mktime(time.strptime(options.date, util.DATE_FORMAT))
+      timestamp = time.mktime(time.strptime(options.date,
+                                            googlecl.service.DATE_FORMAT))
     except ValueError, err:
       print err
       print 'Ignoring date option, using today'
@@ -281,7 +285,8 @@ def _run_create(client, options, args):
       options.date = '%i' % (timestamp * 1000)
   
   album = client.InsertAlbum(title=options.title, summary=options.summary, 
-                             access=util.config.get(SECTION_HEADER, 'access'),
+                             access=googlecl.CONFIG.get(SECTION_HEADER,
+                                                        'access'),
                              timestamp=options.date)
   if args:
     client.InsertPhotoList(album, photo_list=args, tags=options.tags)
@@ -290,8 +295,8 @@ def _run_create(client, options, args):
 def _run_delete(client, options, args):
   client.Delete(title=options.title,
                 query=options.encoded_query,
-                delete_default=util.config.getboolean('GENERAL',
-                                                      'delete_by_default'))
+                delete_default=googlecl.CONFIG.getboolean('GENERAL',
+                                                          'delete_by_default'))
 
 
 def _run_list(client, options, args):
@@ -302,9 +307,11 @@ def _run_list(client, options, args):
   if args:
     style_list = args[0].split(',')
   else:
-    style_list = util.get_config_option(SECTION_HEADER, 'list_style').split(',')
+    style_list = googlecl.get_config_option(SECTION_HEADER,
+                                            'list_style').split(',')
   for item in entries:
-    print util.entry_to_string(item, style_list, delimiter=options.delimiter)
+    print googlecl.service.entry_to_string(item, style_list,
+                                           delimiter=options.delimiter)
 
 
 def _run_list_albums(client, options, args):
@@ -314,9 +321,11 @@ def _run_list_albums(client, options, args):
   if args:
     style_list = args[0].split(',')
   else:
-    style_list = util.get_config_option(SECTION_HEADER, 'list_style').split(',')
+    style_list = googlecl.get_config_option(SECTION_HEADER,
+                                            'list_style').split(',')
   for item in entries:
-    print util.entry_to_string(item, style_list, delimiter=options.delimiter)
+    print googlecl.service.entry_to_string(item, style_list,
+                                           delimiter=options.delimiter)
 
 
 def _run_post(client, options, args):
@@ -355,26 +364,30 @@ def _run_tag(client, options, args):
     print 'No matches for the title and/or query you gave.'
 
 
-TASKS = {'create': util.Task('Create an album', callback=_run_create,
-                             required='title',
-                             optional=['date', 'summary', 'tags'],
-                             args_desc='PATH_TO_PHOTOS'), 
-         'post': util.Task('Post photos to an album', callback=_run_post,
-                           required='title', optional='tags',
-                           args_desc='PATH_TO_PHOTOS'), 
-         'delete': util.Task('Delete photos or albums', callback=_run_delete,
-                             required=[['title', 'query']]),
-         'list': util.Task('List photos', callback=_run_list,
-                           required=['delimiter'],
-                           optional=['title', 'query'], 
-                           login_required=False),
-         'list-albums': util.Task('List albums', callback=_run_list_albums,
-                                  required=['delimiter'],
-                                  optional=['title'],
-                                  login_required=False),
-         'get': util.Task('Download photos', callback=_run_get,
-                          optional=['title', 'query'], 
-                          login_required=False,
-                          args_desc='LOCATION'),
-         'tag': util.Task('Tag photos', callback=_run_tag,
-                          required=['tags', ['title', 'query']])}
+TASKS = {'create': googlecl.service.Task('Create an album',
+                                         callback=_run_create,
+                                         required='title',
+                                         optional=['date', 'summary', 'tags'],
+                                         args_desc='PATH_TO_PHOTOS'), 
+         'post': googlecl.service.Task('Post photos to an album',
+                                       callback=_run_post,
+                                       required='title', optional='tags',
+                                       args_desc='PATH_TO_PHOTOS'), 
+         'delete': googlecl.service.Task('Delete photos or albums',
+                                         callback=_run_delete,
+                                         required=[['title', 'query']]),
+         'list': googlecl.service.Task('List photos', callback=_run_list,
+                                       required=['delimiter'],
+                                       optional=['title', 'query'], 
+                                       login_required=False),
+         'list-albums': googlecl.service.Task('List albums',
+                                              callback=_run_list_albums,
+                                              required=['delimiter'],
+                                              optional=['title'],
+                                              login_required=False),
+         'get': googlecl.service.Task('Download photos', callback=_run_get,
+                                      optional=['title', 'query'], 
+                                      login_required=False,
+                                      args_desc='LOCATION'),
+         'tag': googlecl.service.Task('Tag photos', callback=_run_tag,
+                                      required=['tags', ['title', 'query']])}
