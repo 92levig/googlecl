@@ -388,6 +388,9 @@ def setup_parser():
                     '       Can also specify a range via YYYY-MM-DD,YYYY-MM-DD')
   parser.add_option('--delimiter', dest='delimiter', default=',',
                     help='Specify a delimiter for the output of the list task.')
+  parser.add_option('--draft', dest='draft', default=False,
+                    action='store_true',
+                    help='Blogger only - post as a draft')
   parser.add_option('--editor', dest='editor',
                     help='Docs only - editor to use on a file.')
   parser.add_option('-f', '--folder', dest='folder',

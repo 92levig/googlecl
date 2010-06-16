@@ -204,7 +204,8 @@ def _run_post(client, options, args):
         title = 'New post'
       content = content_string
     try:
-      entry = client.AddPost(options.blog, options.title or title, content)
+      entry = client.AddPost(options.blog, options.title or title, content,
+                             is_draft=options.draft)
     except gdata.service.RequestError, err:
       print 'Failed to post: ' + str(err)
     else:
