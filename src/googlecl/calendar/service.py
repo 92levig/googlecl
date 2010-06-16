@@ -33,7 +33,7 @@ from googlecl.calendar import SECTION_HEADER
 
 USER_BATCH_URL_FORMAT = \
                gdata.calendar.service.DEFAULT_BATCH_URL.replace('default', '%s')
-
+QUERY_DATE_FORMAT = '%Y-%m-%dT%H:%S:%M'
 
 class CalendarError(googlecl.service.Error):
   """Base error for Calendar errors."""
@@ -70,10 +70,12 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
     googlecl.service.BaseServiceCL._set_params(self, regex,
                                                tags_prompt, delete_prompt)
 
-  def _batch_delete_recur(self, date, event, cal_user):
+  def _batch_delete_recur(self, event, cal_user,
+                          start_date=None, end_date=None):
     """Delete a subset of instances of recurring events."""
     request_feed = gdata.calendar.CalendarEventFeed()
-    single_events = self.get_events(cal_user, date=date, 
+    single_events = self.get_events(cal_user, start_date=start_date,
+                                    end_date=end_date,
                                     title=event.title.text,
                                     expand_recurrence=True)
     delete_events = [e for e in single_events if e.original_event and
@@ -103,23 +105,29 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
     delete_default = googlecl.CONFIG.getboolean('GENERAL', 'delete_by_default')
     self.Delete(single_events, 'event', delete_default)
     
-    start_date, end_date = get_start_and_end(date)
+    start_date, end_date, start_date_utc, end_date_utc = get_start_and_end(date)
     # option_list is a list of tuples, (prompt_string, deletion_instruction)
     # prompt_string gets displayed to the user,
-    # deletion_instruction is a special string that will let the program know
-    #   what to do. 'ALL' and 'NONE' are obvious -- but it might also be
-    #   a date range similar to the date range initially passed in. That value
-    #   will ultimately be passed to get_events to get events to delete.
+    # deletion_instruction is a special value that will let the program know
+    #   what to do.
+    #     'ALL' -- delete all events in the series.
+    #     'NONE' -- don't delete anything.
+    #     'TWIXT' -- delete events between start_date and end_date.
+    #     'ON' -- delete events on the single date given.
+    #     'ONAFTER' -- delete events on and after the date given.
     option_list = [('All events in this series', 'ALL')]
     if start_date and end_date:
       option_list.append(('Instances between ' + start_date + ' and ' +
-                          end_date, date))
+                          end_date, 'TWIXT'))
     elif start_date or end_date:
+      if (start_date and not start_date_utc) or (end_date and not end_date_utc):
+        raise CalendarError('UTC date not set when TZ date is!')
       delete_date = (start_date or end_date)
+      delete_date_utc = (start_date_utc or end_date_utc)
       option_list.append(('Instances on ' + delete_date,
-                          _tomorrowize(delete_date)))
+                          'ON'))
       option_list.append(('All events on and after ' + delete_date,
-                          delete_date))
+                          'ONAFTER'))
     option_list.append(('Do not delete', 'NONE'))
     prompt_str = ''
     for i, option in enumerate(option_list):
@@ -133,11 +141,21 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
         option = option_list[delete_selection]
         if option[1] == 'ALL':
           gdata.service.GDataService.Delete(self, event.GetEditLink().href)
+        elif option[1] == 'TWIXT':
+          self._batch_delete_recur(event, calendar_user,
+                                   start_date=start_date_utc,
+                                   end_date=end_date_utc)
+        elif option[1] == 'ON':
+          start_date_utc, end_date_utc = _tomorrowize(delete_date_utc)
+          self._batch_delete_recur(event, calendar_user,
+                                   start_date=start_date_utc,
+                                   end_date=end_date_utc)
+        elif option[1] == 'ONAFTER':
+          self._batch_delete_recur(event, calendar_user,
+                                   start_date=delete_date_utc)
         elif option[1] != 'NONE':
-          try:
-            self._batch_delete_recur(option[1], event, calendar_user)
-          except EventsNotFound:
-            print 'No events found matching request!'
+          raise CalendarError('Got unexpected batch deletion command!')
+
       else:
         gdata.service.GDataService.Delete(self, event.GetEditLink().href)
 
@@ -202,18 +220,18 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
 
   GetCalendarUser = get_calendar_user
 
-  def get_events(self, calendar_user, date=None, title=None, query=None, 
-                 max_results=100, expand_recurrence=True):
+  def get_events(self, calendar_user, start_date=None, end_date=None,
+                 title=None, query=None, max_results=100,
+                 expand_recurrence=True):
     """Get events.
     
     Keyword arguments:
       calendar_user: "user" of the calendar to get events for.
-      date: Date of the event(s). Sets one or both of start-min or start-max in
-            the uri. Must follow the format 'YYYY-MM-DD' in one of three ways:
-              '<format>' - set a start date.
-              '<format>,<format>' - set a start and end date.
-              ',<format>' - set an end date.
-            Default None for only getting future events.
+                     See get_calendar_user.
+      start_date: Start date of the event(s). Must follow the RFC 3339
+                  timestamp format and be in UTC. Default None.
+      end_date: End date of the event(s). Must follow the RFC 3339 timestamp
+                format and be in UTC. Default None.
       title: Title to look for in the event, supporting regular expressions.
              Default None for any title.
       query: Query string (not encoded) for doing full-text searches on event
@@ -228,11 +246,10 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
     """
     query = gdata.calendar.service.CalendarEventQuery(user=calendar_user,
                                                       text_query=query)
-    start_min, start_max = get_start_and_end(date)
-    if start_min:
-      query.start_min = start_min
-    if start_max:
-      query.start_max = start_max
+    if start_date:
+      query.start_min = start_date
+    if end_date:
+      query.start_max = end_date
     if expand_recurrence:
       query.singleevents = 'true'
     query.orderby = 'starttime'
@@ -279,11 +296,10 @@ def get_datetimes(cal_entry):
                                       '%Y-%m-%dT%H:%M:%S')
       end_time_data = time.strptime(when.end_time[:-10],
                                     '%Y-%m-%dT%H:%M:%S')
-    except ValueError, err:
-      # Handle date format for all-day events
-      if err.args[0].find('does not match format') != -1:
-        start_time_data = time.strptime(when.start_time, '%Y-%m-%d')
-        end_time_data = time.strptime(when.end_time, '%Y-%m-%d')
+    except ValueError:
+      # Try to handle date format for all-day events
+      start_time_data = time.strptime(when.start_time, '%Y-%m-%d')
+      end_time_data = time.strptime(when.end_time, '%Y-%m-%d')
   return (start_time_data, end_time_data, freq)
 
 
@@ -291,11 +307,14 @@ def get_start_and_end(date):
   """Split a string representation of a date or range of dates.
   
   Ranges should be designated via a comma. For example, '2010-06-01,2010-06-20'
-  will set return ('2010-06-01', '2010-06-20')
+  will set return ('2010-06-01', '2010-06-20', ...)
   
   Returns:
-    Tuple of (start, end) where start is either the starting date or None and
-                                end is either the ending date or None
+    Tuple of (start, end, utc_start, utc_end) where
+       start is either the starting date or None,
+       end is either the ending date or None,
+       utc_start is the starting date shifted into UTC,
+       utc_end is the ending date shifted into UTC.
   
   """
   if date and date != ',':
@@ -305,7 +324,29 @@ def get_start_and_end(date):
     # If no date is given, set a start of today.
     start = datetime.datetime.today().strftime(googlecl.service.DATE_FORMAT)
     end = None
-  return (start, end)
+  utc_timedelta = get_utc_timedelta()
+  # Even though the "when" elements of events will be properly shifted into
+  # the user's timezone, all queries are interpreted as UTC (GMT) time.
+  if start:
+    start_time = datetime.datetime.strptime(start, googlecl.service.DATE_FORMAT)
+    utc_start = (start_time + (utc_timedelta)).strftime(QUERY_DATE_FORMAT)
+  else:
+    utc_start = None
+  if end:
+    end_time = datetime.datetime.strptime(end, googlecl.service.DATE_FORMAT)
+    utc_end = (end_time + (utc_timedelta)).strftime(QUERY_DATE_FORMAT)
+  else:
+    utc_end = None
+  return (start, end, utc_start, utc_end)
+
+
+def get_utc_timedelta():
+  """Return the UTC offset as a timedelta."""
+  import time
+  if time.daylight != 0:
+    return datetime.timedelta(hours=time.altzone/3600)
+  else:
+    return datetime.timedelta(hours=time.timezone/3600)
 
 
 def parse_recurrence(time_string):
@@ -345,20 +386,27 @@ def _tomorrowize(date=None):
   """Return a date range from given date until tomorrow.
   
   Keyword arguments:
-    date: Date to start at, following googlecl.service.DATE_FORMAT format.
-          Default None, for today.
+    date: String of date to start at, following RFC 3339 timestamp format,
+          but does not have to include data past 'YYYY-MM-DD'.
+          Must be in UTC. Default None, for today.
     
   Returns:
-    A string that will be interpreted as "from <date> until <date + 1 day>"
+    (start_date, end_date) where both dates are strings representing UTC time
+    in the RFC 3339 format. end_date is exactly one day after start_date.
     
   """
   if not date:
-    date_data = datetime.datetime.now()
+    date_data = datetime.datetime.today()
   else:
-    date_data = datetime.datetime.strptime(date, googlecl.service.DATE_FORMAT)
+    try:
+      date_data = datetime.datetime.strptime(date, QUERY_DATE_FORMAT)
+    except ValueError:
+      # If there is no hour data (i.e. the DATE_FORMAT succeeds), add it.
+      date_data = datetime.datetime.strptime(date, googlecl.service.DATE_FORMAT)
+      date_data += get_utc_timedelta()
   tomorrow_data = date_data + datetime.timedelta(days=1)
-  return date_data.strftime(googlecl.service.DATE_FORMAT) + ',' + \
-         tomorrow_data.strftime(googlecl.service.DATE_FORMAT)
+  return (date_data.strftime(QUERY_DATE_FORMAT),
+         tomorrow_data.strftime(QUERY_DATE_FORMAT))
 
 
 #===============================================================================
@@ -375,8 +423,10 @@ def _run_list(client, options, args):
   if not cal_user:
     print 'No calendar matches "' + options.cal + '"'
     return
+  dates = get_start_and_end(options.date)
   entries = client.get_events(cal_user,
-                              date=options.date,
+                              start_date=dates[2],
+                              end_date=dates[3],
                               title=options.title,
                               query=options.query)
   if args:
@@ -390,8 +440,24 @@ def _run_list(client, options, args):
 
 
 def _run_list_today(client, options, args):
-  options.date = _tomorrowize()
-  _run_list(client, options, args)
+  cal_user = client.get_calendar_user(options.cal)
+  if not cal_user:
+    print 'No calendar matches "' + options.cal + '"'
+    return
+  start_date, end_date = _tomorrowize()
+  entries = client.get_events(cal_user,
+                              start_date=start_date,
+                              end_date=end_date,
+                              title=options.title,
+                              query=options.query)
+  if args:
+    style_list = args[0].split(',')
+  else:
+    style_list = googlecl.get_config_option(SECTION_HEADER,
+                                            'list_style').split(',')
+  for entry in entries:
+    print googlecl.service.entry_to_string(entry, style_list,
+                                           delimiter=options.delimiter)
 
 
 def _run_add(client, options, args):
@@ -407,7 +473,9 @@ def _run_delete(client, options, args):
   if not cal_user:
     print 'No calendar matches "' + options.cal + '"'
     return
-  events = client.get_events(cal_user, date=options.date,
+  dates = get_start_and_end(options.date)
+  events = client.get_events(cal_user, start_date=dates[2],
+                             end_date=dates[3],
                              title=options.title, query=options.query,
                              expand_recurrence=False)
   try:
