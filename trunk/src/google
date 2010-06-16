@@ -1,0 +1,444 @@
+#!/usr/bin/python2.5
+#
+# Copyright (C) 2010 Google Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+"""Main function for the Google command line tool, GoogleCL.
+
+This program provides some functionality for a number of Google services from
+the command line. 
+
+Example usage (omitting the initial "./google.py"):
+  # Create a photo album with tags "Vermont" and name "Summer Vacation 2009"
+  picasa create -n "Summer Vacation 2009" -t Vermont ~/photos/vacation2009/*
+  
+  # Post photos to an existing album
+  picasa post -n "Summer Vacation 2008" ~/old_photos/*.jpg
+  
+  # Download another user's albums whose titles match a regular expression
+  picasa get --user my.friend.joe --name ".*computer.*" ~/photos/joes_computer
+  
+  # Delete some posts you accidentally put up
+  blogger delete -n "Silly post, number [0-9]*"
+  
+  # Post your latest film endeavor to YouTube
+  youtube post --category Film --tag "Jane Austen, zombies" ~/final_project.mp4
+  
+Some terminology in use:
+  service: The Google service being accessed (e.g. Picasa, Blogger, YouTube).
+  task: What the client wants done by the service (e.g. post, get, delete).
+
+"""
+from __future__ import with_statement
+
+__author__ = 'tom.h.miller@gmail.com (Tom Miller)'
+import optparse
+import os
+import urllib
+import googlecl
+
+VERSION = '0.9.2'
+
+AVAILABLE_SERVICES = ['picasa', 'blogger', 'youtube', 'docs', 'contacts',
+                       'calendar']
+
+
+def expand_as_command_line(command_string):
+  """Expand a string as if it was entered at the command line.
+  
+  Mimics the shell expansion of '~', file globbing, and quotation marks.
+  For example, 'picasa post -a "My album" ~/photos/*.png' will return
+  ['picasa', 'post', '-a', 'My album', '$HOME/photos/myphoto1.png', etc.]
+  It will not treat apostrophes specially, or handle environment variables.
+  
+  Keyword arguments:
+    command_string: String to be expanded.
+  
+  Returns: 
+    A list of strings that (mostly) matches sys.argv as if command_string
+    was entered on the command line.
+  
+  """ 
+  def do_globbing(args, final_args_list):
+    """Do filename expansion.
+    
+    Uses glob.glob to expand the default special characters of bash. Note that
+    the command line will leave in arguments that do not expand to anything,
+    unlike glob.glob. For example, entering 'myprogram.py total_nonsense*.txt'
+    will pass through 'total_nonsense*.txt' as sys.argv[1].
+    
+    Keyword arguments:
+      args: String, or list of strings, to be expanded.
+      final_args_list: List that expanded arguments should be added to.
+    
+    Returns:
+      Nothing, though final_args_list is modified.
+    
+    """
+    import glob
+    if isinstance(args, basestring):
+      expanded_str = glob.glob(args)
+      if expanded_str:
+        final_args_list.extend(expanded_str)
+      else:
+        final_args_list.append(args)
+    else:
+      for arg in args:
+        expanded_arg = glob.glob(arg)
+        if expanded_arg:
+          final_args_list.extend(expanded_arg)
+        else:
+          final_args_list.append(arg)
+        
+  # End of do_globbing(), begin expand_as_command_line()
+  if not command_string:
+    return []
+  # Sub in the home path.
+  home_path = os.path.expanduser('~/')
+  command_string = command_string.replace( ' ~/', ' ' + home_path)
+  # Look for quotation marks
+  quote_index = command_string.find('"')
+  if quote_index == -1:
+    args_list = command_string.split()
+    final_args_list = []
+    do_globbing(args_list, final_args_list)
+  else:
+    final_args_list = []
+    while quote_index != -1:
+      start = quote_index
+      end = command_string.find('"', start+1)
+      quoted_arg = command_string[start+1:end] 
+      non_quoted_args = command_string[:start].split()
+      
+      # Only do filename expansion on non-quoted args!
+      # do_globbing will modify final_args_list appropriately
+      do_globbing(non_quoted_args, final_args_list) 
+      final_args_list.append(quoted_arg)
+      
+      command_string = command_string[end+1:]
+      if command_string:
+        quote_index = command_string.find('"')
+      else:
+        quote_index = -1
+        
+    if command_string:
+      do_globbing(command_string.strip().split(), final_args_list)
+    
+  return final_args_list
+
+
+def fill_out_options(service_header, task, options):
+  """Fill out required options via config file and command line prompts.
+  
+  If there are any required fields missing for a task, fill them in.
+  This is attempted first by checking the OPTION_DEFAULTS section of the
+  preferences file, then prompting the user if the prior method fails.
+  
+  Keyword arguments:
+    service_header: 
+    task: Requirements of the task (see class googlecl.service.Task).
+    options: Contains attributes that have been specified already, typically
+             through options on the command line (see setup_parser()).
+  
+  Returns:
+    Nothing, though options may be modified to hold the required fields.
+    
+  """
+  # Grab all attributes from options that match two criteria:
+  # 1) They contain no underscores at the beginning or end of the name
+  # 2) They evaluate to False (NoneType or '')
+  missing_attributes = [attr for attr in dir(options)
+                        if attr.strip('_') == attr and
+                        not getattr(options, attr)]
+  for attr in missing_attributes:
+    # "user" is always a required option.
+    if task.requires(attr, options) or attr == 'user':
+      value = googlecl.get_config_option(service_header, attr)
+      if value:
+        setattr(options, attr, value)
+      else:
+        setattr(options, attr, raw_input('Please specify ' + attr + ': '))
+  # Expand those options that might be a filename in disguise.
+  max_file_size = 500000    # Value picked arbitrarily - no idea what the max
+                            # size in bytes of a summary is.
+  if options.summary and os.path.exists(os.path.expanduser(options.summary)):
+    with open(options.summary, 'r') as summary_file:
+      options.summary = summary_file.read(max_file_size)
+  if options.devkey and os.path.exists(os.path.expanduser(options.devkey)):
+    with open(options.devkey, 'r') as key_file:
+      options.devkey = key_file.read(max_file_size).strip()
+  if options.query:
+    options.encoded_query = urllib.quote_plus(options.query)
+  else:
+    options.encoded_query = None
+
+def get_task_help(service, tasks):
+  help = 'Available tasks for service ' + service + \
+         ': ' + str(tasks.keys())[1:-1] + '\n'
+  for task_name in tasks.keys():
+    help += ' ' + task_name + ': ' + tasks[task_name].description + '\n'
+    help += '  ' + tasks[task_name].usage + '\n\n'
+
+  return help
+
+def print_help(service=None, tasks=None):
+  """Print help messages to the screen.
+  
+  Keyword arguments:
+    service: Service to get help on. (Default None, prints general help)
+    tasks: Dictionary of tasks that can be done by the given service.
+           (Default None)
+    
+  """
+  if not service:
+    print 'Welcome to the Google CL tool!'
+    print '  Commands are broken into several parts: service, task, ' + \
+          'options, and arguments.'
+    print '  For example, in the command'
+    print '      "> picasa post --title "My Cat Photos" photos/cats/*"'
+    print '  the service is "picasa", the task is "post", the single ' + \
+          'option is a name of "My Cat Photos", and the argument is the ' + \
+          'path to the photos.'
+    print '  The available services are ' + str(AVAILABLE_SERVICES)[1:-1]
+    print '  Enter "> help <service>" for more information on a service.'
+    print '  Or, just "quit" to quit.'
+  else:
+    print get_task_help(service, tasks)
+
+def run_interactive(parser):
+  """Run an interactive shell for the google commands.
+  
+  Keyword arguments:
+    parser: Object capable of parsing a list of arguments via parse_args.
+    
+  """
+  while True:
+    command_string = raw_input('> ')
+    if not command_string:
+      continue
+    elif command_string == '?':
+      print_help()
+    elif command_string == 'quit':
+      break
+    else:
+      args_list = expand_as_command_line(command_string)
+      (options, args) = parser.parse_args(args_list)
+      run_once(options, args)
+
+
+def run_once(options, args):
+  """Run one command.
+  
+  Keyword arguments:
+    options: Options instance as built and returned by optparse.
+    args: Arguments to GoogleCL, also as returned by optparse.
+  
+  """
+  try:
+    service = args.pop(0)
+    task_name = args.pop(0)
+  except IndexError:
+    if service == 'help':
+      print_help()
+    else:
+      print 'Must specify at least a service and a task!'
+    return
+
+  if service == 'help':
+    service_module = __import__('googlecl.' + task_name + '.service',
+                                globals(), locals(), -1)
+    if service_module:
+      print_help(task_name, service_module.TASKS)
+    return
+  
+  regex = googlecl.CONFIG.getboolean('GENERAL', 'regex')
+  tags_prompt = googlecl.CONFIG.getboolean('GENERAL', 'tags_prompt')
+  delete_prompt = googlecl.CONFIG.getboolean('GENERAL', 'delete_prompt')
+  
+  try:
+    service_module = __import__('googlecl.' + service + '.service',
+                                globals(), locals(), -1)
+  except ImportError, err:
+    print err.args[0]
+    print 'Did you remember to specify the service? Must be one of ' +\
+          str(AVAILABLE_SERVICES)[1:-1]
+    return
+  if not service_module:
+    return
+  client = service_module.SERVICE_CLASS(regex, tags_prompt, delete_prompt)
+  
+  try:
+    task = service_module.TASKS[task_name]
+    task.name = task_name
+  except KeyError:
+    print 'Did not recognize task, please use one of ' + \
+          str(service_module.TASKS.keys())
+    return
+  
+  if task.requires('devkey'):
+    # If a devkey is required, and there is none specified via an option
+    # BEFORE fill_out_options, insert the key from file or the key given
+    # to GoogleCL.
+    # You can get your own key at http://code.google.com/apis/youtube/dashboard 
+    if not options.devkey:
+      options.devkey = googlecl.read_devkey() or 'AI39si4d9dBo0dX7TnGyfQ68bNiKfEeO7wORCfY3HAgSStFboTgTgAi9nQwJMfMSizdGIs35W9wVGkygEw8ei3_fWGIiGSiqnQ'
+  # Not sure why the fromlist keyword argument became necessary...
+  package = __import__('googlecl.' + service, fromlist=['SECTION_HEADER'])
+  # fill_put_options will read the key from file if necessary, but will not set
+  # it since it will always get a non-empty value beforehand.
+  fill_out_options(package.SECTION_HEADER, task, options)
+  if task.login_required:
+    token = googlecl.read_access_token(service, options.user)
+    if token:
+      client.SetOAuthToken(token)
+      try:
+        token_valid = client.IsTokenValid()
+      except AttributeError:
+        # Attribute errors crop up when using different gdata libraries
+        # but the same token.
+        token_valid = False 
+      if token_valid:
+        client.logged_in = True
+        # Picasa requires email to be set to create an album, apparently.
+        # Might be true for other services, so set it up.
+        client.email = options.user
+      else:
+        googlecl.remove_access_token(service, options.user)
+    if not client.logged_in:
+      if client.RequestAccess():
+        client.logged_in = True
+        client.email = options.user
+        googlecl.write_access_token(service, options.user, client.current_token)
+      else:
+        print 'Failed to get valid access token!'
+        return
+  googlecl.set_missing_default_user(package.SECTION_HEADER,
+                                    options.user,
+                                    options.config)
+  if options.devkey:
+    client.developer_key = options.devkey
+    # This may save an invalid dev key -- it's up to the user to specify a
+    # valid dev key eventually.
+    # TODO: It would be nice to make this more efficient.
+    googlecl.write_devkey(options.devkey)
+  task.run(client, options, args)
+
+
+def setup_parser():
+  """Set up the parser.
+  
+  Returns:
+    optparse.OptionParser with options configured.
+  
+  """
+  available_services = '[' + '|'.join(AVAILABLE_SERVICES) + ']'
+  # NOTE: Usage string formatted to work with help2man.  After changing it,
+  # please run:
+  # 'help2man -N -n "command-line access to (some) Google services" \
+  #  -i ../man/examples.help2man  ./google > google.1'
+  # then 'man ./google.1' and make sure the generated manpage still looks
+  # reasonable.  Then save it to man/google.1
+  usage = 'Usage: %prog ' + available_services + ' TASK [options]\n' +\
+          '\n' +\
+          'This program provides command-line access to (some) google ' +\
+          'services via their gdata APIs.\n' +\
+          'Called without a service name, it starts an interactive session.\n\n'
+
+  # XXX: If we're going to bother doing an __import__ of all the modules, we
+  # might as well reuse the one the user actually wants to use.
+  for service in AVAILABLE_SERVICES:
+    service_module = __import__('googlecl.' + service + '.service',
+                                globals(), locals(), -1)
+    if service_module:
+      usage += get_task_help(service, service_module.TASKS) + '\n'
+
+  parser = optparse.OptionParser(usage=usage, version='%prog ' + VERSION)
+  parser.add_option('--blog', dest='blog',
+                    help='Blogger only - specify a blog other than your' +
+                    ' primary.')
+  parser.add_option('--cal', dest='cal',
+                    help='Calendar only - specify a calendar other than your' +
+                    ' primary.')
+  parser.add_option('-c', '--category', dest='category',
+                    help='YouTube only - specify video categories' + 
+                    ' as a comma-separated list, e.g. "Film, Travel"')
+  parser.add_option('--config', dest='config',
+                    help='Specify location of config file.')
+  parser.add_option('--devtags', dest='devtags',
+                    help='YouTube only - specify developer tags' +
+                    ' as a comma-separated list.')
+  parser.add_option('--devkey', dest='devkey',
+                    help='YouTube only - specify a developer key')
+  parser.add_option('-d', '--date', dest='date',
+                    help='Date in YYYY-MM-DD format.' + 
+                    ' Picasa only - sets the date of the album\n' +
+                    ' Calendar only - date of the event to add / look for. ' +
+                    '       Can also specify a range via YYYY-MM-DD,YYYY-MM-DD')
+  parser.add_option('--delimiter', dest='delimiter', default=',',
+                    help='Specify a delimiter for the output of the list task.')
+  parser.add_option('--editor', dest='editor',
+                    help='Docs only - editor to use on a file.')
+  parser.add_option('-f', '--folder', dest='folder',
+                    help='Docs only - specify folder(s) to upload to '+ 
+                    '/ search in.')
+  parser.add_option('--format', dest='format',
+                    help='Docs only - format to download documents as.')
+  parser.add_option('-n', '--title', dest='title',
+                    help='Title of the item')
+  parser.add_option('--no-convert', dest='convert',
+                    action='store_false', default=True,
+                    help='Google Apps Premier only - do not convert the file' +
+                    ' on upload. (Else converts to native Google Docs format)')
+  parser.add_option('-q', '--query', dest='query',
+                    help=('Full text query string for specifying items.'
+                          + ' Searches on titles, captions, and tags.'))
+  parser.add_option('-s', '--summary', dest='summary', 
+                    help=('Description of the upload, ' +
+                          'or file containing the description.'))
+  parser.add_option('-t',  '--tags', dest='tags',
+                    help='Tags for item, e.g. "Sunsets, Earth Day"')
+  parser.add_option('-u', '--user', dest='user',
+                    help=('Username to use for the task. Exact application ' +
+                          'is task-dependent. If authentication is ' +
+                          'necessary, this will force the user to specify a ' +
+                          'password through a command line prompt or option.'))
+  return parser
+
+
+def main():
+  """Entry point for GoogleCL script."""
+  parser = setup_parser()
+  (options, args) = parser.parse_args()
+  if not googlecl.load_preferences(options.config):
+    if options.config:
+      print 'Could not read config file at ' + options.config
+    return
+  if not args:
+    try:
+      run_interactive(parser)
+    except KeyboardInterrupt:
+      print ''
+      print 'Quit via keyboard interrupt'
+    except EOFError:
+      print ''
+  else:
+    try:
+      run_once(options, args)
+    except KeyboardInterrupt:
+      print ''
+
+
+if __name__ == '__main__':
+  main()
