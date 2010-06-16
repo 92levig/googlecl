@@ -43,19 +43,19 @@ Available tasks for service blogger: 'post', 'tag', 'list', 'delete'
 .IP
 post: Post content.
 .IP
-Requires: blog Optional: title, tags Arguments: PATH_TO_CONTENT or CONTENT
+Requires: none Optional: blog, title, tags Arguments: PATH_TO_CONTENT or CONTENT
 .IP
 tag: Label posts
 .IP
-Requires: blog AND tags AND title
+Requires: tags AND title Optional: blog
 .IP
 list: List posts in your blog
 .IP
-Requires: blog AND delimiter Optional: title
+Requires: delimiter Optional: blog, title
 .IP
 delete: Delete a post.
 .IP
-Requires: title AND blog
+Requires: title Optional: blog
 .PP
 Available tasks for service youtube: 'post', 'tag', 'list', 'delete'
 .IP

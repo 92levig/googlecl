@@ -2,6 +2,7 @@ svn HEAD
  Enhancements:
  * Docs "edit" task will create a document if user specifies a non-existent document.
  * Added --draft flag so that Blogger "post" task can post drafts.
+ * Blogger tasks no longer force user to fill out --blog option.
 
  Bugfixes:
  * Getting events no longer omits or includes events in or out of the given date range, respectively.

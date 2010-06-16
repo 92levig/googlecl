@@ -63,11 +63,11 @@ class BloggerServiceCL(googlecl.service.BaseServiceCL):
     googlecl.service.BaseServiceCL._set_params(self, regex,
                                                tags_prompt, delete_prompt)
     
-  def add_post(self, blog, title, content, is_draft=False):
+  def add_post(self, post_title, content, blog_title=None, is_draft=False):
     """Add a post.
     
     Keyword arguments:
-      blog: Title of the blog to post to.
+      blog_title: Title of the blog to post to.
       title: Title to give the post.
       content: String to get posted. This may be contents from a file, but NOT
                the path itself!
@@ -77,11 +77,11 @@ class BloggerServiceCL(googlecl.service.BaseServiceCL):
       Entry of post. (Returns same results as self.Post())
      
     """
-    blog_id = self._get_blog_id(blog)
+    blog_id = self._get_blog_id(blog_title)
     if not blog_id:
       return None
     entry = gdata.GDataEntry()
-    entry.title = atom.Title(title_type='xhtml', text=title)
+    entry.title = atom.Title(title_type='xhtml', text=post_title)
     entry.content = atom.Content(content_type='html', text=content)
     if is_draft:
       control = atom.Control()
@@ -91,7 +91,7 @@ class BloggerServiceCL(googlecl.service.BaseServiceCL):
 
   AddPost = add_post
 
-  def _get_blog_id(self, blog_title, user='default'):
+  def _get_blog_id(self, blog_title=None, user='default'):
     """Return the blog ID of the blog that matches blog_title.
     
     Keyword arguments:
@@ -115,7 +115,7 @@ class BloggerServiceCL(googlecl.service.BaseServiceCL):
 
   IsTokenValid = is_token_valid
     
-  def get_posts(self, blog_title, title=None):
+  def get_posts(self, blog_title=None, post_title=None):
     """Get entries for posts that match a title.
     
     This will only get posts for the user that has logged in. It's apparently
@@ -123,8 +123,8 @@ class BloggerServiceCL(googlecl.service.BaseServiceCL):
     logged in.
     
     Keyword arguments:
-      blog_title: Name or title of the blog the post is in.
-      title: Title that the post should have. (Default None, for all posts)
+      blog_title: Name or title of the blog the post is in. (Default None)
+      post_title: Title that the post should have. (Default None, for all posts)
          
     Returns:
       List of posts that match parameters, or [] if none do.
@@ -133,7 +133,7 @@ class BloggerServiceCL(googlecl.service.BaseServiceCL):
     blog_id = self._get_blog_id(blog_title)
     if blog_id:
       uri = '/feeds/' + blog_id + '/posts/default'
-      return self.GetEntries(uri, title)
+      return self.GetEntries(uri, post_title)
     else:
       return []
 
@@ -191,6 +191,8 @@ def _run_post(client, options, args):
   if not args:
     print 'Must provide paths to files and/or string content to post'
     return
+  if not options.blog:
+    options.blog = googlecl.get_config_option(SECTION_HEADER, 'blog')
   for content_string in args:
     if os.path.exists(content_string):
       with open(content_string, 'r') as content_file:
@@ -204,7 +206,8 @@ def _run_post(client, options, args):
         title = 'New post'
       content = content_string
     try:
-      entry = client.AddPost(options.blog, options.title or title, content,
+      entry = client.AddPost(options.title or title, content,
+                             blog_title=options.blog,
                              is_draft=options.draft)
     except gdata.service.RequestError, err:
       print 'Failed to post: ' + str(err)
@@ -214,8 +217,11 @@ def _run_post(client, options, args):
 
 
 def _run_delete(client, options, args):
+  if not options.blog:
+    options.blog = googlecl.get_config_option(SECTION_HEADER, 'blog')
   try:
-    post_entries = client.GetPosts(options.blog, options.title)
+    post_entries = client.GetPosts(blog_title=options.blog,
+                                   post_title=options.title)
   except BlogNotFound, err:
     print err
     return
@@ -225,6 +231,8 @@ def _run_delete(client, options, args):
 
 
 def _run_list(client, options, args):
+  if not options.blog:
+    options.blog = googlecl.get_config_option(SECTION_HEADER, 'blog')
   try:
     entries = client.GetPosts(options.blog, options.title)
   except BlogNotFound, err:
@@ -241,6 +249,8 @@ def _run_list(client, options, args):
 
 
 def _run_tag(client, options, args):
+  if not options.blog:
+    options.blog = googlecl.get_config_option(SECTION_HEADER, 'blog')
   try:
     entries = client.GetPosts(options.blog, options.title)
   except BlogNotFound, err:
@@ -250,14 +260,15 @@ def _run_tag(client, options, args):
 
 
 TASKS = {'delete': googlecl.service.Task('Delete a post.', callback=_run_delete,
-                                         required=['title', 'blog']),
+                                         required=['title'],
+                                         optional='blog'),
          'post': googlecl.service.Task('Post content.', callback=_run_post,
-                                       required='blog',
-                                       optional=['title', 'tags'],
+                                       optional=['blog', 'title', 'tags'],
                                        args_desc='PATH_TO_CONTENT or CONTENT'),
          'list': googlecl.service.Task('List posts in your blog',
                                        callback=_run_list,
-                                       required=['blog', 'delimiter'],
-                                       optional='title'),
+                                       required=['delimiter'],
+                                       optional=['blog', 'title']),
          'tag': googlecl.service.Task('Label posts', callback=_run_tag,
-                                      required=['blog', 'tags', 'title'])}
+                                      required=['tags', 'title'],
+                                      optional=['blog'])}
