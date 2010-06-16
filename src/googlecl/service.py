@@ -194,16 +194,18 @@ class BaseServiceCL(gdata.service.GDataService):
       browser = googlecl.CONFIG.get('GENERAL', 'auth_browser')
     except ConfigParser.NoOptionError:
       browser = os.getenv('BROWSER')
-    message_format = 'Please log in and/or grant access via your browser%s' +\
-                     ' then hit enter.'
+    message = 'Please log in and/or grant access via your browser at ' +\
+              auth_url + ' then hit enter.'
     if browser:
-      subprocess.call([browser, auth_url])
-      raw_input(message_format % '') 
+      try:
+        subprocess.call([browser, auth_url])
+      except OSError, err:
+        print 'Error using browser "' + browser + '": ' + str(err)
     else:
       print '(Hint: You can automatically launch your browser by adding ' +\
             '"auth_browser = <browser>" to your config file under the ' +\
             'GENERAL section, or define the BROWSER environment variable.)'
-      raw_input(message_format % (' at: ' + auth_url))
+    raw_input(message)
     # This upgrades the token, and if successful, sets the access token
     try:
       self.UpgradeToOAuthAccessToken(request_token)
