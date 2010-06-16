@@ -81,7 +81,7 @@ class BaseServiceCL(gdata.service.GDataService):
 
   Delete = delete
 
-  def get_entries(self, uri, title=None, converter=None):
+  def get_entries(self, uri, title=None, converter=None, max_results=1000):
     """Get a list of entries from a feed uri.
     
     Keyword arguments:
@@ -92,11 +92,21 @@ class BaseServiceCL(gdata.service.GDataService):
       converter: Converter to use on the feed. If specified, will be passed into
                  the GetFeed method. If None (default), GetFeed will be called
                  without the converter argument being passed in.
+      max_results: Value of the max-results query parameter to set on the uri.
+                   This will NOT override an existing value, if it was somehow
+                   set prior to this function call. Note that not all
+                   services will support this, and silently fail to enforce
+                   the limit. Default 1000.
                  
     Returns:
       List of entries.
     
     """
+    if uri.find('?') == -1:
+      uri += '?max-results=' + str(max_results)
+    else:
+      if uri.find('&max-results') == -1:
+        uri += '&max-results=' + str(max_results)
     if converter:
       feed = self.GetFeed(uri, converter=converter)
     else:
