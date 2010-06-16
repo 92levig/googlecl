@@ -484,20 +484,20 @@ def _run_delete(client, options, args):
     print 'No events found that match your options!'
 
 
-TASKS = {'list': googlecl.service.Task('List events on primary calendar',
+TASKS = {'list': googlecl.service.Task('List events on a calendar',
                                        callback=_run_list,
                                        required=['delimiter'],
                                        optional=['title', 'query',
                                                  'date', 'cal']),
-         'today': googlecl.service.Task('List events for today',
+         'today': googlecl.service.Task('List events for the next 24 hours',
                                         callback=_run_list_today,
                                         required='delimiter',
                                         optional=['title', 'query', 'cal']),
-         'add': googlecl.service.Task('Add event to primary calendar',
+         'add': googlecl.service.Task('Add event to a calendar',
                                       callback=_run_add,
                                       optional='cal',
                                       args_desc='QUICK_ADD_TEXT'),
-         'delete': googlecl.service.Task('Delete event from calendar',
+         'delete': googlecl.service.Task('Delete event from a calendar',
                                          callback=_run_delete,
                                          required=[['title', 'query']],
                                          optional=['date', 'cal'])}
