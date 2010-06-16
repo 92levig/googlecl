@@ -101,7 +101,7 @@ class DocsServiceCL(gdata.docs.service.DocsService,
     
     temp_dir = tempfile.mkdtemp()
     path = os.path.join(temp_dir, doc_entry.title.text + '.' + file_format)
-    self.Export(doc_entry, path)
+    self.Export(doc_entry.content.src, path)
     create_time = os.stat(path).st_mtime
     subprocess.call([editor, path])
     if create_time == os.stat(path).st_mtime:
@@ -405,13 +405,19 @@ def _run_upload(client, options, args):
 
 
 def _run_edit(client, options, args):
-  if not hasattr(client, 'Export'):
-    print 'Editing documents is not supported for gdata-python-client < 2.0'
-    return
   doc_entry = client.get_single_doc(options.title, options.folder)
-  if not doc_entry:
-    print 'No matching documents found!'
+  if not hasattr(client, 'Export'):
+    print 'Editing documents is not supported' +\
+          ' for gdata-python-client < 2.0'
     return
+  if not doc_entry:
+    print 'No matching documents found! Creating it.'
+    new_entry = gdata.docs.DocumentListEntry()
+    new_entry.title = gdata.atom.Title(text=options.title or 'GoogleCL doc')
+    category = client._MakeKindCategory(DOCUMENT_LABEL)
+    new_entry.category.append(category)
+
+    doc_entry = client.Post(new_entry, '/feeds/documents/private/full')
   doc_type = get_document_type(doc_entry)
   # Spreadsheet exporting is still broken (on the client library side)
   # so we can't let users specify spreadsheets.
