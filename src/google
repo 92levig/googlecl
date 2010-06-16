@@ -188,8 +188,8 @@ def get_task_help(service, tasks):
   help = 'Available tasks for service ' + service + \
          ': ' + str(tasks.keys())[1:-1] + '\n'
   for task_name in tasks.keys():
-    help += '  ' + task_name + ': ' + tasks[task_name].description + '\n'
-    help += ' ' + tasks[task_name].usage + '\n\n'
+    help += ' ' + task_name + ': ' + tasks[task_name].description + '\n'
+    help += '  ' + tasks[task_name].usage + '\n\n'
 
   return help
 
@@ -216,12 +216,6 @@ def print_help(service=None, tasks=None):
     print '  Or, just "quit" to quit.'
   else:
     print get_task_help(service, tasks)
-#    print 'Available tasks for service ' + service + \
-#          ': ' + str(tasks.keys())[1:-1]
-#    for task_name in tasks.keys():
-#      print '  ' + task_name + ': ' + tasks[task_name].description
-#      print '\t' + tasks[task_name].usage
-
 
 def run_interactive(parser):
   """Run an interactive shell for the google commands.
@@ -353,7 +347,7 @@ def setup_parser():
   # NOTE: Usage string formatted to work with help2man.  After changing it,
   # please run:
   # 'help2man -N -n "command-line access to (some) Google services" \
-  #  ./google > google.1'
+  #  -i ../man/examples.help2man  ./google > google.1'
   # then 'man ./google.1' and make sure the generated manpage still looks
   # reasonable.  Then save it to man/google.1
   usage = 'Usage: %prog ' + available_services + ' TASK [options]\n' +\

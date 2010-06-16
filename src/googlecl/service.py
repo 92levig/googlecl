@@ -263,11 +263,11 @@ class Task(object):
     else:
       req_str = 'none'
     if self.optional:
-      opt_str = '\tOptional: ' + str(self.optional)[1:-1].replace("'", '')
+      opt_str = ' Optional: ' + str(self.optional)[1:-1].replace("'", '')
     else:
       opt_str = ''
     if args_desc:
-      args_desc = '\tArguments: ' + args_desc
+      args_desc = ' Arguments: ' + args_desc
     self.usage = 'Requires: ' + req_str + opt_str + args_desc
     
   def is_optional(self, attribute):
