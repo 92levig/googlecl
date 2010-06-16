@@ -1,3 +1,9 @@
+googlecl (0.9.1-1) unstable; urgency=low
+
+  * Some directory restructuring and minor fixes
+
+ -- Tom H. Miller <tom.h.miller@gmail.com>  Tue, 15 Jun 2010 20:21:00 -0700
+
 googlecl (0.9-2) unstable; urgency=low
 
   * Switch to dpkg-source 3.0 (quilt) format
