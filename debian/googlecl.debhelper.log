@@ -27,13 +27,12 @@ dh_installppp
 dh_installudev
 dh_installwm
 dh_installxfonts
+dh_bugfiles
 dh_lintian
-dh_desktop
 dh_gconf
 dh_icons
 dh_perl
 dh_pysupport
-dh_scrollkeeper
 dh_usrlocal
 dh_link
 dh_compress

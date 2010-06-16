@@ -1,3 +1,9 @@
+googlecl (0.9.2-1) unstable; urgency=low
+
+  * sync with 0.9.2 source release
+
+ -- Tom H. Miller <tom.h.miller@gmail.com>  Tue, 16 Jun 2010 01:53:00 -0700
+
 googlecl (0.9.1-1) unstable; urgency=low
 
   * Some directory restructuring and minor fixes
