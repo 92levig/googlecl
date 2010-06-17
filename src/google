@@ -324,9 +324,11 @@ def run_once(options, args):
       else:
         print 'Failed to get valid access token!'
         return
-  googlecl.set_missing_default_user(package.SECTION_HEADER,
-                                    options.user,
-                                    options.config)
+  googlecl.set_missing_default(package.SECTION_HEADER, 'user',
+                               options.user, options.config)
+  if options.blog:
+    googlecl.set_missing_default(package.SECTION_HEADER, 'blog',
+                                 options.blog, options.config)
   if options.devkey:
     client.developer_key = options.devkey
     # This may save an invalid dev key -- it's up to the user to specify a

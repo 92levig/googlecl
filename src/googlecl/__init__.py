@@ -20,6 +20,7 @@ __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import ConfigParser
 import os
 
+
 CONFIG = ConfigParser.ConfigParser()
 GOOGLE_CL_DIR = os.path.expanduser(os.path.join('~', '.googlecl'))
 CONFIG_FILENAME = 'config'
@@ -178,29 +179,30 @@ def remove_access_token(service, user):
   return success
 
 
-def set_missing_default_user(section, user, config_path=None):
-  """Set the default user for a section if not defined already.
+def set_missing_default(section, option, value, config_path=None):
+  """Set the option for a section if not defined already.
   
   Keyword arguments:
-    section: Title of the section to set the user in.
-    user: Name to set for the user in the given section.
+    section: Title of the section to set the option in.
+    option: Option to set.
+    value: Value to give the option.
     config_path: Path to the configuration file.
                  Default None to use the default path defined in this module.
   
   """
-  default_user = ''
+  existing_value = ''
   try:
-    default_user = CONFIG.get(section, 'user')
+    existing_value = CONFIG.get(section, option)
   except ConfigParser.NoSectionError:
     CONFIG.add_section(section)
   except ConfigParser.NoOptionError:
     # If there's no such option, that's fine. We'll fix that in a sec.
     pass
-  if not default_user:
+  if not existing_value:
     if not config_path:
       config_path = os.path.join(GOOGLE_CL_DIR, CONFIG_FILENAME)
     if os.path.exists(config_path):
-      CONFIG.set(section, 'user', user)
+      CONFIG.set(section, option, value)
       with open(config_path, 'w') as config_file:
         CONFIG.write(config_file)
 
