@@ -45,7 +45,6 @@ class BaseServiceCL(gdata.service.GDataService):
     self.ssl = False
     
     # Some new attributes, not inherited.
-    self.logged_in = False
     self.use_regex = regex
     self.prompt_for_tags = tags_prompt
     self.prompt_for_delete = delete_prompt
@@ -228,6 +227,9 @@ class BaseServiceCL(gdata.service.GDataService):
   RequestAccess = request_access
 
 
+# The use of login_required has been deprecated - all tasks now require
+# logging in, and google.py does not check whether or not a task
+# says otherwise.
 class Task(object):
   
   """A container of requirements.
