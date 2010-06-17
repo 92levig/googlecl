@@ -1,4 +1,4 @@
-svn HEAD
+version 0.9.4
  Enhancements:
  * Docs "edit" task will create a document if user specifies a non-existent document.
  * Added --draft flag so that Blogger "post" task can post drafts.

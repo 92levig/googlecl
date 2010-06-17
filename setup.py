@@ -1,7 +1,7 @@
 from distutils.core import setup
 
 setup(name = "googlecl",
-    version = "0.9.2",
+    version = "0.9.4",
     description = "Use (some) Google services from the command line",
     author = "Tom H. Miller",
     author_email = "tom.h.miller@gmail.com",
