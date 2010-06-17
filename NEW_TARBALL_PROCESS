@@ -1,0 +1,11 @@
+Steps that we take when doing a new tarball release (so we don't forget)
+
+1) Be sure changelog is up to date. Check the commit messages for important bug fixes, enhancements, features, etc.
+2) Increment version number in changelog (change "svn HEAD" to "version x.x.x")
+3) Be sure man pages are up to date.
+4) Update VERSION variable in src/google
+5) Regenerate man pages (or carefully search and replace old version number with new one).
+6) Commit all these changes with a message like "Change to x.x.x" or "Commiting updated version numbers x.x.x"
+7) Use svn copy to tag the release:
+ $ svn copy http://googlecl.googlecode.com/svn/trunk http://googlecl.googlecode.com/svn/tags/release-x.x.x -m "x.x.x release"
+8) Use either "python setup.py sdist" to create the tarball, or tar up the trunk as googlecl-x.x.x.tar.gz. Just watch out for files like this one when you use thelatter :)
