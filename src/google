@@ -299,31 +299,30 @@ def run_once(options, args):
   # fill_put_options will read the key from file if necessary, but will not set
   # it since it will always get a non-empty value beforehand.
   fill_out_options(package.SECTION_HEADER, task, options)
-  if task.login_required:
-    token = googlecl.read_access_token(service, options.user)
-    if token:
-      client.SetOAuthToken(token)
-      try:
-        token_valid = client.IsTokenValid()
-      except AttributeError:
-        # Attribute errors crop up when using different gdata libraries
-        # but the same token.
-        token_valid = False 
-      if token_valid:
-        client.logged_in = True
-        # Picasa requires email to be set to create an album, apparently.
-        # Might be true for other services, so set it up.
-        client.email = options.user
-      else:
-        googlecl.remove_access_token(service, options.user)
-    if not client.logged_in:
-      if client.RequestAccess():
-        client.logged_in = True
-        client.email = options.user
-        googlecl.write_access_token(service, options.user, client.current_token)
-      else:
-        print 'Failed to get valid access token!'
-        return
+  token = googlecl.read_access_token(service, options.user)
+  authenticated = False
+  if token:
+    client.SetOAuthToken(token)
+    try:
+      token_valid = client.IsTokenValid()
+    except AttributeError:
+      # Attribute errors crop up when using different gdata libraries
+      # but the same token.
+      token_valid = False 
+    if token_valid:
+      authenticated = True
+      # Picasa requires email to be set to create an album, apparently.
+      # Might be true for other services, so set it up.
+      client.email = options.user
+    else:
+      googlecl.remove_access_token(service, options.user)
+  if not authenticated:
+    if client.RequestAccess():
+      client.email = options.user
+      googlecl.write_access_token(service, options.user, client.current_token)
+    else:
+      print 'Failed to get valid access token!'
+      return
   googlecl.set_missing_default(package.SECTION_HEADER, 'user',
                                options.user, options.config)
   if options.blog:
