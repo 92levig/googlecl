@@ -261,7 +261,11 @@ class DocsServiceCL(gdata.docs.service.DocsService,
       try:
         media = gdata.MediaSource(file_path=path, content_type=content_type)
         title = title or filename.split('.')[0]
-        if extension.lower() in ['csv', 'tsv', 'tab', 'ods', 'xls']:
+        # Upload() wasn't added until later versions of DocsService, so
+        # we may not have it.
+        if hasattr(self, 'Upload'):
+          entry = self.Upload(media, title)
+        elif extension.lower() in ['csv', 'tsv', 'tab', 'ods', 'xls']:
           entry = self.UploadSpreadsheet(media, title)
         elif extension.lower() in ['ppt', 'pps']:
           entry = self.UploadPresentation(media, title)
