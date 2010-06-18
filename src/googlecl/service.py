@@ -104,7 +104,7 @@ class BaseServiceCL(gdata.service.GDataService):
     if uri.find('?') == -1:
       uri += '?max-results=' + str(max_results)
     else:
-      if uri.find('&max-results') == -1:
+      if uri.find('max-results') == -1:
         uri += '&max-results=' + str(max_results)
     if converter:
       feed = self.GetFeed(uri, converter=converter)
