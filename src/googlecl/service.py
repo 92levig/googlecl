@@ -193,8 +193,10 @@ class BaseServiceCL(gdata.service.GDataService):
     self.SetOAuthInputParameters(gdata.auth.OAuthSignatureMethod.HMAC_SHA1,
                                  consumer_key='anonymous',
                                  consumer_secret='anonymous')
+    display_name = '"GoogleCL for account: ' + self.email + '"'
+    params = {'xoauth_displayname':display_name}
     try:
-      request_token = self.FetchOAuthRequestToken()
+      request_token = self.FetchOAuthRequestToken(extra_parameters=params)
     except gdata.service.FetchingOAuthRequestTokenFailed, err:
       print err[0]['body'].strip() + '; Request token retrieval failed!'
       return False

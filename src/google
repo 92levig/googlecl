@@ -301,6 +301,7 @@ def run_once(options, args):
   fill_out_options(package.SECTION_HEADER, task, options)
   token = googlecl.read_access_token(service, options.user)
   authenticated = False
+  client.email = options.user
   if token:
     client.SetOAuthToken(token)
     try:
@@ -311,14 +312,10 @@ def run_once(options, args):
       token_valid = False 
     if token_valid:
       authenticated = True
-      # Picasa requires email to be set to create an album, apparently.
-      # Might be true for other services, so set it up.
-      client.email = options.user
     else:
       googlecl.remove_access_token(service, options.user)
   if not authenticated:
     if client.RequestAccess():
-      client.email = options.user
       googlecl.write_access_token(service, options.user, client.current_token)
     else:
       print 'Failed to get valid access token!'
