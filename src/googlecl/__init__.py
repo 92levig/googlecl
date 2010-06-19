@@ -76,7 +76,6 @@ def load_preferences(path=None):
                'delete_by_default': 'False',
                'delete_prompt': 'True',
                'tags_prompt': 'False',
-               'use_default_username': 'True',
                'url_style': 'site',
                'list_style': 'title,url-site',
                'missing_field_value': 'N/A',
