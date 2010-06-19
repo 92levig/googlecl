@@ -1,3 +1,7 @@
+svn HEAD
+ Enhancements:
+ * Command history added to interactive mode (Thanks, aripollak!)
+
 version 0.9.5
  Bugfixes:
  * YouTube list task does not raise RequestError complaining about max-results

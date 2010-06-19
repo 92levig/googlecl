@@ -47,6 +47,7 @@ __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import optparse
 import os
 import urllib
+import sys
 import googlecl
 
 VERSION = '0.9.5'
@@ -224,18 +225,39 @@ def run_interactive(parser):
     parser: Object capable of parsing a list of arguments via parse_args.
     
   """
+  history_file = os.path.join(googlecl.GOOGLE_CL_DIR,
+                              googlecl.HISTORY_FILENAME)
+  try:
+    import readline
+    try:
+      readline.read_history_file(history_file)
+    except IOError:
+      pass
+  except ImportError:
+    pass
+
   while True:
-    command_string = raw_input('> ')
-    if not command_string:
-      continue
-    elif command_string == '?':
-      print_help()
-    elif command_string == 'quit':
+    try:
+      command_string = raw_input('> ')
+      if not command_string:
+        continue
+      elif command_string == '?':
+        print_help()
+      elif command_string == 'quit':
+        break
+      else:
+        args_list = expand_as_command_line(command_string)
+        (options, args) = parser.parse_args(args_list)
+        run_once(options, args)
+    except KeyboardInterrupt:
+      print ''
+      print 'Quit via keyboard interrupt'
       break
-    else:
-      args_list = expand_as_command_line(command_string)
-      (options, args) = parser.parse_args(args_list)
-      run_once(options, args)
+    except EOFError:
+      print ''
+      break
+  if 'readline' in sys.modules:
+    readline.write_history_file(history_file)
 
 
 def run_once(options, args):
@@ -427,13 +449,7 @@ def main():
       print 'Could not read config file at ' + options.config
     return
   if not args:
-    try:
-      run_interactive(parser)
-    except KeyboardInterrupt:
-      print ''
-      print 'Quit via keyboard interrupt'
-    except EOFError:
-      print ''
+    run_interactive(parser)
   else:
     try:
       run_once(options, args)
