@@ -105,6 +105,22 @@ class ContactsServiceCL(gdata.contacts.service.ContactsService,
 
   GetContacts = get_contacts
 
+  def add_group(self, name):
+    """Add group."""
+    import atom
+    new_group = gdata.contacts.GroupEntry(title=atom.Title(text=name))
+    self.CreateGroup(new_group)
+
+  AddGroup = add_group
+
+  def  get_groups(self, name):
+    """Get all groups that match a name."""
+    uri = self.GetFeedUri(kind='groups')
+    return self.GetEntries(uri, name,
+                           converter=gdata.contacts.GroupsFeedFromString)
+
+  GetGroups = get_groups
+
   def is_token_valid(self, test_uri=None):
     """Check that the token being used is valid."""
     if not test_uri:
@@ -127,6 +143,8 @@ SERVICE_CLASS = ContactsServiceCL
 #        required
 #===============================================================================
 def _run_list(client, options, args):
+  # XXX: see issue 89, use --fields instead of args, use args instead of --title
+  # but support --title for backward compatibility, as in _run_delete
   entries = client.GetContacts(options.title)
   if args:
     style_list = args[0].split(',')
@@ -144,15 +162,54 @@ def _run_add(client, options, args):
 
 
 def _run_delete(client, options, args):
-  entries = client.GetContacts(options.title)
-  client.Delete(entries, 'contact',
-                googlecl.CONFIG.getboolean('GENERAL', 'delete_by_default'))
+  # Supporting --title for backward compatibility
+  if options.title is not None:
+    args.append(options.title)
+  if len(args) == 0:
+    print "No contacts specified. Try: google contacts delete 'John Doe'"
+    return
+  for name in args:
+    entries = client.GetContacts(name)
+    client.Delete(entries, 'contact',
+                  googlecl.CONFIG.getboolean('GENERAL', 'delete_by_default'))
 
+def _run_add_groups(client, options, args):
+  for group in args:
+    client.AddGroup(group)
+
+def _run_delete_groups(client, options, args):
+  if len(args) == 0:
+    print "No contacts specified. Try: google contacts delete 'John Doe'"
+    return
+  for group in args:
+    entries = client.GetGroups(group)
+    client.Delete(entries, 'group',
+                  googlecl.CONFIG.getboolean('GENERAL', 'delete_by_default'))
+
+def _run_list_groups(client, options, args):
+  if len(args) == 0:
+    args.append(None)
+
+  for group in args:
+    entries = client.GetGroups(group)
+    for entry in entries:
+      print googlecl.service.entry_to_string(entry, ['title'],
+                                           delimiter=options.delimiter)
 
 TASKS = {'list': googlecl.service.Task('List contacts', callback=_run_list,
-                                       required='delimiter', optional='title'),
+             args_desc='Fields to show (example: name,email)'),
          'add': googlecl.service.Task('Add contacts', callback=_run_add,
-                                      args_desc='CONTACT DATA or CSV FILE'),
+             args_desc='"name,email" pair or CSV filename'),
          'delete': googlecl.service.Task('Delete contacts',
-                                         callback=_run_delete,
-                                         optional='title')}
+             callback=_run_delete,
+     args_desc='names of contact(s) to delete (example: "John Doe" "Jane Doe")'),
+         'add-groups': googlecl.service.Task('Add contact group(s)',
+                                             callback=_run_add_groups,
+                                             args_desc='Group name(s)'),
+         'delete-groups': googlecl.service.Task('Delete contact group(s)',
+                                                callback=_run_delete_groups,
+                                                args_desc='Group name(s)'),
+         'list-groups': googlecl.service.Task('List contact groups',
+             callback=_run_list_groups,
+             args_desc='Specific groups to list (if any)')}
+

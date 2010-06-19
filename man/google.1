@@ -97,19 +97,31 @@ get: Download a document
 .IP
 Requires: (title OR folder) Arguments: LOCATION
 .PP
-Available tasks for service contacts: 'add', 'list', 'delete'
-.IP
-add: Add contacts
-.IP
-Requires: none Arguments: CONTACT DATA or CSV FILE
+Available tasks for service contacts: 'list', 'list\-groups', 'add', 'add\-groups', 'delete\-groups', 'delete'
 .IP
 list: List contacts
 .IP
-Requires: delimiter Optional: title
+Requires: none Arguments: Fields to show (example: name,email)
+.IP
+list\-groups: List contact groups
+.IP
+Requires: none Arguments: Specific groups to list (if any)
+.IP
+add: Add contacts
+.IP
+Requires: none Arguments: "name,email" pair or CSV filename
+.IP
+add\-groups: Add contact group(s)
+.IP
+Requires: none Arguments: Group name(s)
+.IP
+delete\-groups: Delete contact group(s)
+.IP
+Requires: none Arguments: Group name(s)
 .IP
 delete: Delete contacts
 .IP
-Requires: none Optional: title
+Requires: none Arguments: names of contact(s) to delete (example: "John Doe" "Jane Doe")
 .PP
 Available tasks for service calendar: 'add', 'list', 'today', 'delete'
 .IP
