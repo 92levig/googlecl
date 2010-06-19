@@ -186,32 +186,34 @@ class BaseServiceCL(gdata.service.GDataService):
     
     """
     import ConfigParser
-    import webbrowser
+    import os
+    import subprocess
     # Installed applications do not have a pre-registration and so follow
     # directions for unregistered applications
     self.SetOAuthInputParameters(gdata.auth.OAuthSignatureMethod.HMAC_SHA1,
                                  consumer_key='anonymous',
                                  consumer_secret='anonymous')
-    display_name = '"GoogleCL for account: ' + self.email + '"'
-    params = {'xoauth_displayname':display_name}
     try:
-      request_token = self.FetchOAuthRequestToken(extra_parameters=params)
+      request_token = self.FetchOAuthRequestToken()
     except gdata.service.FetchingOAuthRequestTokenFailed, err:
       print err[0]['body'].strip() + '; Request token retrieval failed!'
       return False
     auth_url = self.GenerateOAuthAuthorizationURL(request_token=request_token)
     try:
-      try:
-        browser_str = googlecl.CONFIG.get('GENERAL', 'auth_browser')
-      except ConfigParser.NoOptionError:
-        browser = webbrowser.get()
-      else:
-        browser = webbrowser.get(browser_str)
-      browser.open(auth_url)
-    except webbrowser.Error, err:
-      print 'Failed to launch web browser: ' + str(err)
+      browser = googlecl.CONFIG.get('GENERAL', 'auth_browser')
+    except ConfigParser.NoOptionError:
+      browser = os.getenv('BROWSER')
     message = 'Please log in and/or grant access via your browser at ' +\
               auth_url + ' then hit enter.'
+    if browser:
+      try:
+        subprocess.call([browser, auth_url])
+      except OSError, err:
+        print 'Error using browser "' + browser + '": ' + str(err)
+    else:
+      print '(Hint: You can automatically launch your browser by adding ' +\
+            '"auth_browser = <browser>" to your config file under the ' +\
+            'GENERAL section, or define the BROWSER environment variable.)'
     raw_input(message)
     # This upgrades the token, and if successful, sets the access token
     try:

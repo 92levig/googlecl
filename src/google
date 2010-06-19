@@ -47,7 +47,6 @@ __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import optparse
 import os
 import urllib
-import sys
 import googlecl
 
 VERSION = '0.9.5'
@@ -225,39 +224,18 @@ def run_interactive(parser):
     parser: Object capable of parsing a list of arguments via parse_args.
     
   """
-  history_file = os.path.join(googlecl.GOOGLE_CL_DIR,
-                              googlecl.HISTORY_FILENAME)
-  try:
-    import readline
-    try:
-      readline.read_history_file(history_file)
-    except IOError:
-      pass
-  except ImportError:
-    pass
-
   while True:
-    try:
-      command_string = raw_input('> ')
-      if not command_string:
-        continue
-      elif command_string == '?':
-        print_help()
-      elif command_string == 'quit':
-        break
-      else:
-        args_list = expand_as_command_line(command_string)
-        (options, args) = parser.parse_args(args_list)
-        run_once(options, args)
-    except KeyboardInterrupt:
-      print ''
-      print 'Quit via keyboard interrupt'
+    command_string = raw_input('> ')
+    if not command_string:
+      continue
+    elif command_string == '?':
+      print_help()
+    elif command_string == 'quit':
       break
-    except EOFError:
-      print ''
-      break
-  if 'readline' in sys.modules:
-    readline.write_history_file(history_file)
+    else:
+      args_list = expand_as_command_line(command_string)
+      (options, args) = parser.parse_args(args_list)
+      run_once(options, args)
 
 
 def run_once(options, args):
@@ -323,7 +301,6 @@ def run_once(options, args):
   fill_out_options(package.SECTION_HEADER, task, options)
   token = googlecl.read_access_token(service, options.user)
   authenticated = False
-  client.email = options.user
   if token:
     client.SetOAuthToken(token)
     try:
@@ -334,10 +311,14 @@ def run_once(options, args):
       token_valid = False 
     if token_valid:
       authenticated = True
+      # Picasa requires email to be set to create an album, apparently.
+      # Might be true for other services, so set it up.
+      client.email = options.user
     else:
       googlecl.remove_access_token(service, options.user)
   if not authenticated:
     if client.RequestAccess():
+      client.email = options.user
       googlecl.write_access_token(service, options.user, client.current_token)
     else:
       print 'Failed to get valid access token!'
@@ -449,7 +430,13 @@ def main():
       print 'Could not read config file at ' + options.config
     return
   if not args:
-    run_interactive(parser)
+    try:
+      run_interactive(parser)
+    except KeyboardInterrupt:
+      print ''
+      print 'Quit via keyboard interrupt'
+    except EOFError:
+      print ''
   else:
     try:
       run_once(options, args)

@@ -24,7 +24,6 @@ import os
 CONFIG = ConfigParser.ConfigParser()
 GOOGLE_CL_DIR = os.path.expanduser(os.path.join('~', '.googlecl'))
 CONFIG_FILENAME = 'config'
-HISTORY_FILENAME = 'history'
 TOKENS_FILENAME_FORMAT = 'access_tok_%s'
 DEVKEY_FILENAME = 'yt_devkey'
 
@@ -76,6 +75,7 @@ def load_preferences(path=None):
                'delete_by_default': 'False',
                'delete_prompt': 'True',
                'tags_prompt': 'False',
+               'use_default_username': 'True',
                'url_style': 'site',
                'list_style': 'title,url-site',
                'missing_field_value': 'N/A',
