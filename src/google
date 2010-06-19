@@ -405,7 +405,9 @@ def setup_parser():
                     help='Date in YYYY-MM-DD format.' + 
                     ' Picasa only - sets the date of the album\n' +
                     ' Calendar only - date of the event to add / look for. ' +
-                    '       Can also specify a range via YYYY-MM-DD,YYYY-MM-DD')
+                    ' Can also specify a range with a comma:' +
+                    ' "YYYY-MM-DD", events between date and future.' +
+                    ' "YYYY-MM-DD,YYYY-MM-DD" events between two dates.')
   parser.add_option('--delimiter', dest='delimiter', default=',',
                     help='Specify a delimiter for the output of the list task.')
   parser.add_option('--draft', dest='draft', default=False,

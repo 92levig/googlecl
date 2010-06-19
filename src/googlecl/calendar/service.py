@@ -319,10 +319,11 @@ def get_start_and_end(date):
   """
   if date and date != ',':
     # Partition won't choke on date == '2010-06-05', split will.
-    start, junk, end = date.partition(',')
+    start, is_range, end = date.partition(',')
   else:
     # If no date is given, set a start of today.
     start = datetime.datetime.today().strftime(googlecl.service.DATE_FORMAT)
+    is_range = None
     end = None
   utc_timedelta = get_utc_timedelta()
   # Even though the "when" elements of events will be properly shifted into
@@ -332,6 +333,11 @@ def get_start_and_end(date):
     utc_start = (start_time + (utc_timedelta)).strftime(QUERY_DATE_FORMAT)
   else:
     utc_start = None
+  if not is_range:
+    dates = _tomorrowize(start)
+    # _tomorrowize() returns a full timestamp with hour data, so trim
+    # down to same format that user enters dates in.
+    end = dates[1][:10]
   if end:
     end_time = datetime.datetime.strptime(end, googlecl.service.DATE_FORMAT)
     utc_end = (end_time + (utc_timedelta)).strftime(QUERY_DATE_FORMAT)

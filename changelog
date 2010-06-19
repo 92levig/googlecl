@@ -1,6 +1,7 @@
 svn HEAD
  Enhancements:
  * Command history added to interactive mode (Thanks, aripollak!)
+ * Make "--date 2010-06-19" specify a single day instead of a range starting on that date.
 
  Bugfixes:
  * Browser launch for authentication more reliable.
