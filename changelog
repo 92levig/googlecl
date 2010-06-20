@@ -1,4 +1,4 @@
-version 0.9.6
+version 0.9.7
  Enhancements:
  * Command history added to interactive mode (Thanks, aripollak!)
  * Make "--date 2010-06-19" specify a single day instead of a range starting on that date.
