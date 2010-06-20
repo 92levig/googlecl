@@ -1,6 +1,10 @@
 svn HEAD
+ Enhancements
+ * setuptools support added for setup.py
+
  Bugfixes
  * Uploads to folders supported for more recent versions of gdata-python-client
+ * Gdata dependency added to setup.py
 
 version 0.9.7
  Enhancements:
