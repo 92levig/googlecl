@@ -1,0 +1,38 @@
+version 0.9.6
+ Enhancements:
+ * Command history added to interactive mode (Thanks, aripollak!)
+ * Make "--date 2010-06-19" specify a single day instead of a range starting on that date.
+ * Add *-groups tasks to contacts service, start to move away from --title.
+   (thanks, ericvw!)
+
+ Bugfixes:
+ * Browser launch for authentication more reliable.
+
+version 0.9.5
+ Bugfixes:
+ * YouTube list task does not raise RequestError complaining about max-results.
+
+version 0.9.4
+ Enhancements:
+ * Docs "edit" task will create a document if user specifies a non-existent document.
+ * Added --draft flag so that Blogger "post" task can post drafts.
+ * Blogger tasks no longer force user to fill out --blog option.
+
+ Bugfixes:
+ * Getting events no longer omits or includes events in or out of the given date range, respectively.
+ * DeprecationWarning no longer appears during docs upload for users with more recent python gdata libraries.
+
+version 0.9.2
+ Enhancements:
+ * Fixes to Debian packaging.
+
+version 0.9.1
+ Enhancements:
+ * Posting photos to an ambiguous album title prompts user to select album, rather than failing.
+
+ Bugfixes:
+ * Tasks with no required options do not raise TypeError exceptions.
+ * Uploading photos does not raise TypeError exceptions.
+
+version 0.9
+ * Initial release.
