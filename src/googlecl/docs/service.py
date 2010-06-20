@@ -229,13 +229,14 @@ class DocsServiceCL(gdata.docs.service.DocsService,
 
   IsTokenValid = is_token_valid
 
-  def upload_docs(self, paths, title=None):
+  def upload_docs(self, paths, title=None, folder=None):
     """Upload a document.
     
     Keyword arguments:
       paths: Paths of files to upload.
       title: Title to give the files once uploaded.
              (Default None for the names of the files).
+      folder: Folder to upload into. (Default None for no folder).
 
     Returns:
       Dictionary mapping filenames to where they can be accessed online.
@@ -243,6 +244,17 @@ class DocsServiceCL(gdata.docs.service.DocsService,
     """
     from gdata.docs.service import SUPPORTED_FILETYPES
     url_locs = {}
+    folder_entry = None
+    if folder:
+      # The earlier methods of uploading don't seem to support uploading to
+      # a folder.
+      if hasattr(self, 'Upload'):
+        query = gdata.docs.service.DocumentQuery(categories=['folder'],
+                                                 params={'showfolders': 'true'})
+        folder_entry = self.GetSingleEntry(query.ToUri(), title=folder)
+      else:
+        print 'Uploading to folders not supported for gdata-python-client < 2.0'
+        folder_entry = None
     for path in paths:
       filename = os.path.basename(path)
       content_type = ''
@@ -264,7 +276,10 @@ class DocsServiceCL(gdata.docs.service.DocsService,
         # Upload() wasn't added until later versions of DocsService, so
         # we may not have it.
         if hasattr(self, 'Upload'):
-          entry = self.Upload(media, title)
+          if folder_entry:
+            entry = self.Upload(media, title, folder_or_uri=folder_entry)
+          else:
+            entry = self.Upload(media, title)
         elif extension.lower() in ['csv', 'tsv', 'tab', 'ods', 'xls']:
           entry = self.UploadSpreadsheet(media, title)
         elif extension.lower() in ['ppt', 'pps']:
@@ -405,7 +420,7 @@ def _run_upload(client, options, args):
   if not args:
     print 'Need to tell me what to upload!'
     return
-  client.upload_docs(args, options.title)
+  client.upload_docs(args, title=options.title, folder=options.folder)
 
 
 def _run_edit(client, options, args):
