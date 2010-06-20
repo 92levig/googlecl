@@ -1,7 +1,9 @@
-svn HEAD
+version 0.9.6
  Enhancements:
  * Command history added to interactive mode (Thanks, aripollak!)
  * Make "--date 2010-06-19" specify a single day instead of a range starting on that date.
+ * Add *-groups tasks to contacts service, start to move away from --title.
+   (thanks, ericvw!)
 
  Bugfixes:
  * Browser launch for authentication more reliable.

@@ -1,4 +1,4 @@
-#!/usr/bin/python2.5
+#!/usr/bin/python
 #
 # Copyright (C) 2010 Google Inc.
 #
@@ -50,7 +50,7 @@ import urllib
 import sys
 import googlecl
 
-VERSION = '0.9.5'
+VERSION = '0.9.6'
 
 AVAILABLE_SERVICES = ['picasa', 'blogger', 'youtube', 'docs', 'contacts',
                        'calendar']
