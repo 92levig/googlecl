@@ -1,11 +1,12 @@
 svn HEAD
  Enhancements
- * setuptools support added for setup.py.
+ * setuptools support added for setup.py. (Thanks, dcolish!)
  * Calendar service supports multiple calendar operations.
 
  Bugfixes
  * Uploads to folders supported for more recent versions of gdata-python-client.
  * Gdata dependency added to setup.py.
+ * Asking for help on a non-existant service cleanly and helpfully exits. (Thanks, ferranb!)
 
 version 0.9.7
  Enhancements:

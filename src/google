@@ -279,26 +279,31 @@ def run_once(options, args):
     return
 
   if service == 'help':
-    service_module = __import__('googlecl.' + task_name + '.service',
-                                globals(), locals(), -1)
-    if service_module:
+    try:
+      service_module = __import__('googlecl.' + task_name + '.service',
+                                  globals(), locals(), -1)
+    except ImportError, err:
+      print err.args[0]
+      print 'Did you specify the service correctly? Must be one of ' +\
+            str(AVAILABLE_SERVICES[1:-1])
+      return
+    else:
       print_help(task_name, service_module.TASKS)
     return
-  
+  else: 
+    try:
+      service_module = __import__('googlecl.' + service + '.service',
+                                  globals(), locals(), -1)
+    except ImportError, err:
+      print err.args[0]
+      print 'Did you specify the service correctly? Must be one of ' +\
+            str(AVAILABLE_SERVICES)[1:-1]
+      return
+
   regex = googlecl.CONFIG.getboolean('GENERAL', 'regex')
   tags_prompt = googlecl.CONFIG.getboolean('GENERAL', 'tags_prompt')
   delete_prompt = googlecl.CONFIG.getboolean('GENERAL', 'delete_prompt')
   
-  try:
-    service_module = __import__('googlecl.' + service + '.service',
-                                globals(), locals(), -1)
-  except ImportError, err:
-    print err.args[0]
-    print 'Did you remember to specify the service? Must be one of ' +\
-          str(AVAILABLE_SERVICES)[1:-1]
-    return
-  if not service_module:
-    return
   client = service_module.SERVICE_CLASS(regex, tags_prompt, delete_prompt)
   
   try:
