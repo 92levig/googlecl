@@ -217,8 +217,8 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
                                keywords=keywords)
       except GooglePhotosException, err:
         print 'Failed to upload %s. (%s: %s)' % (path,
-                                                 err.args[0].reason,
-                                                 err.args[0].body) 
+                                                 err.args[0],
+                                                 err.args[1]) 
         failures.append(file)   
     return failures
 

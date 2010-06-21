@@ -7,6 +7,7 @@ svn HEAD
  * Uploads to folders supported for more recent versions of gdata-python-client.
  * Gdata dependency added to setup.py.
  * Asking for help on a non-existant service cleanly and helpfully exits. (Thanks, ferranb!)
+ * Errors encountered while uploading to Picasa are printed correctly rather than crashing. (Thanks, bartosh!)
 
 version 0.9.7
  Enhancements:
