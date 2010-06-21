@@ -34,8 +34,9 @@ class BaseServiceCL(gdata.service.GDataService):
 
   """Extension of gdata.GDataService specific to GoogleCL."""
 
-  def _set_params(self, regex=False, tags_prompt=False, delete_prompt=True):
+  def _set_params(self, section):
     """Set some basic attributes common to all instances."""
+    LARGE_MAX_RESULTS = 10000
     # Because each new xxxServiceCL class should use the more specific
     # superclass's __init__ function, don't define one here.
     self.source = 'GoogleCL'
@@ -45,9 +46,25 @@ class BaseServiceCL(gdata.service.GDataService):
     self.ssl = False
     
     # Some new attributes, not inherited.
-    self.use_regex = regex
-    self.prompt_for_tags = tags_prompt
-    self.prompt_for_delete = delete_prompt
+    self.use_regex = googlecl.get_config_option(section, 'regex',
+                                                default=True, type=bool)
+    self.prompt_for_tags = googlecl.get_config_option(section, 'tags_prompt',
+                                                      default=False, type=bool)
+    self.prompt_for_delete = googlecl.get_config_option(section,
+                                                        'delete_prompt',
+                                                        default=True,
+                                                        type=bool)
+    self.cap_results = googlecl.get_config_option(section,
+                                                  'cap_results',
+                                                  default=False,
+                                                  type=bool)
+    self.max_results = googlecl.get_config_option(section,
+                                                  'max_results',
+                                                  default=LARGE_MAX_RESULTS,
+                                                  type=int)
+    # Prevent user from shooting self in foot...
+    if not self.cap_results and self.max_results < LARGE_MAX_RESULTS:
+      self.max_results = LARGE_MAX_RESULTS
 
   def delete(self, entries, entry_type, delete_default):
     """Extends Delete to handle a list of entries.
@@ -80,7 +97,7 @@ class BaseServiceCL(gdata.service.GDataService):
 
   Delete = delete
 
-  def get_entries(self, uri, title=None, converter=None, max_results=1000):
+  def get_entries(self, uri, title=None, converter=None):
     """Get a list of entries from a feed uri.
     
     Keyword arguments:
@@ -91,33 +108,36 @@ class BaseServiceCL(gdata.service.GDataService):
       converter: Converter to use on the feed. If specified, will be passed into
                  the GetFeed method. If None (default), GetFeed will be called
                  without the converter argument being passed in.
-      max_results: Value of the max-results query parameter to set on the uri.
-                   This will NOT override an existing value, if it was somehow
-                   set prior to this function call. Note that not all
-                   services will support this, and silently fail to enforce
-                   the limit. Default 1000.
-                 
     Returns:
       List of entries.
     
     """
     if uri.find('?') == -1:
-      uri += '?max-results=' + str(max_results)
+      uri += '?max-results=' + str(self.max_results)
     else:
       if uri.find('max-results') == -1:
-        uri += '&max-results=' + str(max_results)
+        uri += '&max-results=' + str(self.max_results)
     if converter:
       feed = self.GetFeed(uri, converter=converter)
     else:
       feed = self.GetFeed(uri)
+    all_entries = feed.entry
+    if feed.GetNextLink():
+      if self.cap_results:
+        print '==WARNING: Leaving data that matches query on server.=='
+        print '  Increase max-results or set cap_results to False.'
+      else:
+        while feed and feed.GetNextLink():
+          feed = self.GetNext(feed)
+          if feed:
+            all_entries.extend(feed.entry)
     if not title:
-      return feed.entry
+      return all_entries
     if self.use_regex:
-      entries = [entry for entry in feed.entry 
-                 if entry.title.text and re.match(title,entry.title.text)]
+      return [entry for entry in all_entries 
+              if entry.title.text and re.match(title,entry.title.text)]
     else:
-      entries = [entry for entry in feed.entry if title == entry.title.text]
-    return entries
+      return [entry for entry in all_entries if title == entry.title.text]
 
   GetEntries = get_entries
 

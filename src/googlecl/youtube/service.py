@@ -34,21 +34,10 @@ class YouTubeServiceCL(YouTubeService, googlecl.service.BaseServiceCL):
   
   """
   
-  def __init__(self, regex=False, tags_prompt=False, delete_prompt=True):
-    """Constructor.
-    
-    Keyword arguments:
-      regex: Indicates if regular expressions should be used for matching
-             strings, such as video titles. (Default False)
-      tags_prompt: Indicates if while inserting videos, instance should prompt
-                   for tags for each video. (Default False)
-      delete_prompt: Indicates if instance should prompt user before
-                     deleting a video. (Default True)
-              
-    """ 
+  def __init__(self):
+    """Constructor."""
     YouTubeService.__init__(self)
-    googlecl.service.BaseServiceCL._set_params(self, regex,
-                                               tags_prompt, delete_prompt)
+    self._set_params(SECTION_HEADER)
   
   def categorize_videos(self, video_entries, category):
     """Change the categories of a list of videos to a single category.

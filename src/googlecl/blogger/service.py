@@ -44,24 +44,13 @@ class BloggerServiceCL(googlecl.service.BaseServiceCL):
   
   """
   
-  def __init__(self, regex=False, tags_prompt=False, delete_prompt=True):
-    """Constructor.
-    
-    Keyword arguments:
-      regex: Indicates if regular expressions should be used for matching
-             strings, such as post titles. (Default False)
-      tags_prompt: Indicates if while inserting posts, instance should prompt
-                   for tags for each post. (Default False)
-      delete_prompt: Indicates if instance should prompt user before
-                     deleting a post. (Default True)
-              
-    """
+  def __init__(self):
+    """Constructor."""
     googlecl.service.BaseServiceCL.__init__(self)
     self.service = 'blogger'
     self.server = 'www.blogger.com'
     self.account_type = 'GOOGLE'
-    googlecl.service.BaseServiceCL._set_params(self, regex,
-                                               tags_prompt, delete_prompt)
+    self._set_params(SECTION_HEADER)
     
   def add_post(self, post_title, content, blog_title=None, is_draft=False):
     """Add a post.

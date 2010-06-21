@@ -29,30 +29,44 @@ TOKENS_FILENAME_FORMAT = 'access_tok_%s'
 DEVKEY_FILENAME = 'yt_devkey'
 
 
-def get_config_option(section, option):
+def get_config_option(section, option, default=None, type=None):
   """Return option from config file.
   
   Tries to retrieve <option> from the given section. If that fails, tries to
-  retrieve the same option from the GENERAL section.
+  retrieve the same option from the GENERAL section. If that fails,
+  returns value of "default" parameter.
   
   Keyword arguments:
     section: Name of the section to initially try to retrieve the option from.
     option: Name of the option to retrieve.
+    default: Value to return if the option does not exist in a searched section.
+    type: Conversion function to use on the string, or None to leave as string.
+          For example, if you want an integer value returned, this should be
+          set to int. This is not applied to the "default" parameter.
   
   Returns:
-    Value of the option if it exists in the prefs file, or None if it does not
-    exist.
+    Value of the option if it exists in the prefs file, or value of "default"
+    if option does not exist.
   
   """
   try:
     try:
-      return CONFIG.get(section, option)
+      value = CONFIG.get(section, option)
     except ConfigParser.NoSectionError:
-      return CONFIG.get('GENERAL', option)
+      value = CONFIG.get('GENERAL', option)
     except ConfigParser.NoOptionError:
-      return CONFIG.get('GENERAL', option)
+      value = CONFIG.get('GENERAL', option)
+    if type:
+      # bool() function doesn't actually do what we wanted, so intercept it and
+      # replace with comparison
+      if type == bool:
+        return value.lower() == 'true'
+      else:
+        return type(value)
+    else:
+      return value
   except ConfigParser.NoOptionError:
-    return None
+    return default
 
 
 def load_preferences(path=None):
@@ -80,7 +94,8 @@ def load_preferences(path=None):
                'url_style': 'site',
                'list_style': 'title,url-site',
                'missing_field_value': 'N/A',
-               'date_print_format': '%b %d %H:%M'}
+               'date_print_format': '%b %d %H:%M',
+               'cap_results': 'False'}
     _docs = {'document_format': 'txt',
              'spreadsheet_format': 'xls',
              'presentation_format': 'ppt',

@@ -76,21 +76,10 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
 
   """
 
-  def __init__(self, regex=False, tags_prompt=False, delete_prompt=True):
-    """Constructor.
-    
-    Keyword arguments:
-      regex: Indicates if regular expressions should be used for matching
-             strings, such as event titles. (Default False)
-      tags_prompt: Indicates if while inserting events, instance should prompt
-                   for tags for each photo. (Default False)
-      delete_prompt: Indicates if instance should prompt user before
-                     deleting a calendar or event. (Default True)
-              
-    """
+  def __init__(self):
+    """Constructor."""
     gdata.calendar.service.CalendarService.__init__(self)
-    googlecl.service.BaseServiceCL._set_params(self, regex,
-                                               tags_prompt, delete_prompt)
+    self._set_params(SECTION_HEADER)
 
   def _batch_delete_recur(self, event, cal_user,
                           start_date=None, end_date=None):
@@ -239,8 +228,7 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
   GetCalendarUserList = get_calendar_user_list
 
   def get_events(self, calendar_user, start_date=None, end_date=None,
-                 title=None, query=None, max_results=1000,
-                 expand_recurrence=True):
+                 title=None, query=None, expand_recurrence=True):
     """Get events.
     
     Keyword arguments:
@@ -254,7 +242,6 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
              Default None for any title.
       query: Query string (not encoded) for doing full-text searches on event
              titles and content.
-      max_results: Maximum number of events to get. Default 100.
       expand_recurrence: If true, expand recurring events per the 'singleevents'
                          query parameter. Otherwise, don't.
     
@@ -272,7 +259,6 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
       query.singleevents = 'true'
     query.orderby = 'starttime'
     query.sortorder = 'ascend'
-    query.max_results = max_results
     return self.GetEntries(query.ToUri(), title,
                            converter=gdata.calendar.CalendarEventFeedFromString)
 

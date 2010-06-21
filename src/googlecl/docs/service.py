@@ -67,21 +67,10 @@ class DocsServiceCL(gdata.docs.service.DocsService,
   
   """
   
-  def __init__(self, regex=False, tags_prompt=False, delete_prompt=True):
-    """Constructor.
-    
-    Keyword arguments:
-      regex: Indicates if regular expressions should be used for matching
-             strings, such as document names. (Default False)
-      tags_prompt: Indicates if while inserting docs, instance should prompt
-                   for tags for each doc. (Default False)
-      delete_prompt: Indicates if instance should prompt user before
-                     deleting a document. (Default True)
-              
-    """ 
+  def __init__(self):
+    """Constructor.""" 
     gdata.docs.service.DocsService.__init__(self, source='GoogleCL')
-    googlecl.service.BaseServiceCL._set_params(self, regex,
-                                               tags_prompt, delete_prompt)
+    self._set_params(SECTION_HEADER)
 
   def edit_doc(self, doc_entry, editor, file_format):
     """Edit a document.

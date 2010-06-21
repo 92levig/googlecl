@@ -42,21 +42,10 @@ class ContactsServiceCL(gdata.contacts.service.ContactsService,
 
   """
 
-  def __init__(self, regex=False, tags_prompt=False, delete_prompt=True):
-    """Constructor.
-    
-    Keyword arguments:
-      regex: Indicates if regular expressions should be used for matching
-             strings, such as contact names. (Default False)
-      tags_prompt: Indicates if while inserting photos, instance should prompt
-                   for tags for each photo. (Default False)
-      delete_prompt: Indicates if instance should prompt user before
-                     deleting a contact. (Default True)
-              
-    """
+  def __init__(self):
+    """Constructor."""
     gdata.contacts.service.ContactsService.__init__(self)
-    googlecl.service.BaseServiceCL._set_params(self, regex,
-                                               tags_prompt, delete_prompt)
+    self._set_params(SECTION_HEADER)
 
   def add_contact(self, string_or_csv_file):
     """Add contact(s).
@@ -96,10 +85,7 @@ class ContactsServiceCL(gdata.contacts.service.ContactsService,
 
   def get_contacts(self, name):
     """Get all contacts that match a name."""
-    # The API only states that to return all the contacts, pass a large number
-    # to max_results. Multiple queries never seem to run out of contacts...
-    # so here we are.
-    uri = self.GetFeedUri() + '?max-results=10000'
+    uri = self.GetFeedUri()
     return self.GetEntries(uri, name,
                            converter=gdata.contacts.ContactsFeedFromString)
 

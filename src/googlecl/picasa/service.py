@@ -36,22 +36,11 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
   
   """
   
-  def __init__(self, regex=False, tags_prompt=False, delete_prompt=True):
-    """Constructor.
-    
-    Keyword arguments:
-      regex: Indicates if regular expressions should be used for matching
-             strings, such as album titles. (Default False)
-      tags_prompt: Indicates if while inserting photos, instance should prompt
-                   for tags for each photo. (Default False)
-      delete_prompt: Indicates if instance should prompt user before
-                     deleting an album or photo. (Default True)
-              
-    """ 
+  def __init__(self):
+    """Constructor."""
     PhotosService.__init__(self)
-    googlecl.service.BaseServiceCL._set_params(self, regex,
-                                               tags_prompt, delete_prompt)
-        
+    self._set_params(SECTION_HEADER)
+  
   def build_entry_list(self, user='default', title=None, query=None,
                        force_photos=False):
     """Build a list of entries of either photos or albums.

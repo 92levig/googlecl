@@ -294,17 +294,15 @@ def run_once(options, args):
     try:
       service_module = __import__('googlecl.' + service + '.service',
                                   globals(), locals(), -1)
+      section = __import__('googlecl.' + service + '.__init__',
+                           globals(), locals(), -1).SECTION_HEADER
     except ImportError, err:
       print err.args[0]
       print 'Did you specify the service correctly? Must be one of ' +\
             str(AVAILABLE_SERVICES)[1:-1]
       return
 
-  regex = googlecl.CONFIG.getboolean('GENERAL', 'regex')
-  tags_prompt = googlecl.CONFIG.getboolean('GENERAL', 'tags_prompt')
-  delete_prompt = googlecl.CONFIG.getboolean('GENERAL', 'delete_prompt')
-  
-  client = service_module.SERVICE_CLASS(regex, tags_prompt, delete_prompt)
+  client = service_module.SERVICE_CLASS()
   
   try:
     task = service_module.TASKS[task_name]
