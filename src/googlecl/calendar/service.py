@@ -28,6 +28,7 @@ import datetime
 import gdata.calendar.service
 import googlecl
 import googlecl.service
+import urllib
 from googlecl.calendar import SECTION_HEADER
 
 
@@ -42,6 +43,27 @@ class CalendarError(googlecl.service.Error):
 class EventsNotFound(CalendarError):
   """No events matching given parameters were found."""
   pass
+
+
+class Calendar():
+  
+  """Wrapper class for some calendar entry data."""
+
+  def __init__(self, cal_entry=None, user=None, name=None):
+    """Parse a CalendarEntry into "user" and human-readable names,
+       or take them directly."""
+    if cal_entry:
+      # Non-primary calendar feeds look like this:
+      # http:blah/.../feeds/JUNK%40group.calendar.google.com/private/full
+      # So grab the part after /feeds/ and unquote it.
+      self.user = urllib.unquote(cal_entry.content.src.split('/')[-3])
+      self.name = cal_entry.title.text
+    else:
+      self.user = user
+      self.name = name
+
+  def __str__(self):
+    return self.name
 
 
 class CalendarServiceCL(gdata.calendar.service.CalendarService,
@@ -186,48 +208,44 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
 
   QuickAddEvent = quick_add_event
 
-  def get_calendar_user(self, cal_name=None):
-    """Get "user" name for one calendar.
+  def get_calendar_user_list(self, cal_name=None):
+    """Get "user" name and human-readable name for one or more calendars.
     
     The "user" for a calendar is an awful misnomer for the ID for the calendar.
     To get events for a calendar, you can form a query with
-      user = self.get_calendar_user('my calendar name')
-      if user:
-        query = gdata.calendar.CalendarEventQuery(user=user)
+      cal_list = self.get_calendar_user_list('my calendar name')
+      if cal_list:
+        query = gdata.calendar.CalendarEventQuery(user=cal_list[0].user)
     
     Keyword arguments:
       cal_name: Name of the calendar to match. Default None to return the 
-                uri of the default / main calendar.
+                an instance representing only the default / main calendar.
       
     Returns:
-      Single CalendarEntry, or None of there were no matches for cal_name.
+      A list of Calendar instances, or None of there were no matches
+      for cal_name.
     
     """
-    import urllib
-    if not cal_name or cal_name == 'default':
-      return 'default'
+    if not cal_name:
+      return [Calendar(user='default', name=self.email)]
     else:
-      cal = self.GetSingleEntry('/calendar/feeds/default/allcalendars/full',
-                                 cal_name,
-                            converter=gdata.calendar.CalendarListFeedFromString)
-      if cal:
-        # Non-primary calendar feeds look like this:
-        # http:blah/blah/.../feeds/JUNK%40group.calendar.google.com/private/full
-        # So grab the part after /feeds/ and unquote it.
-        return urllib.unquote(cal.content.src.split('/')[-3])
-      else:
-        return None
+      cal_list = self.GetEntries('/calendar/feeds/default/allcalendars/full',
+                                 title=cal_name,
+                          converter=gdata.calendar.CalendarListFeedFromString)
+      if cal_list:
+        return [Calendar(cal) for cal in cal_list]
+    return None
 
-  GetCalendarUser = get_calendar_user
+  GetCalendarUserList = get_calendar_user_list
 
   def get_events(self, calendar_user, start_date=None, end_date=None,
-                 title=None, query=None, max_results=100,
+                 title=None, query=None, max_results=1000,
                  expand_recurrence=True):
     """Get events.
     
     Keyword arguments:
       calendar_user: "user" of the calendar to get events for.
-                     See get_calendar_user.
+                     See get_calendar_user_list.
       start_date: Start date of the event(s). Must follow the RFC 3339
                   timestamp format and be in UTC. Default None.
       end_date: End date of the event(s). Must follow the RFC 3339 timestamp
@@ -425,69 +443,82 @@ def _tomorrowize(date=None):
 #        required
 #===============================================================================
 def _run_list(client, options, args):
-  cal_user = client.get_calendar_user(options.cal)
-  if not cal_user:
+  cal_user_list = client.get_calendar_user_list(options.cal)
+  if not cal_user_list:
     print 'No calendar matches "' + options.cal + '"'
     return
   dates = get_start_and_end(options.date)
-  entries = client.get_events(cal_user,
-                              start_date=dates[2],
-                              end_date=dates[3],
-                              title=options.title,
-                              query=options.query)
-  if args:
-    style_list = args[0].split(',')
-  else:
-    style_list = googlecl.get_config_option(SECTION_HEADER,
-                                            'list_style').split(',')
-  for entry in entries:
-    print googlecl.service.entry_to_string(entry, style_list,
-                                           delimiter=options.delimiter)
+  for cal in cal_user_list:
+    print ''
+    print '[' + str(cal) + ']'
+    entries = client.get_events(cal.user,
+                                start_date=dates[2],
+                                end_date=dates[3],
+                                title=options.title,
+                                query=options.query)
+
+    if args:
+      style_list = args[0].split(',')
+    else:
+      style_list = googlecl.get_config_option(SECTION_HEADER,
+                                              'list_style').split(',')
+    for entry in entries:
+      print googlecl.service.entry_to_string(entry, style_list,
+                                             delimiter=options.delimiter)
 
 
 def _run_list_today(client, options, args):
-  cal_user = client.get_calendar_user(options.cal)
-  if not cal_user:
+  cal_user_list = client.get_calendar_user_list(options.cal)
+  if not cal_user_list:
     print 'No calendar matches "' + options.cal + '"'
     return
   start_date, end_date = _tomorrowize()
-  entries = client.get_events(cal_user,
-                              start_date=start_date,
-                              end_date=end_date,
-                              title=options.title,
-                              query=options.query)
-  if args:
-    style_list = args[0].split(',')
-  else:
-    style_list = googlecl.get_config_option(SECTION_HEADER,
-                                            'list_style').split(',')
-  for entry in entries:
-    print googlecl.service.entry_to_string(entry, style_list,
-                                           delimiter=options.delimiter)
+  for cal in cal_user_list:
+    print ''
+    print '[' + str(cal) + ']'
+    entries = client.get_events(cal.user,
+                                start_date=start_date,
+                                end_date=end_date,
+                                title=options.title,
+                                query=options.query)
+
+    if args:
+      style_list = args[0].split(',')
+    else:
+      style_list = googlecl.get_config_option(SECTION_HEADER,
+                                              'list_style').split(',')
+    for entry in entries:
+      print googlecl.service.entry_to_string(entry, style_list,
+                                             delimiter=options.delimiter)
 
 
 def _run_add(client, options, args):
-  cal_user = client.get_calendar_user(options.cal)
-  if not cal_user:
+  cal_user_list = client.get_calendar_user_list(options.cal)
+  if not cal_user_list:
     print 'No calendar matches "' + options.cal + '"'
     return
-  client.quick_add_event(args, cal_user)
+  for cal in cal_user_list:
+    client.quick_add_event(args, cal.user)
 
 
 def _run_delete(client, options, args):
-  cal_user = client.get_calendar_user(options.cal)
-  if not cal_user:
+  cal_user_list = client.get_calendar_user_list(options.cal)
+  if not cal_user_list:
     print 'No calendar matches "' + options.cal + '"'
     return
   dates = get_start_and_end(options.date)
-  events = client.get_events(cal_user, start_date=dates[2],
-                             end_date=dates[3],
-                             title=options.title, query=options.query,
-                             expand_recurrence=False)
-  try:
-    client.delete_events(events, options.date, cal_user)
-  except EventsNotFound:
-    print 'No events found that match your options!'
+  for cal in cal_user_list:
+    print 'For calendar ' + str(cal)
+    events = client.get_events(cal.user,
+                               start_date=dates[2],
+                               end_date=dates[3],
+                               title=options.title,
+                               query=options.query,
+                               expand_recurrence=False)
+    try:
+      client.delete_events(events, options.date, cal.user)
+    except EventsNotFound:
+      print 'No events found that match your options!'
 
 
 TASKS = {'list': googlecl.service.Task('List events on a calendar',
