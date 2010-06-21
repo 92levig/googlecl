@@ -71,6 +71,7 @@ def load_preferences(path=None):
     # keep them here.
     # REMEMBER: updating these means you need to update the CONFIG readme.
     _contacts = {'list_style': 'title,email'}
+    _calendar = {'list_style': 'title,when'}
     _picasa = {'access': 'public'}
     _general = {'regex': 'True',
                'delete_by_default': 'False',
@@ -89,6 +90,7 @@ def load_preferences(path=None):
     config_defaults = {googlecl.docs.SECTION_HEADER: _docs,
                        googlecl.picasa.SECTION_HEADER: _picasa,
                        googlecl.contacts.SECTION_HEADER: _contacts,
+                       googlecl.calendar.SECTION_HEADER: _calendar,
                        'GENERAL': _general}
     made_changes = False
     for section_name in config_defaults.keys():
