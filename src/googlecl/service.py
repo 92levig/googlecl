@@ -29,6 +29,10 @@ class Error(Exception):
   """Base error for GoogleCL exceptions."""
   pass
 
+class LeftoverData(Warning):
+  """Data left on server because of max_results and cap_results settings."""
+  pass
+
 
 class BaseServiceCL(gdata.service.GDataService):
 
@@ -93,7 +97,7 @@ class BaseServiceCL(gdata.service.GDataService):
         try:
           gdata.service.GDataService.Delete(self, item.GetEditLink().href)
         except gdata.service.RequestError, err:
-          print 'Could not delete event: ' + err[0]['body']
+          print 'Could not delete ' + entry_type + ': ' + str(err)
 
   Delete = delete
 
@@ -112,20 +116,26 @@ class BaseServiceCL(gdata.service.GDataService):
       List of entries.
     
     """
+    import warnings
     if uri.find('?') == -1:
       uri += '?max-results=' + str(self.max_results)
     else:
       if uri.find('max-results') == -1:
         uri += '&max-results=' + str(self.max_results)
-    if converter:
-      feed = self.GetFeed(uri, converter=converter)
-    else:
-      feed = self.GetFeed(uri)
+    try:
+      if converter:
+        feed = self.GetFeed(uri, converter=converter)
+      else:
+        feed = self.GetFeed(uri)
+    except gdata.service.RequestError, err:
+      print 'Failed to get entries: ' + str(err)
+      return []
     all_entries = feed.entry
     if feed.GetNextLink():
       if self.cap_results:
-        print '==WARNING: Leaving data that matches query on server.=='
-        print '  Increase max-results or set cap_results to False.'
+        warnings.warn('Leaving data that matches query on server.' +
+                      ' Increase max_results or set cap_results to False.',
+                      LeftoverData, stacklevel=2)
       else:
         while feed and feed.GetNextLink():
           feed = self.GetNext(feed)
