@@ -3,7 +3,7 @@ svn HEAD
  * setuptools support added for setup.py. (Thanks, dcolish!)
  * Calendar service supports multiple calendar operations.
  * More results are returned by queries, and control over number of results given to user with config file options.
- * Added --format as optional option to docs upload.
+ * Added --format as optional option to docs upload and download.
  * Behavior of --date option for calendar service improved.
 
  Bugfixes

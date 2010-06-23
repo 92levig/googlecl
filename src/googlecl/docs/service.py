@@ -117,19 +117,22 @@ class DocsServiceCL(gdata.docs.service.DocsService,
 
   EditDoc = edit_doc
 
-  def get_docs(self, base_path, entries, default_format='txt'):
+  def get_docs(self, base_path, entries, file_format=None):
     """Download documents.
     
     Keyword arguments:
       base_path: The path to download files to. This plus an entry's title plus
                  its format-specific extension will form the complete path.
       entries: List of DocEntry items representing the files to download.
-      default_format: The extension to use if the type of the entry is not
-                      defined or unknown. (Default 'txt').
-    
+      file_format: Suffix to give the file when downloading.
+                   For example, "txt", "csv", "xcl". Default None to let
+                   get_extension decide the extension.
+
     """
+    default_format = 'txt'
     for entry in entries:
-      file_format = get_extension(get_document_type(entry)) or default_format
+      if not file_format:
+        file_format = get_extension(get_document_type(entry)) or default_format
       path = os.path.join(base_path, entry.title.text + '.' + file_format)
       print 'Downloading ' + entry.title.text + ' to ' + path
       try:
@@ -401,7 +404,7 @@ def _run_get(client, options, args):
   print '(Downloading spreadsheets through the API is currently broken, sorry).'
   entries = [e for e in entries
              if get_document_type(e) != SPREADSHEET_LABEL]
-  client.get_docs(path, entries)
+  client.get_docs(path, entries, file_format=options.format)
 
 
 def _run_list(client, options, args):
@@ -470,6 +473,7 @@ TASKS = {'upload': googlecl.service.Task('Upload a document',
                                        optional=['format', 'editor']),
          'get': googlecl.service.Task('Download a document', callback=_run_get,
                                       required=[['title', 'folder']],
+                                      optional='format',
                                       args_desc='LOCATION'),
          'list': googlecl.service.Task('List documents', callback=_run_list,
                                        required='delimiter',
