@@ -218,7 +218,7 @@ class DocsServiceCL(gdata.docs.service.DocsService,
 
   IsTokenValid = is_token_valid
 
-  def upload_docs(self, paths, title=None, folder=None):
+  def upload_docs(self, paths, title=None, folder=None, format=None):
     """Upload a document.
     
     Keyword arguments:
@@ -226,6 +226,10 @@ class DocsServiceCL(gdata.docs.service.DocsService,
       title: Title to give the files once uploaded.
              (Default None for the names of the files).
       folder: Folder to upload into. (Default None for no folder).
+      format: Replace (or specify) the extension on the file when figuring
+              out the upload format. For example, 'txt' will upload the
+              file as if it was plain text. Default None for the file's
+              extension (which defaults to 'txt' if there is none).
 
     Returns:
       Dictionary mapping filenames to where they can be accessed online.
@@ -246,21 +250,28 @@ class DocsServiceCL(gdata.docs.service.DocsService,
         folder_entry = None
     for path in paths:
       filename = os.path.basename(path)
-      content_type = ''
-      try:
-        extension = filename.split('.')[1].upper()
-      except IndexError:
-        print 'No extension on filename!'
+      if format:
+        extension = format
       else:
         try:
-          content_type = SUPPORTED_FILETYPES[extension]
-        except KeyError:
-          pass
-      if not content_type:
+          extension = filename.split('.')[1]
+        except IndexError:
+          default_ext = 'txt'
+          print 'No extension on filename! Treating as ' + default_ext
+          extension = default_ext
+      try:
+        content_type = SUPPORTED_FILETYPES[extension.upper()]
+      except KeyError:
+        print 'No supported filetype found for extension ' + extension
         content_type = 'text/plain'
+        print 'Uploading as ' + content_type
       print 'Loading ' + path
       try:
-        media = gdata.MediaSource(file_path=path, content_type=content_type)
+        try:
+          media = gdata.MediaSource(file_path=path, content_type=content_type)
+        except IOError, err:
+          print err
+          continue
         title = title or filename.split('.')[0]
         # Upload() wasn't added until later versions of DocsService, so
         # we may not have it.
@@ -409,7 +420,8 @@ def _run_upload(client, options, args):
   if not args:
     print 'Need to tell me what to upload!'
     return
-  client.upload_docs(args, title=options.title, folder=options.folder)
+  client.upload_docs(args, title=options.title, folder=options.folder,
+                     format=options.format)
 
 
 def _run_edit(client, options, args):
@@ -451,8 +463,7 @@ def _run_delete(client, options, args):
 
 TASKS = {'upload': googlecl.service.Task('Upload a document',
                                          callback=_run_upload,
-                                         optional=['title', 'folder',
-                                                   'no-convert'],
+                                         optional=['title', 'folder', 'format'],
                                          args_desc='PATH_TO_FILE'),
          'edit': googlecl.service.Task('Edit a document', callback=_run_edit,
                                        required=['title'],

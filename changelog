@@ -3,12 +3,14 @@ svn HEAD
  * setuptools support added for setup.py. (Thanks, dcolish!)
  * Calendar service supports multiple calendar operations.
  * More results are returned by queries, and control over number of results given to user with config file options.
+ * Added --format as optional option to docs upload
 
  Bugfixes
  * Uploads to folders supported for more recent versions of gdata-python-client.
  * Gdata dependency added to setup.py.
  * Asking for help on a non-existant service cleanly and helpfully exits. (Thanks, ferranb!)
  * Errors encountered while uploading to Picasa are printed correctly rather than crashing. (Thanks, bartosh!)
+ * Uploading files to Docs without extensions obeys --format or assumes an extension.
 
 version 0.9.7
  Enhancements:
