@@ -313,9 +313,10 @@ def get_datetimes(cal_entry):
     freq = None
     when = cal_entry.when[0]
     try:
-      start_time_data = time.strptime(when.start_time[:-10],
+      # Trim the string data from "when" to only include down to seconds
+      start_time_data = time.strptime(when.start_time[:19],
                                       '%Y-%m-%dT%H:%M:%S')
-      end_time_data = time.strptime(when.end_time[:-10],
+      end_time_data = time.strptime(when.end_time[:19],
                                     '%Y-%m-%dT%H:%M:%S')
     except ValueError:
       # Try to handle date format for all-day events
