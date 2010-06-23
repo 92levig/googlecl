@@ -1,16 +1,11 @@
-try:
-  from setuptools import setup, find_packages
-  packages = find_packages()
-except ImportError:
-  from distutils.core import setup
-  packages =['googlecl',
-             'googlecl.blogger',
-             'googlecl.calendar',
-             'googlecl.contacts',
-             'googlecl.docs',
-             'googlecl.picasa',
-             'googlecl.youtube']
- 
+from distutils.core import setup
+packages =['googlecl',
+           'googlecl.blogger',
+           'googlecl.calendar',
+           'googlecl.contacts',
+           'googlecl.docs',
+           'googlecl.picasa',
+           'googlecl.youtube']
 
 setup(name="googlecl",
       version="0.9.7",
