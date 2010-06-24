@@ -151,14 +151,15 @@ class BaseServiceCL(gdata.service.GDataService):
 
   GetEntries = get_entries
 
-  def get_single_entry(self, uri, title=None, converter=None):
+  def get_single_entry(self, uri_or_entry_list, title=None, converter=None):
     """Return exactly one entry.
     
     Uses GetEntries to retrieve the entries, then asks the user to select one of
     them by entering a number.
     
     Keyword arguments:
-      uri: URI to get feed from. See GetEntries.
+      uri_or_entry_list: URI to get feed from (See get_entries) or list of
+                         entries to select from.
       title: Title to match on. See GetEntries. (Default None).
       converter: Conversion function to apply to feed. See GetEntries.
     
@@ -166,10 +167,19 @@ class BaseServiceCL(gdata.service.GDataService):
       None if there were no matches, or one entry matching the given title.
     
     """
-    entries = self.GetEntries(uri, title, converter)
+    if not uri_or_entry_list:
+      return None
+
+    if isinstance(uri_or_entry_list, basestring):
+      entries = self.GetEntries(uri, title, converter)
+    elif isinstance(uri_or_entry_list, list):
+      entries = uri_or_entry_list
+    else:
+      raise Error('Got unexpected type for uri_or_entry_list!')
+
     if not entries:
       return None
-    elif len(entries) == 1:
+    if len(entries) == 1:
       return entries[0]
     elif len(entries) > 1:
       print 'More than one match for title ' + (title or '')

@@ -29,10 +29,10 @@ Download docs:
 __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import ConfigParser
 import gdata.docs.service
-import re
 import os
 import googlecl
 import googlecl.service
+import warnings
 from googlecl.docs import SECTION_HEADER
 
 
@@ -55,7 +55,7 @@ SPREADSHEET_LABEL = 'spreadsheet'
 PRESENTATION_LABEL = 'presentation'
 FOLDER_LABEL = 'folder'
 PDF_LABEL = 'pdf'
-
+DOCUMENTS_NAMESPACE = 'http://schemas.google.com/docs/2007'
 
 class DocsServiceCL(gdata.docs.service.DocsService,
                     googlecl.service.BaseServiceCL):
@@ -143,39 +143,28 @@ class DocsServiceCL(gdata.docs.service.DocsService,
 
   GetDocs = get_docs
 
-  def get_doclist(self, title=None, folder_name=None):
+  def get_doclist(self, title=None, folder_entry_list=None):
     """Get a list of document entries from a feed.
     
     Keyword arguments:
       title: String to use when looking for entries to return. Will be compared
              to entry.title.text, using regular expressions if self.use_regex.
-             (Default None for all entries from feed).
-      folder_name: String to match against folder titles. Only files found
-                   in folders with matching titles will be returned.
-                   (Default None for all folders).
+             Default None for all entries from feed.
+      folder_entry_list: List of GDataEntry's of folders to get from.
+             Only files found in these folders will be returned.
+             Default None for all folders.
                  
     Returns:
       List of entries.
       
     """
-    if folder_name:
-      query = gdata.docs.service.DocumentQuery(categories=['folder'],
-                                               params={'showfolders': 'true'})
-      feed = self.Query(query.ToUri())
+    if folder_entry_list:
       entries = []
-      for folder in feed.entry:
-        # Skip folders that do not match the name we're looking for
-        if ((self.use_regex and re.match(folder_name, folder.title.text)) or
-            (not self.use_regex and folder_name == folder.title.text)):
-          contents = self.QueryDocumentListFeed(uri=folder.content.src)
-          if not title:
-            entries.extend(contents.entry)
-          elif self.use_regex:
-            entries.extend([entry for entry in contents.entry
-                            if re.match(title, entry.title.text)])
-          else:
-            entries.extend([entry for entry in contents.entry
-                            if title == entry.title.text])
+      for folder in folder_entry_list:
+        # folder.content.src is the uri to query for documents in that folder.
+        entries.extend(self.GetEntries(folder.content.src,
+                                       title,
+                               converter=gdata.docs.DocumentListFeedFromString))
     else:
       query = gdata.docs.service.DocumentQuery()
       entries = self.GetEntries(query.ToUri(),
@@ -183,35 +172,56 @@ class DocsServiceCL(gdata.docs.service.DocsService,
                                 converter=gdata.docs.DocumentListFeedFromString)
     return entries
 
-  def get_single_doc(self, title=None, folder=None):
-    """Return exactly one file.
-    
-    Uses GetEntries to retrieve the entries, then asks the user to select one of
-    them by entering a number.
+  def get_single_doc(self, title=None, folder_entry_list=None):
+    """Return exactly one doc_entry.
     
     Keyword arguments:
-      title: Title to match on. See get_doclist. (Default None).
-      folder: Folders to look in. See get_doclist. (Default None).
+      title: Title to match on for document. Default None for any title.
+      folder_entry_list: GDataEntry of folders to look in.
+                         Default None for any folder.
     
     Returns:
       None if there were no matches, or one entry matching the given title.
     
     """
-    entries = self.get_doclist(title, folder)
-    if not entries:
-      return None
-    elif len(entries) == 1:
-      return entries[0]
-    elif len(entries) > 1:
-      print 'More than one match for title ' + (title or '')
-      for num, entry in enumerate(entries):
-        print '%i) %s' % (num, entry.title.text)
-      selection = -1
-      while selection < 0 or selection > len(entries)-1: 
-        selection = int(raw_input('Please select one of the items by number: '))
-      return entries[selection]
+    if folder_entry_list:
+      if len(folder_entry_list) == 1:
+        return self.GetSingleEntry(folder_entry_list[0].content.src,
+                                   title,
+                                converter=gdata.docs.DocumentListFeedFromString)
+      else:
+        entries = self.get_doclist(title, folder_entry_list)
+        # Technically don't need the converter for this call
+        # because we have the entries.
+        return self.GetSingleEntry(entries, title)
+    else:
+      return self.GetSingleEntry(gdata.docs.service.DocumentQuery().ToUri(),
+                                 title,
+                                converter=gdata.docs.DocumentListFeedFromString)
 
   GetSingleDoc = get_single_doc
+
+  def get_folder(self, title):
+    """Return entries for one or more folders.
+
+    Keyword arguments:
+      title: Title of the folder.
+
+    Returns:
+      GDataEntry representing a folder, or None of title is None.
+
+    """
+    if title:
+      query = gdata.docs.service.DocumentQuery(categories=['folder'],
+                                               params={'showfolders': 'true'})
+      folder_entries = self.GetEntries(query.ToUri(), title=title)
+      if not folder_entries:
+        warnings.warn('No folder found that matches ' + title, stacklevel=2)
+      return folder_entries
+    else:
+      return None
+
+  GetFolder = get_folder
 
   def is_token_valid(self, test_uri=None):
     """Check that the token being used is valid."""
@@ -221,15 +231,17 @@ class DocsServiceCL(gdata.docs.service.DocsService,
 
   IsTokenValid = is_token_valid
 
-  def upload_docs(self, paths, title=None, folder=None, format=None):
+  def upload_docs(self, paths, title=None, folder_entry=None,
+                  file_format=None):
     """Upload a document.
     
     Keyword arguments:
       paths: Paths of files to upload.
       title: Title to give the files once uploaded.
-             (Default None for the names of the files).
-      folder: Folder to upload into. (Default None for no folder).
-      format: Replace (or specify) the extension on the file when figuring
+             Default None for the names of the files.
+      folder_entry: GDataEntry of the folder to upload into. 
+                    Default None for no folder.
+      file_format: Replace (or specify) the extension on the file when figuring
               out the upload format. For example, 'txt' will upload the
               file as if it was plain text. Default None for the file's
               extension (which defaults to 'txt' if there is none).
@@ -238,23 +250,17 @@ class DocsServiceCL(gdata.docs.service.DocsService,
       Dictionary mapping filenames to where they can be accessed online.
     
     """
+    import atom
     from gdata.docs.service import SUPPORTED_FILETYPES
     url_locs = {}
-    folder_entry = None
-    if folder:
-      # The earlier methods of uploading don't seem to support uploading to
-      # a folder.
-      if hasattr(self, 'Upload'):
-        query = gdata.docs.service.DocumentQuery(categories=['folder'],
-                                                 params={'showfolders': 'true'})
-        folder_entry = self.GetSingleEntry(query.ToUri(), title=folder)
-      else:
-        print 'Uploading to folders not supported for gdata-python-client < 2.0'
-        folder_entry = None
+    if folder_entry:
+      post_uri = folder_entry.content.src
+    else:
+      post_uri = '/feeds/documents/private/full'
     for path in paths:
       filename = os.path.basename(path)
-      if format:
-        extension = format
+      if file_format:
+        extension = file_format
       else:
         try:
           extension = filename.split('.')[1]
@@ -270,40 +276,52 @@ class DocsServiceCL(gdata.docs.service.DocsService,
         print 'Uploading as ' + content_type
       print 'Loading ' + path
       try:
-        try:
-          media = gdata.MediaSource(file_path=path, content_type=content_type)
-        except IOError, err:
-          print err
-          continue
-        title = title or filename.split('.')[0]
-        # Upload() wasn't added until later versions of DocsService, so
-        # we may not have it.
-        if hasattr(self, 'Upload'):
-          if folder_entry:
-            entry = self.Upload(media, title, folder_or_uri=folder_entry)
-          else:
-            entry = self.Upload(media, title)
-        elif extension.lower() in ['csv', 'tsv', 'tab', 'ods', 'xls']:
-          entry = self.UploadSpreadsheet(media, title)
-        elif extension.lower() in ['ppt', 'pps']:
-          entry = self.UploadPresentation(media, title)
-        elif extension.lower() in ['doc', 'odt', 'rtf', 'sxw',
-                                   'txt', 'htm', 'html']:
-          entry = self.UploadDocument(media, title)
-        else:
-          raise UnexpectedExtension(extension)
+        media = gdata.MediaSource(file_path=path, content_type=content_type)
+      except IOError, err:
+        print err
+        continue
+      entry_title = title or filename.split('.')[0]
+      # Upload() wasn't added until later versions of DocsService, so
+      # we may not have it. To support uploading to folders for earlier
+      # versions of the API, expose the lower-level Post
+      entry = gdata.docs.DocumentListEntry()
+      entry.title = atom.Title(text=entry_title)
+      if extension.lower() in ['csv', 'tsv', 'tab', 'ods', 'xls']:
+        category = _make_kind_category(SPREADSHEET_LABEL)
+      elif extension.lower() in ['ppt', 'pps']:
+        category = _make_kind_category(PRESENTATION_LABEL)
+      elif extension.lower() in ['pdf']:
+        category = _make_kind_category(PDF_LABEL)
+      # Treat everything else as a document
+      else:
+        category = _make_kind_category(DOCUMENT_LABEL)
+      entry.category.append(category)
+      try:
+        new_entry = self.Post(entry, post_uri, media_source=media,
+                              extra_headers={'Slug': media.file_name},
+                              converter=gdata.docs.DocumentListEntryFromString)
       except (gdata.service.RequestError, UnexpectedExtension), err:
         print 'Failed to upload ' + path
         print err
       else:
-        print 'Upload success! Direct link: ' + entry.GetAlternateLink().href
-        url_locs[filename] = entry.GetAlternateLink().href
+        print 'Upload success! Direct link: ' +\
+              new_entry.GetAlternateLink().href
+        url_locs[filename] = new_entry.GetAlternateLink().href
     return url_locs
 
   UploadDocs = upload_docs
 
 
 SERVICE_CLASS = DocsServiceCL
+
+
+def _make_kind_category(label):
+  """Stolen from gdata-2.0.10 docs.service."""
+  import atom
+  if label is None:
+    return None
+  return atom.Category(scheme=gdata.docs.service.DATA_KIND_SCHEME,
+                       term=DOCUMENTS_NAMESPACE + '#' + label, label=label)
 
 
 def get_document_type(entry):
@@ -399,7 +417,8 @@ def _run_get(client, options, args):
     if not os.path.exists(path):
       print 'Path ' + path + ' does not exist!'
       return
-  entries = client.get_doclist(options.title, options.folder)
+  folder_entries = client.get_folder(options.folder)
+  entries = client.get_doclist(options.title, folder_entries)
   print 'Removing spreadsheets from list of documents...'
   print '(Downloading spreadsheets through the API is currently broken, sorry).'
   entries = [e for e in entries
@@ -408,7 +427,8 @@ def _run_get(client, options, args):
 
 
 def _run_list(client, options, args):
-  entries = client.get_doclist(options.title, options.folder)
+  folder_entries = client.get_folder(options.folder)
+  entries = client.get_doclist(options.title, folder_entries)
   if args:
     style_list = args[0].split(',')
   else:
@@ -423,24 +443,32 @@ def _run_upload(client, options, args):
   if not args:
     print 'Need to tell me what to upload!'
     return
-  client.upload_docs(args, title=options.title, folder=options.folder,
-                     format=options.format)
+  folder_entries = client.get_folder(options.folder)
+  folder_entry = client.get_single_entry(folder_entries)
+  client.upload_docs(args, title=options.title, folder_entry=folder_entry,
+                     file_format=options.format)
 
 
 def _run_edit(client, options, args):
-  doc_entry = client.get_single_doc(options.title, options.folder)
   if not hasattr(client, 'Export'):
     print 'Editing documents is not supported' +\
           ' for gdata-python-client < 2.0'
     return
+  folder_entry_list = client.get_folder(options.folder)
+  doc_entry = client.get_single_doc(options.title, folder_entry_list)
   if not doc_entry:
     print 'No matching documents found! Creating it.'
     new_entry = gdata.docs.DocumentListEntry()
     new_entry.title = gdata.atom.Title(text=options.title or 'GoogleCL doc')
-    category = client._MakeKindCategory(DOCUMENT_LABEL)
+    category = _make_kind_category(DOCUMENT_LABEL)
     new_entry.category.append(category)
-
-    doc_entry = client.Post(new_entry, '/feeds/documents/private/full')
+    folder_entries = client.get_folder(options.folder)
+    folder_entry = client.get_single_entry(folder_entries)
+    if folder_entry:
+      post_uri = folder_entry.content.src
+    else:
+      post_uri = '/feeds/documents/private/full'
+    doc_entry = client.Post(new_entry, post_uri)
   doc_type = get_document_type(doc_entry)
   # Spreadsheet exporting is still broken (on the client library side)
   # so we can't let users specify spreadsheets.
@@ -470,7 +498,7 @@ TASKS = {'upload': googlecl.service.Task('Upload a document',
                                          args_desc='PATH_TO_FILE'),
          'edit': googlecl.service.Task('Edit a document', callback=_run_edit,
                                        required=['title'],
-                                       optional=['format', 'editor']),
+                                       optional=['format', 'editor', 'folder']),
          'get': googlecl.service.Task('Download a document', callback=_run_get,
                                       required=[['title', 'folder']],
                                       optional='format',
