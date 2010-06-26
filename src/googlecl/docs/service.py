@@ -226,10 +226,25 @@ class DocsServiceCL(gdata.docs.service.DocsService,
   def is_token_valid(self, test_uri=None):
     """Check that the token being used is valid."""
     if not test_uri:
-      test_uri = gdata.docs.service.DocumentQuery().ToUri()
-    return  googlecl.service.BaseServiceCL.IsTokenValid(self, test_uri)
+      docs_uri = gdata.docs.service.DocumentQuery().ToUri()
+      sheets_uri = \
+               'https://spreadsheets.google.com/feeds/spreadsheets/private/full'
+    docs_test = googlecl.service.BaseServiceCL.IsTokenValid(self, docs_uri)
+    sheets_test = googlecl.service.BaseServiceCL.IsTokenValid(self, sheets_uri)
+    return docs_test and sheets_test
 
   IsTokenValid = is_token_valid
+
+  def request_access(self, scopes=None):
+    """Request access as in BaseServiceCL, but specify scopes."""
+    # When people use docs (writely), they expect access to
+    # spreadsheets as well (wise).
+    if not scopes:
+      scopes = gdata.service.CLIENT_LOGIN_SCOPES['writely'] +\
+               gdata.service.CLIENT_LOGIN_SCOPES['wise']
+    return googlecl.service.BaseServiceCL.request_access(self, scopes=scopes)
+
+  RequestAccess = request_access
 
   def upload_docs(self, paths, title=None, folder_entry=None,
                   file_format=None):
@@ -419,10 +434,6 @@ def _run_get(client, options, args):
       return
   folder_entries = client.get_folder(options.folder)
   entries = client.get_doclist(options.title, folder_entries)
-  print 'Removing spreadsheets from list of documents...'
-  print '(Downloading spreadsheets through the API is currently broken, sorry).'
-  entries = [e for e in entries
-             if get_document_type(e) != SPREADSHEET_LABEL]
   client.get_docs(path, entries, file_format=options.format)
 
 
@@ -470,20 +481,14 @@ def _run_edit(client, options, args):
       post_uri = '/feeds/documents/private/full'
     doc_entry = client.Post(new_entry, post_uri)
   doc_type = get_document_type(doc_entry)
-  # Spreadsheet exporting is still broken (on the client library side)
-  # so we can't let users specify spreadsheets.
-  if doc_type == SPREADSHEET_LABEL:
-    print 'Sorry, cannot edit or download spreadsheets.'
+  format_ext = options.format or get_extension(doc_type)
+  editor = options.editor or get_editor(doc_type)
+  if not editor:
+    print 'No editor defined!'
+    print 'Define an "editor" option in your config file, set the ' +\
+          'EDITOR environment variable, or pass an editor in with --editor.'
     return
-  else:
-    format_ext = options.format or get_extension(doc_type)
-    editor = options.editor or get_editor(doc_type)
-    if not editor:
-      print 'No editor defined!'
-      print 'Define an "editor" option in your config file, set the ' +\
-            'EDITOR environment variable, or pass an editor in with --editor.'
-      return
-    client.edit_doc(doc_entry, editor, format_ext)
+  client.edit_doc(doc_entry, editor, format_ext)
 
 
 def _run_delete(client, options, args):

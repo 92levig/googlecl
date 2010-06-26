@@ -6,6 +6,7 @@ svn HEAD
  * Added --format as optional option to docs upload and download.
  * Added --folder as optional option to docs edit.
  * Behavior of --date option for calendar service improved.
+ * Docs service can now download / edit spreadsheets (Thanks, bartosh!)
 
  Bugfixes
  * Uploads to folders in docs supported.

@@ -171,7 +171,7 @@ class BaseServiceCL(gdata.service.GDataService):
       return None
 
     if isinstance(uri_or_entry_list, basestring):
-      entries = self.GetEntries(uri, title, converter)
+      entries = self.GetEntries(uri_or_entry_list, title, converter)
     elif isinstance(uri_or_entry_list, list):
       entries = uri_or_entry_list
     else:
@@ -218,9 +218,12 @@ class BaseServiceCL(gdata.service.GDataService):
 
   IsTokenValid = is_token_valid
 
-  def request_access(self):
+  def request_access(self, scopes=None):
     """Do all the steps involved with getting an OAuth access token.
     
+    Keyword arguments:
+      scopes: String or list of strings describing scopes to request access
+              for. Default None for default scope of service.
     Return:
       True if access token was succesfully retrieved and set, otherwise False.
     
@@ -235,7 +238,8 @@ class BaseServiceCL(gdata.service.GDataService):
     display_name = '"GoogleCL for account: ' + self.email + '"'
     params = {'xoauth_displayname':display_name}
     try:
-      request_token = self.FetchOAuthRequestToken(extra_parameters=params)
+      request_token = self.FetchOAuthRequestToken(scopes=scopes,
+                                                  extra_parameters=params)
     except gdata.service.FetchingOAuthRequestTokenFailed, err:
       print err[0]['body'].strip() + '; Request token retrieval failed!'
       return False
