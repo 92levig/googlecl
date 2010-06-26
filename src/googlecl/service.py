@@ -117,11 +117,7 @@ class BaseServiceCL(gdata.service.GDataService):
     
     """
     import warnings
-    if uri.find('?') == -1:
-      uri += '?max-results=' + str(self.max_results)
-    else:
-      if uri.find('max-results') == -1:
-        uri += '&max-results=' + str(self.max_results)
+    uri = set_max_results(uri, self.max_results)
     try:
       if converter:
         feed = self.GetFeed(uri, converter=converter)
@@ -204,8 +200,9 @@ class BaseServiceCL(gdata.service.GDataService):
     
     """
     if not test_uri:
-      raise Exception('No uri to test token with!' +
-                      '(was is_token_valid extended?)')
+      raise Error('No uri to test token with!' +
+                  '(was is_token_valid extended?)')
+    test_uri = set_max_results(test_uri, 1) 
     try:
       self.Get(test_uri)
     except gdata.service.RequestError, err:
@@ -267,6 +264,16 @@ class BaseServiceCL(gdata.service.GDataService):
       return True
 
   RequestAccess = request_access
+
+
+def set_max_results(uri, max):
+  """Set max-results parameter if it is not set already."""
+  max_str = str(max)
+  if uri.find('?') == -1:
+    return uri + '?max-results=' + max_str
+  else:
+    if uri.find('max-results') == -1:
+      return uri + '&max-results=' + max_str
 
 
 # The use of login_required has been deprecated - all tasks now require
