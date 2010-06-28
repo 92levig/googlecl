@@ -185,6 +185,26 @@ def fill_out_options(service_header, task, options):
   else:
     options.encoded_query = None
 
+
+def get_hd_domain(username, default_domain='default'):
+  """Return the domain associated with an email address.
+
+  Intended for use with the OAuth hd parameter for Google.
+
+  Keyword arguments:
+    username: Username to parse.
+    default_domain: Domain to set if '@suchandsuch.huh' is not part of the
+                    username. Defaults to 'default' to specify a regular
+                    Google account.
+
+  Returns:
+    String of the domain associated with username.
+
+  """
+  name, at_sign, domain = username.partition('@')
+  return domain or default_domain
+
+
 def get_task_help(service, tasks):
   help = 'Available tasks for service ' + service + \
          ': ' + str(tasks.keys())[1:-1] + '\n'
@@ -294,8 +314,6 @@ def run_once(options, args):
     try:
       service_module = __import__('googlecl.' + service + '.service',
                                   globals(), locals(), -1)
-      section = __import__('googlecl.' + service + '.__init__',
-                           globals(), locals(), -1).SECTION_HEADER
     except ImportError, err:
       print err.args[0]
       print 'Did you specify the service correctly? Must be one of ' +\
@@ -338,15 +356,16 @@ def run_once(options, args):
     if token_valid:
       authenticated = True
     else:
-      googlecl.remove_access_token(service, options.user)
+      googlecl.remove_access_token(service, client.email)
   if not authenticated:
-    if client.RequestAccess():
-      googlecl.write_access_token(service, options.user, client.current_token)
+    domain = get_hd_domain(client.email)
+    if client.RequestAccess(domain):
+      googlecl.write_access_token(service, client.email, client.current_token)
     else:
       print 'Failed to get valid access token!'
       return
   googlecl.set_missing_default(package.SECTION_HEADER, 'user',
-                               options.user, options.config)
+                               client.email, options.config)
   if options.blog:
     googlecl.set_missing_default(package.SECTION_HEADER, 'blog',
                                  options.blog, options.config)

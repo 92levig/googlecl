@@ -215,13 +215,15 @@ class BaseServiceCL(gdata.service.GDataService):
 
   IsTokenValid = is_token_valid
 
-  def request_access(self, scopes=None):
+  def request_access(self, domain, scopes=None):
     """Do all the steps involved with getting an OAuth access token.
     
     Keyword arguments:
-      scopes: String or list of strings describing scopes to request access
-              for. Default None for default scope of service.
-    Return:
+      domain: Domain to request access for.
+              (Sets the hd query parameter for the authorization step).
+      scopes: String or list/tuple of strings describing scopes to request
+              access to. Default None for default scope of service.
+    Returns:
       True if access token was succesfully retrieved and set, otherwise False.
     
     """
@@ -233,14 +235,16 @@ class BaseServiceCL(gdata.service.GDataService):
                                  consumer_key='anonymous',
                                  consumer_secret='anonymous')
     display_name = '"GoogleCL for account: ' + self.email + '"'
-    params = {'xoauth_displayname':display_name}
+    fetch_params = {'xoauth_displayname':display_name}
     try:
       request_token = self.FetchOAuthRequestToken(scopes=scopes,
-                                                  extra_parameters=params)
+                                                  extra_parameters=fetch_params)
     except gdata.service.FetchingOAuthRequestTokenFailed, err:
       print err[0]['body'].strip() + '; Request token retrieval failed!'
       return False
-    auth_url = self.GenerateOAuthAuthorizationURL(request_token=request_token)
+    auth_params = {'hd': domain}
+    auth_url = self.GenerateOAuthAuthorizationURL(request_token=request_token,
+                                                  extra_params=auth_params)
     try:
       try:
         browser_str = googlecl.CONFIG.get('GENERAL', 'auth_browser')

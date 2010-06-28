@@ -235,14 +235,15 @@ class DocsServiceCL(gdata.docs.service.DocsService,
 
   IsTokenValid = is_token_valid
 
-  def request_access(self, scopes=None):
+  def request_access(self, domain, scopes=None):
     """Request access as in BaseServiceCL, but specify scopes."""
     # When people use docs (writely), they expect access to
     # spreadsheets as well (wise).
     if not scopes:
       scopes = gdata.service.CLIENT_LOGIN_SCOPES['writely'] +\
                gdata.service.CLIENT_LOGIN_SCOPES['wise']
-    return googlecl.service.BaseServiceCL.request_access(self, scopes=scopes)
+    return googlecl.service.BaseServiceCL.request_access(self, domain,
+                                                         scopes=scopes)
 
   RequestAccess = request_access
 
