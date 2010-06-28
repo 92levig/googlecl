@@ -204,12 +204,13 @@ class BaseServiceCL(gdata.service.GDataService):
                   '(was is_token_valid extended?)')
     test_uri = set_max_results(test_uri, 1) 
     try:
+      # Try to limit the number of results we get.
       self.Get(test_uri)
     except gdata.service.RequestError, err:
-      if err.args[0]['body'].find('Token invalid') != -1:
-        return False
-      else:
-        raise
+      # If the complaint is NOT about the token, print the error message.
+      if err.args[0]['body'].find('Token invalid') == -1:
+        print 'Token invalid! ' + str(err)
+      return False
     else:
       return True
 
@@ -278,6 +279,8 @@ def set_max_results(uri, max):
   else:
     if uri.find('max-results') == -1:
       return uri + '&max-results=' + max_str
+    else:
+      return uri
 
 
 # The use of login_required has been deprecated - all tasks now require

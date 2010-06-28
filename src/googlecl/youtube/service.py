@@ -74,15 +74,14 @@ class YouTubeServiceCL(YouTubeService, googlecl.service.BaseServiceCL):
       List of videos that match parameters, or [] if none do.
     
     """
-    uri = 'http://gdata.youtube.com/feeds/api/users/' + user +\
-          '/uploads?max-results=50'
+    uri = 'http://gdata.youtube.com/feeds/api/users/' + user + '/uploads'
     return self.GetEntries(uri,
                            title,
                            converter=gdata.youtube.YouTubeVideoFeedFromString)
 
   GetVideos = get_videos
 
-  def is_token_valid(self, test_uri='/feeds/api/users/default'):
+  def is_token_valid(self, test_uri='/feeds/api/users/default/uploads'):
     """Check that the token being used is valid."""
     return googlecl.service.BaseServiceCL.IsTokenValid(self, test_uri)
 
