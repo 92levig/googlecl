@@ -1,12 +1,13 @@
 svn HEAD
  Enhancements
+ * Authorization for Apps users occurs properly.
  * setuptools support added for setup.py. (Thanks, dcolish!)
  * Calendar service supports multiple calendar operations.
  * More results are returned by queries, and control over number of results given to user with config file options.
  * Added --format as optional option to docs upload and download.
  * Added --folder as optional option to docs edit.
  * Behavior of --date option for calendar service improved.
- * Docs service can now download / edit spreadsheets (Thanks, bartosh!)
+ * Docs service can now download / edit spreadsheets. (Thanks, bartosh!)
 
  Bugfixes
  * Uploads to folders in docs supported.
