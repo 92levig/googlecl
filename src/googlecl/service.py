@@ -235,8 +235,20 @@ class BaseServiceCL(gdata.service.GDataService):
     self.SetOAuthInputParameters(gdata.auth.OAuthSignatureMethod.HMAC_SHA1,
                                  consumer_key='anonymous',
                                  consumer_secret='anonymous')
-    display_name = '"GoogleCL for account: ' + self.email + '"'
+    display_name = 'GoogleCL'
     fetch_params = {'xoauth_displayname':display_name}
+    # First and third if statements taken from
+    # gdata.service.GDataService.FetchOAuthRequestToken.
+    # Need to do this detection/conversion here so we can add the 'email' API
+    if not scopes:
+      scopes = gdata.service.lookup_scopes(self.service)
+    if isinstance(scopes, tuple):
+      scopes = list(scopes)
+    if not isinstance(scopes, list):
+      scopes = [scopes,]
+    # Documentation says use userinfo#email, but that makes even less progress
+    # than this, so stick with this for now
+    scopes.extend(['https://www.googleapis.com/auth/userinfo.email'])
     try:
       request_token = self.FetchOAuthRequestToken(scopes=scopes,
                                                   extra_parameters=fetch_params)
