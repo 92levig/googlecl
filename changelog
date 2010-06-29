@@ -1,6 +1,7 @@
 svn HEAD
  Enhancements
  * Authorization for Apps users occurs properly.
+ * Docs upload can upload directories (Thanks, bartosh!)
  * setuptools support added for setup.py. (Thanks, dcolish!)
  * Calendar service supports multiple calendar operations.
  * More results are returned by queries, and control over number of results given to user with config file options.

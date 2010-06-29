@@ -72,6 +72,30 @@ class DocsServiceCL(gdata.docs.service.DocsService,
     gdata.docs.service.DocsService.__init__(self, source='GoogleCL')
     self._set_params(SECTION_HEADER)
 
+  def create_folder(self, title, folder_or_uri=None):
+    """Stolen from gdata-2.0.10 to make recursive directory upload work."""
+    try:
+      return gdata.docs.service.DocsService.CreateFolder(self, title,
+                                                         folder_or_uri)
+    except AttributeError:
+      import atom
+      if folder_or_uri:
+        try:
+          uri = folder_or_uri.content.src
+        except AttributeError:
+          uri = folder_or_uri
+      else:
+        uri = '/feeds/documents/private/full'
+
+      folder_entry = gdata.docs.DocumentListEntry()
+      folder_entry.title = atom.Title(text=title)
+      folder_entry.category.append(_make_kind_category(FOLDER_LABEL))
+      folder_entry = self.Post(folder_entry, uri,
+                               converter=gdata.docs.DocumentListEntryFromString)
+      return folder_entry
+
+  CreateFolder = create_folder
+
   def edit_doc(self, doc_entry, editor, file_format):
     """Edit a document.
     
@@ -249,14 +273,20 @@ class DocsServiceCL(gdata.docs.service.DocsService,
 
   def upload_docs(self, paths, title=None, folder_entry=None,
                   file_format=None):
-    """Upload a document.
+    """Upload a list of documents or directories.
     
+    For each item in paths:
+      if item is a directory, upload all files found in the directory
+        in a manner roughly equivalent to "cp -R directory/ <docs_folder>"
+      if item is a file, upload that file to <docs_folder>
+
     Keyword arguments:
-      paths: Paths of files to upload.
+      paths: List of file paths and/or directories to upload.
       title: Title to give the files once uploaded.
              Default None for the names of the files.
-      folder_entry: GDataEntry of the folder to upload into. 
-                    Default None for no folder.
+      folder_entry: GDataEntry of the folder to treat as the new root for
+                    directories/files.
+                    Default None for no folder (the Google Docs root).
       file_format: Replace (or specify) the extension on the file when figuring
               out the upload format. For example, 'txt' will upload the
               file as if it was plain text. Default None for the file's
@@ -266,66 +296,99 @@ class DocsServiceCL(gdata.docs.service.DocsService,
       Dictionary mapping filenames to where they can be accessed online.
     
     """
+    url_locs = {}
+    for path in paths:
+      folder_root = folder_entry
+      if os.path.isdir(path):
+        folder_entries = {}
+        # final '/' sets folder_name to '' which causes
+        # 503 "Service Unavailable". 
+        path = path.rstrip('/')
+        for dirpath, dirnames, filenames in os.walk(path):
+          directory = os.path.dirname(dirpath)
+          folder_name = os.path.basename(dirpath)
+          if directory in folder_entries:
+            fentry = self.CreateFolder(folder_name, folder_entries[directory])
+          else:
+            fentry = self.CreateFolder(folder_name, folder_root)
+          folder_entries[dirpath] = fentry
+          print 'Created folder ' + dirpath + ' ' + folder_name
+          for fname in filenames:
+            loc = self.upload_single_doc(os.path.join(dirpath, fname),
+                                         folder_entry=fentry)
+            if loc:
+              url_locs[fname] = loc
+      else:
+        loc = self.upload_single_doc(path, title=title,
+                                     folder_entry=folder_entry,
+                                     file_format=file_format)
+        if loc:
+          url_locs[os.path.basename(path)] = loc
+    return url_locs
+
+  UploadDocs = upload_docs
+
+  def upload_single_doc(self, path, title=None, folder_entry=None,
+                        file_format=None):
     import atom
     from gdata.docs.service import SUPPORTED_FILETYPES
-    url_locs = {}
+
     if folder_entry:
       post_uri = folder_entry.content.src
     else:
       post_uri = '/feeds/documents/private/full'
-    for path in paths:
-      filename = os.path.basename(path)
-      if file_format:
-        extension = file_format
-      else:
-        try:
-          extension = filename.split('.')[1]
-        except IndexError:
-          default_ext = 'txt'
-          print 'No extension on filename! Treating as ' + default_ext
-          extension = default_ext
+    filename = os.path.basename(path)
+    if file_format:
+      extension = file_format
+    else:
       try:
-        content_type = SUPPORTED_FILETYPES[extension.upper()]
-      except KeyError:
-        print 'No supported filetype found for extension ' + extension
-        content_type = 'text/plain'
-        print 'Uploading as ' + content_type
-      print 'Loading ' + path
-      try:
-        media = gdata.MediaSource(file_path=path, content_type=content_type)
-      except IOError, err:
-        print err
-        continue
-      entry_title = title or filename.split('.')[0]
-      # Upload() wasn't added until later versions of DocsService, so
-      # we may not have it. To support uploading to folders for earlier
-      # versions of the API, expose the lower-level Post
-      entry = gdata.docs.DocumentListEntry()
-      entry.title = atom.Title(text=entry_title)
-      if extension.lower() in ['csv', 'tsv', 'tab', 'ods', 'xls']:
-        category = _make_kind_category(SPREADSHEET_LABEL)
-      elif extension.lower() in ['ppt', 'pps']:
-        category = _make_kind_category(PRESENTATION_LABEL)
-      elif extension.lower() in ['pdf']:
-        category = _make_kind_category(PDF_LABEL)
-      # Treat everything else as a document
-      else:
-        category = _make_kind_category(DOCUMENT_LABEL)
-      entry.category.append(category)
-      try:
-        new_entry = self.Post(entry, post_uri, media_source=media,
-                              extra_headers={'Slug': media.file_name},
-                              converter=gdata.docs.DocumentListEntryFromString)
-      except (gdata.service.RequestError, UnexpectedExtension), err:
-        print 'Failed to upload ' + path
-        print err
-      else:
-        print 'Upload success! Direct link: ' +\
-              new_entry.GetAlternateLink().href
-        url_locs[filename] = new_entry.GetAlternateLink().href
-    return url_locs
+        extension = filename.split('.')[1]
+      except IndexError:
+        default_ext = 'txt'
+        print 'No extension on filename! Treating as ' + default_ext
+        extension = default_ext
+    try:
+      content_type = SUPPORTED_FILETYPES[extension.upper()]
+    except KeyError:
+      print 'No supported filetype found for extension ' + extension
+      content_type = 'text/plain'
+      print 'Uploading as ' + content_type
+    print 'Loading ' + path
+    try:
+      media = gdata.MediaSource(file_path=path, content_type=content_type)
+    except IOError, err:
+      print err
+      return None
+    entry_title = title or filename.split('.')[0]
+    # Upload() wasn't added until later versions of DocsService, so
+    # we may not have it. To support uploading to folders for earlier
+    # versions of the API, expose the lower-level Post
+    entry = gdata.docs.DocumentListEntry()
+    entry.title = atom.Title(text=entry_title)
+    if extension.lower() in ['csv', 'tsv', 'tab', 'ods', 'xls']:
+      category = _make_kind_category(SPREADSHEET_LABEL)
+    elif extension.lower() in ['ppt', 'pps']:
+      category = _make_kind_category(PRESENTATION_LABEL)
+    elif extension.lower() in ['pdf']:
+      category = _make_kind_category(PDF_LABEL)
+    # Treat everything else as a document
+    else:
+      category = _make_kind_category(DOCUMENT_LABEL)
+    entry.category.append(category)
+    try:
+      new_entry = self.Post(entry, post_uri, media_source=media,
+                            extra_headers={'Slug': media.file_name},
+                            converter=gdata.docs.DocumentListEntryFromString)
+    except (gdata.service.RequestError, UnexpectedExtension), err:
+      print 'Failed to upload ' + path
+      print err
+      return None
+    else:
+      print 'Upload success! Direct link: ' +\
+            new_entry.GetAlternateLink().href
+    return  new_entry.GetAlternateLink().href
 
-  UploadDocs = upload_docs
+  UploadSingleDoc = upload_single_doc
 
 
 SERVICE_CLASS = DocsServiceCL
