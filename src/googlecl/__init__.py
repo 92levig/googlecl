@@ -156,7 +156,7 @@ def read_access_token(service, user):
   import pickle
   token_path = os.path.join(GOOGLE_CL_DIR, TOKENS_FILENAME_FORMAT % user)
   if os.path.exists(token_path):
-    with open(token_path, 'r') as token_file:
+    with open(token_path, 'rb') as token_file:
       token_dict = pickle.load(token_file)
     try:
       token = token_dict[service.lower()]
@@ -236,12 +236,23 @@ def write_access_token(service, user, token):
   import stat
   token_path = os.path.join(GOOGLE_CL_DIR, TOKENS_FILENAME_FORMAT % user)
   if os.path.exists(token_path):
-    with open(token_path, 'r') as token_file:
-      token_dict = pickle.load(token_file)
+    with open(token_path, 'rb') as token_file:
+      try:
+        token_dict = pickle.load(token_file)
+      except (KeyError, IndexError):
+        print 'Failed to load token_file (may be corrupted?)'
+        file_invalid = True
+      else:
+        file_invalid = False
+    if file_invalid:
+      new_path = token_path + '.failed'
+      os.rename(token_path, new_path)
+      print 'Moved ' + token_path + ' to ' + new_path
+      token_dict = {}
   else:
     token_dict = {}
   token_dict[service] = token 
-  with open(token_path, 'w') as token_file:
+  with open(token_path, 'wb') as token_file:
     # Ensure only the owner of the file has read/write permission
     os.chmod(token_path, stat.S_IRUSR | stat.S_IWUSR)
     pickle.dump(token_dict, token_file)

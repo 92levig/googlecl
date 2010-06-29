@@ -349,7 +349,11 @@ def run_once(options, args):
 
   authenticated = False
   client.email = options.user
-  token = googlecl.read_access_token(service, client.email)
+  try:
+    token = googlecl.read_access_token(service, client.email)
+  except (KeyError, IndexError):
+    print 'WARNING: Token file appears to be corrupted. Not using.'
+    token = None
   if token:
     client.SetOAuthToken(token)
     try:
