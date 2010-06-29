@@ -11,6 +11,7 @@ svn HEAD
  * Docs service can now download / edit spreadsheets. (Thanks, bartosh!)
 
  Bugfixes
+ * Catches when user grants access with an account other than the one specified.
  * Uploads to folders in docs supported.
  * Gdata dependency added to setup.py.
  * Asking for help on a non-existant service cleanly and helpfully exits. (Thanks, ferranb!)

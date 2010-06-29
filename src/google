@@ -217,6 +217,7 @@ def get_task_help(service, tasks):
 
   return help
 
+
 def print_help(service=None, tasks=None):
   """Print help messages to the screen.
   
@@ -342,12 +343,13 @@ def run_once(options, args):
       options.devkey = googlecl.read_devkey() or 'AI39si4d9dBo0dX7TnGyfQ68bNiKfEeO7wORCfY3HAgSStFboTgTgAi9nQwJMfMSizdGIs35W9wVGkygEw8ei3_fWGIiGSiqnQ'
   # Not sure why the fromlist keyword argument became necessary...
   package = __import__('googlecl.' + service, fromlist=['SECTION_HEADER'])
-  # fill_put_options will read the key from file if necessary, but will not set
+  # fill_out_options will read the key from file if necessary, but will not set
   # it since it will always get a non-empty value beforehand.
   fill_out_options(package.SECTION_HEADER, task, options)
-  token = googlecl.read_access_token(service, options.user)
+
   authenticated = False
   client.email = options.user
+  token = googlecl.read_access_token(service, client.email)
   if token:
     client.SetOAuthToken(token)
     try:
@@ -355,7 +357,7 @@ def run_once(options, args):
     except AttributeError:
       # Attribute errors crop up when using different gdata libraries
       # but the same token.
-      token_valid = False 
+      token_valid = False
     if token_valid:
       authenticated = True
     else:
@@ -363,10 +365,20 @@ def run_once(options, args):
   if not authenticated:
     domain = get_hd_domain(client.email)
     if client.RequestAccess(domain):
-      googlecl.write_access_token(service, client.email, client.current_token)
+      authorized_account = client.get_email()
+      if not verify_email(client.email, authorized_account):
+        print 'You specified account ' + client.email +\
+              ' but granted access for ' + authorized_account
+        print 'Please log out of ' + authorized_account +\
+              ' and grant access with ' + client.email
+        return
+      else:
+        # Only write the token if it's for the right user
+        googlecl.write_access_token(service, client.email, client.current_token)
     else:
       print 'Failed to get valid access token!'
       return
+
   googlecl.set_missing_default(package.SECTION_HEADER, 'user',
                                client.email, options.config)
   if options.blog:
@@ -465,6 +477,27 @@ def setup_parser():
                           'necessary, this will force the user to specify a ' +
                           'password through a command line prompt or option.'))
   return parser
+
+
+def verify_email(given_account, authorized_account):
+  """Make sure user didn't clickfest his/her way into a mistake.
+
+  Keyword arguments:
+    given_account: String of account specified by the user to GoogleCL,
+                   probably by options.user. If domain is not included,
+                   assumed to be 'gmail.com'
+    authorized_account: Account returned by client.get_email(). Must
+                        include domain!
+  
+  Returns:
+    True if given_account and authorized_account match, False otherwise.
+
+  """
+  if authorized_account.find('@') == -1:
+    raise Exception('authorized_account must include domain!')
+  if given_account.find('@') == -1:
+    given_account += '@gmail.com'
+  return given_account == authorized_account
 
 
 def main():

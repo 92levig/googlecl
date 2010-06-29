@@ -101,6 +101,55 @@ class BaseServiceCL(gdata.service.GDataService):
 
   Delete = delete
 
+  def get_email(self, _uri=None):
+    """Get the email address that has the OAuth access token.
+
+    Uses the "Email address" scope to return the email address the user
+    was logged in as when he/she authorized the OAuth request token.
+
+    Keyword arguments:
+      uri: Uri to get data from. Should only be used for redirects.
+
+    Returns:
+      Full email address ('schmoe@domain.wtf') of the account with access.
+
+    """
+    # Use request instead of Get to avoid the attempts to parse from xml.
+    server_response = self.request('GET',
+                           _uri or 'https://www.googleapis.com/userinfo/email',
+                           headers={'Content-Type': 'text/plain'})
+    result_body = server_response.read()
+
+    if server_response.status == 200:
+      try:
+        from urlparse import parse_qs
+        parse_func = parse_qs
+      except ImportError:
+        # parse_qs was moved to urlparse from cgi in python2.6
+        import cgi
+        parse_func = cgi.parse_qs
+      param_dict = parse_func(result_body)
+      email = param_dict['email'][0]
+    # This block copied (with some modification) from GDataService (2.0.10)
+    elif server_response.status == 302:
+      if redirects_remaining > 0:
+        location = (server_response.getheader('Location') or
+                    server_response.getheader('location'))
+        if location is not None:
+          return BaseServiceCL.get_email(location)
+        else:
+          raise gdata.service.RequestError, {'status': server_response.status,
+                'reason': '302 received without Location header',
+                'body': result_body}
+      else:
+        raise gdata.service.RequestError, {'status': server_response.status,
+              'reason': 'Redirect received, but redirects_remaining <= 0',
+              'body': result_body}
+    else:
+      raise gdata.service.RequestError, {'status': server_response.status,
+            'reason': server_response.reason, 'body': result_body}
+    return email
+
   def get_entries(self, uri, title=None, converter=None):
     """Get a list of entries from a feed uri.
     
@@ -208,7 +257,7 @@ class BaseServiceCL(gdata.service.GDataService):
       self.Get(test_uri)
     except gdata.service.RequestError, err:
       # If the complaint is NOT about the token, print the error message.
-      if err.args[0]['body'].find('Token invalid') == -1:
+      if err.args[0]['body'].lower().find('token invalid') == -1:
         print 'Token invalid! ' + str(err)
       return False
     else:
@@ -246,9 +295,7 @@ class BaseServiceCL(gdata.service.GDataService):
       scopes = list(scopes)
     if not isinstance(scopes, list):
       scopes = [scopes,]
-    # Documentation says use userinfo#email, but that makes even less progress
-    # than this, so stick with this for now
-    scopes.extend(['https://www.googleapis.com/auth/userinfo.email'])
+    scopes.extend(['https://www.googleapis.com/auth/userinfo#email'])
     try:
       request_token = self.FetchOAuthRequestToken(scopes=scopes,
                                                   extra_parameters=fetch_params)
