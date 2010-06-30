@@ -9,6 +9,7 @@ svn HEAD
  * Added --folder as optional option to docs edit.
  * Behavior of --date option for calendar service improved.
  * Docs service can now download / edit spreadsheets. (Thanks, bartosh!)
+ * Exceptions raised in interactive shell do not end shell session (Thanks, ferranb!)
 
  Bugfixes
  * Catches when user grants access with an account other than the one specified.
@@ -18,6 +19,7 @@ svn HEAD
  * Errors encountered while uploading to Picasa are printed correctly rather than crashing. (Thanks, bartosh!)
  * Uploading files to Docs without extensions obeys --format or assumes an extension.
  * Uploading multiple files to Docs will name each file after its filename, rather than the first filename encountered.
+ * Dependency on gdata is versioned to >= 1.2.4
 
 version 0.9.7
  Enhancements:

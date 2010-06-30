@@ -229,18 +229,21 @@ def print_help(service=None, tasks=None):
   """
   if not service:
     print 'Welcome to the Google CL tool!'
-    print '  Commands are broken into several parts: service, task, ' + \
-          'options, and arguments.'
+    print '  Commands are broken into several parts: '
+    print '    service, task, options, and arguments.'
     print '  For example, in the command'
     print '      "> picasa post --title "My Cat Photos" photos/cats/*"'
-    print '  the service is "picasa", the task is "post", the single ' + \
-          'option is a name of "My Cat Photos", and the argument is the ' + \
-          'path to the photos.'
-    print '  The available services are ' + str(AVAILABLE_SERVICES)[1:-1]
+    print '  the service is "picasa", the task is "post", the single'
+    print '  option is a title of "My Cat Photos", and the argument is the '
+    print '  path to the photos.'
+    print ''
+    print '  The available services are ' 
+    print str(AVAILABLE_SERVICES)[1:-1]
     print '  Enter "> help <service>" for more information on a service.'
     print '  Or, just "quit" to quit.'
   else:
     print get_task_help(service, tasks)
+
 
 def run_interactive(parser):
   """Run an interactive shell for the google commands.
@@ -280,6 +283,14 @@ def run_interactive(parser):
     except EOFError:
       print ''
       break
+    except SystemExit:
+      # optparse.OptParser prints the usage statement and calls 
+      # sys.exit when there are any option errors.
+      # Printing usage good, SystemExit bad. So catch it and do nothing.
+      pass
+    except BaseException:
+      from traceback import print_exc
+      print_exc()
   if 'readline' in sys.modules:
     readline.write_history_file(history_file)
 
