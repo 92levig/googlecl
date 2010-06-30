@@ -1,4 +1,4 @@
-svn HEAD
+version 0.9.8
  Enhancements
  * Authorization for Apps users occurs properly.
  * Docs upload can upload directories (Thanks, bartosh!)
