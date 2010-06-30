@@ -82,6 +82,9 @@ Tasks:
   * add: Add contacts. `add "Jim Raynor, jimmy@noreaster.com" contacts.csv`
   * delete: Delete contacts. `delete --title Jerkface`
   * list: List contacts. `list name,email --title ".*bob.*" > the_bobs.csv`
+  * add-groups: Add contact groups. `add-groups "Work" "Friends"`
+  * delete-groups: Delete contact groups. `delete-groups "Friends"`
+  * list-groups: List contact groups. `list-groups "my group"`
 
 2.1.4 Docs
 Common options:
@@ -93,7 +96,7 @@ Tasks:
   * edit: Edit or view a document. `edit --title "Shopping list" --editor vim`
   * get: Download docs. `get --title "Homework [0-9]*"`
   * list: List documents. `list title,url-direct --delimiter ": "`
-  * upload: Upload documents. `upload the_bobs.csv ~/work/docs_to_share/*`
+  * upload: Upload documents. `upload the_bobs.csv ~/work/docs_to_share`
 
 2.1.5 Picasa
 Tasks:

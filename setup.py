@@ -10,6 +10,11 @@ packages =['googlecl',
            'googlecl.picasa',
            'googlecl.youtube']
  
+long_desc = """The Google Data APIs allow programmatic access to
+various Google services.  This package wraps a subset of those APIs into a
+command-line tool that makes it easy to do things like posting to a Blogger
+blog, uploading files to Picasa, or editing a Google Docs file."""
+
 
 setup(name="googlecl",
       version="0.9.7",
@@ -21,11 +26,8 @@ setup(name="googlecl",
       packages=packages,
       package_dir={'googlecl':'src/googlecl'},
       scripts=["src/google"],
-      install_requires=['gdata'],
-      long_description="""The Google Data APIs allow programmatic access to
-various Google services.  This package wraps a subset of those APIs into a
-command-line tool that makes it easy to do things like posting to a Blogger
-blog, uploading files to Picasa, or editing a Google Docs file.""",
+      install_requires=['gdata >=1.2.4'],
+      long_description=long_desc,
       classifiers=[
           'Topic :: Internet :: WWW/HTTP',
           'Environment :: Console',
