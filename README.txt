@@ -119,14 +119,17 @@ The list task can be given additional arguments to specify what exactly is being
 
 `$ google <service> list style1,style2,style3 --delimiter ": "`
 
-will output those styles, in that order, with ": " as a delimiter. Valid values for `<`style1`>` etc. are:
-  * 'title' - title of the entry.
+will output those styles, in that order, with ": " as a delimiter. Valid values for `<`style1`>` etc. are (with common services in parentheses):
+  * 'author' - author(s). (Blogger)
+  * 'email' - email address(es). (Contacts)
+  * 'summary' - summary text.
+  * 'title' or 'name' - displayed title or name.
   * 'url' - treated as 'url-direct' or 'url-site' depending on setting in preferences file.
-  * 'url-site' - url of the site associated with the entry.
+  * 'url-site' - url of the site.
   * 'url-direct' - url directly to the resource.
-  * 'author' - author(s) of the entry.
-  * 'when' - "when" data for the entry (typically calendar-only, for start and end date of the event).
-  * 'where' - "where" data for the entry (typically calendar-only, for where the event takes place).
+  * 'when' - "when" data. (Calendar)
+  * 'where' - "where" data. (Calendar)
+  * 'xml' - full XML dump.
 
 The difference between 'url-site' and 'url-direct' is best exemplified by a picasa PhotoEntry: 'url-site' gives a link to the photo in the user's album, 'url-direct' gives a link to the image url. If 'url-direct' is specified but is not applicable, 'url-site' is placed in its stead, and vice-versa.
 

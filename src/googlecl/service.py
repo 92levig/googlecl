@@ -471,6 +471,7 @@ def entry_to_string(entry, style_list, delimiter, missing_field_value=None):
            'tags', 'labels' - Keywords / tags / labels of the entry
                               (entry.media.description.keywords.text or
                               entry.categories[:].term).
+           'xml' - Dump the xml of the entry.
                                
            The difference between url-site and url-direct is best exemplified
            by a picasa PhotoEntry: 'url-site' gives a link to the photo in the
@@ -486,33 +487,29 @@ def entry_to_string(entry, style_list, delimiter, missing_field_value=None):
   
   """
   def _string_for_style(style, entry, join_string):
+    """Figure out the string to return that matches the requested style."""
     from googlecl.calendar.service import get_datetimes
     import time
-    """Figure out the string to return that matches the requested style."""
-    # We can access attributes willy-nilly, and catch the NoneTypes later.
+
+    # We can access attributes willy-nilly, since this function is wrapped in
+    # a try block.
     value = ''
     if style == 'title' or style == 'name':
       value = entry.title.text
     elif style[:3] == 'url':
       substyle = style[4:] or googlecl.CONFIG.get('GENERAL', 'url_style')
-      try:
+      if not entry.GetHtmlLink():
+        href = ''
+      else:
         href = entry.GetHtmlLink().href
-      except AttributeError:
-        if not entry.GetHtmlLink():
-          href = ''
-        else:
-          raise
       if substyle == 'direct':
         value = entry.content.src or href
       else:
         value = href or entry.content.src
     elif style == 'author' and entry.author:
-      author_string = str([a.name.text for a in entry.author])[1:-1]
-      value = author_string.replace("'", '')
+      value = join_string.join([a.name.text for a in entry.author])
     elif style == 'email':
-      if hasattr(entry, 'email'):
-        email_string = str([e.address for e in entry.email])[1:-1]
-        value = email_string.replace("'", '')
+      value = join_string.join([e.address for e in entry.email])
     elif style == 'when':
       start_time_data, end_time_data, freq = get_datetimes(entry)
       print_format = googlecl.CONFIG.get('GENERAL', 'date_print_format')
@@ -545,6 +542,8 @@ def entry_to_string(entry, style_list, delimiter, missing_field_value=None):
       except AttributeError:
         # Blogger uses categories.
         value = join_string.join([c.term for c in entry.category if c.term])
+    elif style == 'xml':
+      value = str(entry)
     else:
       raise ValueError("'Unknown listing style: '" + style + "'")
     return value
@@ -567,12 +566,13 @@ def entry_to_string(entry, style_list, delimiter, missing_field_value=None):
     except ValueError, err:
       print err.args[0] + ' (Did not add value for style ' + style + ')'
     except AttributeError, err:
-      if err.args[0].find("'NoneType' object has no attribute") != -1:
-        return_string += missing_field_value
-      else:
-        raise
-    # Ensure the delimiter won't appear in a non-delineation role.
-    return_string += val.replace(delimiter, ' ') + delimiter
+      return_string += missing_field_value
+    # Ensure the delimiter won't appear in a non-delineation role,
+    # but let it slide if the raw xml is being dumped
+    if style != 'xml':
+      return_string += val.replace(delimiter, ' ') + delimiter
+    else:
+      return_string = val
   
   return return_string.rstrip(delimiter)
 
