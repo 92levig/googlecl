@@ -1,5 +1,6 @@
-Steps that we take when doing a new tarball release (so we don't forget)
+Steps that we take when doing releases (so we don't forget)
 
+===Tarball===
 All instructions assume a current working directory of trunk
 1) Be sure changelog is up to date. Check the commit messages for important bug fixes, enhancements, features, etc.
 2) Increment version number in changelog (change "svn HEAD" to "version x.x.x")
@@ -14,3 +15,16 @@ All instructions assume a current working directory of trunk
 11) When you're convinced it's correct, use svn copy to tag the release:
  $ svn copy https://googlecl.googlecode.com/svn/trunk https://googlecl.googlecode.com/svn/tags/release-x.x.x -m "x.x.x release"
 
+===Debian package===
+Our .deb build currently uses git-buildpackage with a private git repo (sorry, hackers).
+
+===Windows executable===
+Note: This will only work from a windows machine with py2exe installed. You MUST use Python 2.5
+1) Run 'cmd' to get a terminal
+2) cd to the src directory of the repository, where win_setup is.
+3) Run "C:\path\to\python25\python.exe win_setup py2exe -O2" That's a capital "o", then a 2
+4) LEGAL WORRY: After py2exe does its thing, ***REMOVE MSVCR71.dll*** from the newly created dist/
+5) Copy trunk/README.txt and trunk/README.config into dist/
+5) Rename dist/ to googlecl (or what have you) and zip it up.
+
+On legal worries: As far as I can tell, it is a breach of the EULA to distribute that DLL unless you own a license for Microsoft Visual C++, which I do not. Users that need it can follow the instructions on the wiki's SystemRequirements page
