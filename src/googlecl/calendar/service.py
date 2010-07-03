@@ -28,6 +28,7 @@ import datetime
 import gdata.calendar.service
 import googlecl
 import googlecl.service
+import time
 import urllib
 from googlecl.calendar import SECTION_HEADER
 
@@ -271,6 +272,29 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
 SERVICE_CLASS = CalendarServiceCL
 
 
+class CalendarEntryToStringWrapper(googlecl.service.BaseEntryToStringWrapper):
+  @property
+  def when(self):
+    """When event takes place."""
+    start_time_data, end_time_data, freq = get_datetimes(self.entry)
+    print_format = googlecl.get_config_option(SECTION_HEADER,
+                                              'date_print_format')
+    start_time = time.strftime(print_format, start_time_data)
+    end_time = time.strftime(print_format, end_time_data)
+    value = start_time + ' - ' + end_time
+    if freq:
+      if freq.has_key('BYDAY'):
+        value += ' (' + freq['BYDAY'].lower() + ')'
+      else:
+        value += ' (' + freq['FREQ'].lower() + ')'
+    return value
+
+  @property
+  def where(self):
+    """Where event takes place"""
+    return self._join(self.entry.where, text_attribute='value_string')
+
+
 def get_date_today(include_hour=False, as_range=False):
   """Get today's date, as if entered by the user.
 
@@ -306,7 +330,6 @@ def get_datetimes(cal_entry):
            event does not repeat (does not have a gd:recurrence element)).
   
   """
-  import time
   if cal_entry.recurrence:
     return parse_recurrence(cal_entry.recurrence.text)
   else:
@@ -338,7 +361,6 @@ def parse_recurrence(time_string):
     values. (http://www.ietf.org/rfc/rfc2445.txt, section 4.3.10)
   
   """
-  import time
   # Google calendars uses a pretty limited section of RFC 2445, and I'm
   # abusing that here. This will probably break if Google ever changes how
   # they handle recurrence, or how the recurrence string is built.
@@ -358,6 +380,32 @@ def parse_recurrence(time_string):
   return (start_time, end_time, freq)
 
 
+def _list(client, options, args, date):
+  cal_user_list = client.get_calendar_user_list(options.cal)
+  if not cal_user_list:
+    print 'No calendar matches "' + options.cal + '"'
+    return
+  for cal in cal_user_list:
+    print ''
+    print '[' + str(cal) + ']'
+    entries = client.get_events(cal.user,
+                                start_date=date.utc_start,
+                                end_date=date.utc_end,
+                                title=options.title,
+                                query=options.query)
+
+    if args:
+      style_list = args[0].split(',')
+    else:
+      style_list = googlecl.get_config_option(SECTION_HEADER,
+                                              'list_style').split(',')
+    for entry in entries:
+      print googlecl.service.compile_entry_string(
+                                            CalendarEntryToStringWrapper(entry),
+                                            style_list,
+                                            delimiter=options.delimiter)
+
+
 #===============================================================================
 # Each of the following _run_* functions execute a particular task.
 #  
@@ -368,10 +416,6 @@ def parse_recurrence(time_string):
 #        required
 #===============================================================================
 def _run_list(client, options, args):
-  cal_user_list = client.get_calendar_user_list(options.cal)
-  if not cal_user_list:
-    print 'No calendar matches "' + options.cal + '"'
-    return
   # If no other search parameters are mentioned, set date to be
   # today. (Prevent user from retrieving all events ever)
   if not (options.title or options.query or options.date):
@@ -379,48 +423,12 @@ def _run_list(client, options, args):
                                                  as_range=True))
   else:
     date = googlecl.calendar.Date(options.date)
-  for cal in cal_user_list:
-    print ''
-    print '[' + str(cal) + ']'
-    entries = client.get_events(cal.user,
-                                start_date=date.utc_start,
-                                end_date=date.utc_end,
-                                title=options.title,
-                                query=options.query)
-
-    if args:
-      style_list = args[0].split(',')
-    else:
-      style_list = googlecl.get_config_option(SECTION_HEADER,
-                                              'list_style').split(',')
-    for entry in entries:
-      print googlecl.service.entry_to_string(entry, style_list,
-                                             delimiter=options.delimiter)
+  _list(client, options, args, date)
 
 
 def _run_list_today(client, options, args):
-  cal_user_list = client.get_calendar_user_list(options.cal)
-  if not cal_user_list:
-    print 'No calendar matches "' + options.cal + '"'
-    return
   date = googlecl.calendar.Date(get_date_today(include_hour=False))
-  for cal in cal_user_list:
-    print ''
-    print '[' + str(cal) + ']'
-    entries = client.get_events(cal.user,
-                                start_date=date.utc_start,
-                                end_date=date.utc_end,
-                                title=options.title,
-                                query=options.query)
-
-    if args:
-      style_list = args[0].split(',')
-    else:
-      style_list = googlecl.get_config_option(SECTION_HEADER,
-                                              'list_style').split(',')
-    for entry in entries:
-      print googlecl.service.entry_to_string(entry, style_list,
-                                             delimiter=options.delimiter)
+  _list(client, options, args, date)
 
 
 def _run_add(client, options, args):

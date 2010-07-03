@@ -193,8 +193,10 @@ def _run_list(client, options, args):
     style_list = googlecl.get_config_option(SECTION_HEADER,
                                             'list_style').split(',')
   for vid in entries:
-    print googlecl.service.entry_to_string(vid, style_list,
-                                           delimiter=options.delimiter)
+    print googlecl.service.compile_entry_string(
+                                 googlecl.service.BaseEntryToStringWrapper(vid),
+                                 style_list,
+                                 delimiter=options.delimiter)
 
 
 def _run_post(client, options, args):

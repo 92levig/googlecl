@@ -119,6 +119,13 @@ class ContactsServiceCL(gdata.contacts.service.ContactsService,
 SERVICE_CLASS = ContactsServiceCL
 
 
+class ContactsEntryToStringWrapper(googlecl.service.BaseEntryToStringWrapper):
+  @property
+  def email(self):
+    """Email addresses."""
+    return self._join(self.entry.email, text_attribute='address')
+
+
 #===============================================================================
 # Each of the following _run_* functions execute a particular task.
 #  
@@ -138,9 +145,10 @@ def _run_list(client, options, args):
     style_list = googlecl.get_config_option(SECTION_HEADER,
                                             'list_style').split(',')
   for entry in entries:
-    print googlecl.service.entry_to_string(entry, style_list,
-                                           delimiter=options.delimiter)
-
+    print googlecl.service.compile_entry_string(
+                                            ContactsEntryToStringWrapper(entry),
+                                            style_list,
+                                            delimiter=options.delimiter)
 
 def _run_add(client, options, args):
   for contact in args:
@@ -182,7 +190,9 @@ def _run_list_groups(client, options, args):
   for group in args:
     entries = client.GetGroups(group)
     for entry in entries:
-      print googlecl.service.entry_to_string(entry, ['title'],
+      print googlecl.service.compile_to_string(
+                                           ContactsEntryToStringWrapper(entry),
+                                           ['title'],
                                            delimiter=options.delimiter)
 
 

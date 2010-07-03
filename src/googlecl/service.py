@@ -445,108 +445,163 @@ class Task(object):
     print 'Sorry, this task is not yet implemented!'
 
 
-def entry_to_string(entry, style_list, delimiter, missing_field_value=None):
+class BaseEntryToStringWrapper(object):
+  """Wraps GDataEntries to easily get human-readable data."""
+  def __init__(self, gdata_entry,
+               intra_property_delimiter='',
+               label_delimiter=' '):
+    """Constructor.
+
+    Keyword arguments:
+      gdata_entry: The GDataEntry to extract data from.
+      intra_property_delimiter: Delimiter to distinguish between multiple
+                   values in a single property (e.g. multiple email addresses).
+                   Default '' (there will always be at least one space).
+      label_delimiter: String to place in front of a label for intra-property
+                       values. For example, for a contact with multiple phone
+                       numbers, ':' would yield "Work:<number> Home:<number>"
+                       Default ' ' (there is no whitespace between label and
+                       value if it is not specified).
+                       Set as NoneType to omit labels entirely.
+
+    """
+    self.entry = gdata_entry
+    self.intra_property_delimiter = intra_property_delimiter
+    self.label_delimiter = label_delimiter
+
+  @property
+  def title(self):
+    """Title or name."""
+    return self.entry.title.text
+  name = title
+
+  @property
+  def url(self):
+    """url_direct or url_site, depending on url_style defined in config."""
+    return self._url(googlecl.get_config_option('GENERAL', 'url_style'))
+
+  @property
+  def url_direct(self):
+    """Url that leads directly to content."""
+    return self._url('direct')
+
+  @property
+  def url_site(self):
+    """Url that leads to site hosting content."""
+    return self._url('site')
+
+  def _url(self, substyle):
+    if not self.entry.GetHtmlLink():
+      href = ''
+    else:
+      href = self.entry.GetHtmlLink().href
+
+    if substyle == 'direct':
+      return entry.content.src or href
+    return href or self.entry.content.src
+
+  @property
+  def summary(self):
+    """Summary or description."""
+    try:
+      # Try to access the "default" description
+      return entry.media.description.text
+    except AttributeError:
+      # If it's not there, try the summary attribute
+      return entry.summary.text
+    else:
+      if not value:
+        # If the "default" description was there, but it was empty,
+        # try the summary attribute.
+        return entry.summary.text
+  description = summary
+
+  @property
+  def tags(self):
+    """Tags / keywords or labels."""
+    try:
+      return entry.media.description.keywords.text
+    except AttributeError:
+      # Blogger uses categories.
+      return join_string.join([c.term for c in entry.category if c.term])
+  labels = tags
+  keywords = tags
+
+  @property
+  def xml(self):
+    """Raw XML."""
+    return str(entry)
+
+  def _extract_label(self, entry_list_item, backup_attr=None):
+    """Determine the human-readable label of the item."""
+    if hasattr(entry_list_item, 'rel'):
+      scheme_or_label = entry_list_item.rel
+    elif hasattr(entry_list_item, 'label'):
+      scheme_or_label = entry_list_item.label
+    elif backup_attr and hasattr(entry_list_item, backup_attr):
+      scheme_or_label = getattr(entry_list_item, backup_attr)
+    else:
+      return None
+
+    if scheme_or_label:
+      return scheme_or_label[scheme_or_label.find('#')+1:]
+    else:
+      return None
+
+  def _join(self, entry_list, text_attribute='text',
+            text_extractor=None, label_attribute=None):
+    """Join a list of entries into a string.
+
+    Keyword arguments:
+      entry_list: List of entries to be joined.
+      text_attribute: String of the attribute that will give human readable
+                      text for each entry in entry_list. Default 'text'.
+      text_extractor: Function that can be used to get desired text.
+                      Default None. Use this if the readable data is buried
+                      deeper than a single attribute.
+      label_attribute: If the attribute for the label is not 'rel' or 'label'
+                       it can be specified here.
+
+    Returns:
+      String from joining the items in entry_list.
+
+    """
+    if not text_extractor:
+      if not text_attribute:
+        raise Error('One of "text_extractor" or ' +
+                    '"text_attribute" must be defined!')
+      text_extractor = lambda entry: getattr(entry, text_attribute)
+
+    if self.label_delimiter is None:
+      return self.intra_property_delimiter.join([text_extractor(e)
+                                                 for e in entry_list
+                                                 if text_extractor(e)])
+    else:
+      separating_string = self.intra_property_delimiter + ' '
+      joined_string = ''
+      for entry in entry_list:
+        if self.label_delimiter is not None:
+          label = self._extract_label(entry, backup_attr=label_attribute)
+          if label:
+            joined_string += label + self.label_delimiter
+        joined_string += text_extractor(entry) + separating_string
+      return joined_string.rstrip(separating_string)
+
+
+def compile_entry_string(entry, attribute_list, delimiter,
+                         missing_field_value=None):
   """Return a useful string describing a gdata.data.GDEntry.
   
   Keyword arguments:
-    entry: Entry to convert to string.
-    style_list: List of strings that describe what the return string should be
-           composed of. Valid style strings are:
-           'title', 'name' - title of the entry (entry.title.text).
-           'url' - treated as 'url-direct' or 'url-site' depending on
-                   setting in preferences file.
-           'url-site' - url of the site associated with the entry
-                        (entry.GetHtmlLink().href).
-           'url-direct' - url directly to the resource 
-                          (entry.content.src).
-           'author' - author of the entry (entry.author[:].name.text).
-           'email' - email addresses of entry (entry.email[:].address),
-           'where' - location associated with the entry
-                     (entry.where[:].value_string).
-           'when' - time of the entry
-                    (entry.when[:].start_time - entry.when[:].end_time)
-           'summary', 'description', 'desc' - Summary / caption / description
-                    of the entry (entry.media.description.text or
-                    entry.summary.text).
-           'tags', 'labels' - Keywords / tags / labels of the entry
-                              (entry.media.description.keywords.text or
-                              entry.categories[:].term).
-           'xml' - Dump the xml of the entry.
-                               
-           The difference between url-site and url-direct is best exemplified
-           by a picasa PhotoEntry: 'url-site' gives a link to the photo in the
-           user's album, 'url-direct' gives a link to the image url.
-           If 'url-direct' is specified but is not applicable, 'url-site' is
-           placed in its stead, and vice-versa.
-    delimiter: String to use as the delimiter between fields.
+    wrapped_entry: BaseEntryToStringWrapper to display.
+    attribute_list: List of attributes to access
+    delimiter: String to use as the delimiter between attributes.
     missing_field_value: If any of the styles for any of the entries are
                          invalid or undefined, put this in its place
                          (Default None to use "missing_field_value" config
                          option).
-    
   
   """
-  def _string_for_style(style, entry, join_string):
-    """Figure out the string to return that matches the requested style."""
-    from googlecl.calendar.service import get_datetimes
-    import time
-
-    # We can access attributes willy-nilly, since this function is wrapped in
-    # a try block.
-    value = ''
-    if style == 'title' or style == 'name':
-      value = entry.title.text
-    elif style[:3] == 'url':
-      substyle = style[4:] or googlecl.CONFIG.get('GENERAL', 'url_style')
-      if not entry.GetHtmlLink():
-        href = ''
-      else:
-        href = entry.GetHtmlLink().href
-      if substyle == 'direct':
-        value = entry.content.src or href
-      else:
-        value = href or entry.content.src
-    elif style == 'author' and entry.author:
-      value = join_string.join([a.name.text for a in entry.author])
-    elif style == 'email':
-      value = join_string.join([e.address for e in entry.email])
-    elif style == 'when':
-      start_time_data, end_time_data, freq = get_datetimes(entry)
-      print_format = googlecl.CONFIG.get('GENERAL', 'date_print_format')
-      start_time = time.strftime(print_format, start_time_data)
-      end_time = time.strftime(print_format, end_time_data)
-      value = start_time + ' - ' + end_time
-      if freq:
-        if freq.has_key('BYDAY'):
-          value += ' (' + freq['BYDAY'].lower() + ')'
-        else:
-          value += ' (' + freq['FREQ'].lower() + ')'
-    elif style == 'where':
-      value = join_string.join([w.value_string for w in entry.where
-                                if w.value_string])
-    elif style == 'summary' or style[:4] == 'desc':
-      try:
-        # Try to access the "default" description
-        value = entry.media.description.text
-      except AttributeError:
-        # If it's not there, try the summary attribute
-        value = entry.summary.text
-      else:
-        if not value:
-          # If the "default" description was there, but it was empty,
-          # try the summary attribute.
-          value = entry.summary.text
-    elif style == 'tags' or style == 'labels':
-      try:
-        value = entry.media.description.keywords.text
-      except AttributeError:
-        # Blogger uses categories.
-        value = join_string.join([c.term for c in entry.category if c.term])
-    elif style == 'xml':
-      value = str(entry)
-    else:
-      raise ValueError("'Unknown listing style: '" + style + "'")
-    return value
 
   return_string = ''
   missing_field_value = missing_field_value or googlecl.CONFIG.get('GENERAL',
@@ -554,22 +609,22 @@ def entry_to_string(entry, style_list, delimiter, missing_field_value=None):
   if not delimiter:
     delimiter = ','
   if delimiter.strip() == ',':
-    join_string = ';'
+    entry.intra_property_delimiter = ';'
   else:
-    join_string = ','
-  for style in style_list:
-    val = ''
+    entry.intra_property_delimiter = ','
+  entry.label_delimiter = None
+  for attr in attribute_list:
     try:
       # Get the value, replacing NoneTypes and empty strings
       # with the missing field value.
-      val = _string_for_style(style, entry, join_string) or missing_field_value
+      val = getattr(entry, attr) or missing_field_value
     except ValueError, err:
-      print err.args[0] + ' (Did not add value for style ' + style + ')'
+      print err.args[0] + ' (Did not add value for style ' + attr + ')'
     except AttributeError, err:
-      return_string += missing_field_value
+      val = missing_field_value
     # Ensure the delimiter won't appear in a non-delineation role,
     # but let it slide if the raw xml is being dumped
-    if style != 'xml':
+    if attr != 'xml':
       return_string += val.replace(delimiter, ' ') + delimiter
     else:
       return_string = val

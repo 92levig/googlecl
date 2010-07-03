@@ -510,8 +510,10 @@ def _run_list(client, options, args):
     style_list = googlecl.get_config_option(SECTION_HEADER,
                                             'list_style').split(',')
   for entry in entries:
-    print googlecl.service.entry_to_string(entry, style_list,
-                                           delimiter=options.delimiter)
+    print googlecl.service.compile_entry_string(
+                               googlecl.service.BaseEntryToStringWrapper(entry),
+                               style_list,
+                               delimiter=options.delimiter)
 
 
 def _run_upload(client, options, args):

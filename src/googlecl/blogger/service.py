@@ -166,6 +166,15 @@ class BloggerServiceCL(googlecl.service.BaseServiceCL):
 SERVICE_CLASS = BloggerServiceCL
 
 
+class BloggerEntryToStringWrapper(googlecl.service.BaseEntryToStringWrapper):
+  @property
+  def author(self):
+    """Author."""
+    # Name of author 'x' name is in entry.author[x].name.text
+    text_extractor = lambda entry: getattr(getattr(entry, 'name'), 'text')
+    return self._join(self.entry.author, text_extractor=text_extractor)
+
+
 #===============================================================================
 # Each of the following _run_* functions execute a particular task.
 #  
@@ -233,8 +242,10 @@ def _run_list(client, options, args):
     style_list = googlecl.get_config_option(SECTION_HEADER,
                                             'list_style').split(',')
   for entry in entries:
-    print googlecl.service.entry_to_string(entry, style_list,
-                                         delimiter=options.delimiter)
+    print googlecl.service.compile_entry_string(
+                                             BloggerEntryToStringWrapper(entry),
+                                             style_list,
+                                             delimiter=options.delimiter)
 
 
 def _run_tag(client, options, args):
