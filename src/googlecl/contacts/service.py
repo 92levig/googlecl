@@ -121,9 +121,44 @@ SERVICE_CLASS = ContactsServiceCL
 
 class ContactsEntryToStringWrapper(googlecl.service.BaseEntryToStringWrapper):
   @property
+  def address(self):
+    """Postal addresses."""
+    return self._join(self.entry.postal_address, text_attribute='text')
+
+  @property
+  def company(self):
+    """Name of company."""
+    return self.entry.organization.org_name.text
+  org_name = company
+
+  @property
   def email(self):
     """Email addresses."""
     return self._join(self.entry.email, text_attribute='address')
+
+  @property
+  def im(self):
+    """Instant messanger handles."""
+    return self._join(self.entry.im, text_attribute='address',
+                      label_attribute='protocol')
+
+  @property
+  def notes(self):
+    """Additional notes."""
+    return self.entry.content.text
+
+  @property
+  def phone_number(self):
+    """Phone numbers."""
+    return self._join(self.entry.phone_number, text_attribute='text')
+  phone = phone_number
+
+  @property
+  # Overrides Base's title. "name" will still give name of contact.
+  def title(self):
+    """Title of contact in organization."""
+    return self.entry.organization.org_title.text
+  org_title = title
 
 
 #===============================================================================

@@ -120,8 +120,13 @@ The list task can be given additional arguments to specify what exactly is being
 `$ google <service> list style1,style2,style3 --delimiter ": "`
 
 will output those styles, in that order, with ": " as a delimiter. Valid values for `<`style1`>` etc. are (with common services in parentheses):
+  * 'address' - postal addresses. (Contacts)
   * 'author' - author(s). (Blogger)
+	* 'company' - company name. (Contacts)
   * 'email' - email address(es). (Contacts)
+	* 'im' - instant messanger handles. (Contacts)
+	* 'notes' - notes on a contact. (Contacts)
+	* 'phone' - phone numbers. (Contacts)
   * 'summary' - summary text.
   * 'title' or 'name' - displayed title or name.
   * 'url' - treated as 'url-direct' or 'url-site' depending on setting in preferences file.

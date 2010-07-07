@@ -1,3 +1,7 @@
+svn HEAD
+ Enhancements
+ * Added list styles for contacts.
+
 version 0.9.8
  Enhancements
  * Authorization for Apps users occurs properly.

@@ -530,16 +530,16 @@ class BaseEntryToStringWrapper(object):
   @property
   def xml(self):
     """Raw XML."""
-    return str(entry)
+    return str(self.entry)
 
-  def _extract_label(self, entry_list_item, backup_attr=None):
+  def _extract_label(self, entry_list_item, label_attr=None):
     """Determine the human-readable label of the item."""
-    if hasattr(entry_list_item, 'rel'):
+    if label_attr and hasattr(entry_list_item, label_attr):
+      scheme_or_label = getattr(entry_list_item, label_attr)
+    elif hasattr(entry_list_item, 'rel'):
       scheme_or_label = entry_list_item.rel
     elif hasattr(entry_list_item, 'label'):
       scheme_or_label = entry_list_item.label
-    elif backup_attr and hasattr(entry_list_item, backup_attr):
-      scheme_or_label = getattr(entry_list_item, backup_attr)
     else:
       return None
 
@@ -581,7 +581,7 @@ class BaseEntryToStringWrapper(object):
       joined_string = ''
       for entry in entry_list:
         if self.label_delimiter is not None:
-          label = self._extract_label(entry, backup_attr=label_attribute)
+          label = self._extract_label(entry, label_attr=label_attribute)
           if label:
             joined_string += label + self.label_delimiter
         joined_string += text_extractor(entry) + separating_string
@@ -612,7 +612,6 @@ def compile_entry_string(entry, attribute_list, delimiter,
     entry.intra_property_delimiter = ';'
   else:
     entry.intra_property_delimiter = ','
-  entry.label_delimiter = None
   for attr in attribute_list:
     try:
       # Get the value, replacing NoneTypes and empty strings
