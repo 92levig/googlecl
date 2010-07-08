@@ -75,9 +75,9 @@ class Date(object):
 
 
 def get_utc_timedelta():
-  """Return the UTC offset as a timedelta."""
+  """Return the UTC offset of local zone at present time as a timedelta."""
   import time
-  if time.daylight != 0:
+  if time.localtime().tm_isdst and time.daylight:
     return datetime.timedelta(hours=time.altzone/3600)
   else:
     return datetime.timedelta(hours=time.timezone/3600)
