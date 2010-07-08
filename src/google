@@ -203,8 +203,8 @@ def get_hd_domain(username, default_domain='default'):
   """
   name, at_sign, domain = username.partition('@')
   # If user specifies gmail.com, it confuses the hd parameter (thanks, bartosh!)
-  if domain == 'gmail.com':
-    return default_domain
+  if domain == 'gmail.com' or domain == 'googlemail.com':
+    return 'default'
   return domain or default_domain
 
 
