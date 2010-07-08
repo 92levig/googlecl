@@ -2,6 +2,9 @@ svn HEAD
  Enhancements
  * Added list styles for contacts.
 
+ Bugfixes
+ * YouTube tasks can retrieve more than 50 results from queries.
+
 version 0.9.8
  Enhancements
  * Authorization for Apps users occurs properly.

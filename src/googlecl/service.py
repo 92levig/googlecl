@@ -20,7 +20,7 @@
 import gdata.service
 import googlecl
 import re
-
+import warnings
 
 DATE_FORMAT = '%Y-%m-%d'
 
@@ -40,7 +40,7 @@ class BaseServiceCL(gdata.service.GDataService):
 
   def _set_params(self, section):
     """Set some basic attributes common to all instances."""
-    LARGE_MAX_RESULTS = 10000
+    large_max_results = 10000
     # Because each new xxxServiceCL class should use the more specific
     # superclass's __init__ function, don't define one here.
     self.source = 'GoogleCL'
@@ -64,11 +64,12 @@ class BaseServiceCL(gdata.service.GDataService):
                                                   type=bool)
     self.max_results = googlecl.get_config_option(section,
                                                   'max_results',
-                                                  default=LARGE_MAX_RESULTS,
+                                                  default=large_max_results,
                                                   type=int)
-    # Prevent user from shooting self in foot...
-    if not self.cap_results and self.max_results < LARGE_MAX_RESULTS:
-      self.max_results = LARGE_MAX_RESULTS
+    if (self.service != 'youtube' and
+        (not self.cap_results and self.max_results < large_max_results)):
+      warnings.warn('You are requesting only ' + str(self.max_results) +
+                    ' results per query -- this may be slow', stacklevel=2)
 
   def delete(self, entries, entry_type, delete_default):
     """Extends Delete to handle a list of entries.

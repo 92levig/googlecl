@@ -78,12 +78,11 @@ def load_preferences(path=None):
   """
   def set_options():
     """Set the most basic options in the config file."""
-    import googlecl.picasa
-    import googlecl.docs
-    import googlecl.contacts
+    import googlecl
     # These may be useful to define at the module level, but for now,
     # keep them here.
     # REMEMBER: updating these means you need to update the CONFIG readme.
+    _youtube = {'max_results': '50'}
     _contacts = {'list_style': 'title,email'}
     _calendar = {'list_style': 'title,when'}
     _picasa = {'access': 'public'}
@@ -106,6 +105,7 @@ def load_preferences(path=None):
                        googlecl.picasa.SECTION_HEADER: _picasa,
                        googlecl.contacts.SECTION_HEADER: _contacts,
                        googlecl.calendar.SECTION_HEADER: _calendar,
+                       googlecl.youtube.SECTION_HEADER: _youtube,
                        'GENERAL': _general}
     made_changes = False
     for section_name in config_defaults.keys():
