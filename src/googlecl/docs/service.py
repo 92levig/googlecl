@@ -26,6 +26,8 @@ Download docs:
   docs get --folder "Some folder"
 
 """
+from __future__ import with_statement
+
 __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import ConfigParser
 import gdata.docs.service
@@ -50,7 +52,7 @@ class UnexpectedExtension(DocsError):
 
 class UnknownDoctype(DocsError):
   """Document type / label is unknown."""
-  def __str(self):
+  def __str__(self):
     if len(self.args) == 1:
       return 'Unknown document type: ' + str(self.args[0])
     else:
@@ -154,12 +156,12 @@ class DocsServiceCL(gdata.docs.service.DocsService,
 
     if not new_doc:
       self.Export(doc_entry_or_title.content.src, path)
-      create_time = os.stat(path).st_mtime
+      file_hash = _md5_hash_file(path)
     else:
-      create_time = None
+      file_hash = None
 
     subprocess.call([editor, path])
-    if create_time and create_time == os.stat(path).st_mtime:
+    if file_hash and file_hash == _md5_hash_file(path):
       print 'No modifications to file, not uploading.'
       return
     elif not os.path.exists(path):
@@ -446,6 +448,20 @@ class DocsServiceCL(gdata.docs.service.DocsService,
 
 
 SERVICE_CLASS = DocsServiceCL
+
+
+# Read size is 128*20 for no good reason.
+# Just want to avoid reading in the whole file, and read in a multiple of 128.
+def _md5_hash_file(path, read_size=2560):
+  """Return a binary md5 checksum of file at path."""
+  import hashlib
+  hash_function = hashlib.md5()
+  with open(path, 'r') as my_file:
+    data = my_file.read(read_size)
+    while data:
+      hash_function.update(data)
+      data = my_file.read(read_size)
+  return hash_function.digest()
 
 
 def _make_kind_category(label):
