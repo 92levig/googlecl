@@ -44,7 +44,15 @@ class UnexpectedExtension(DocsError):
   """Found an unexpected filename extension."""
   def __str__(self):
     if len(self.args) == 1:
-      return 'Unexpected extension: ' + self.args[0]
+      return 'Unexpected extension: ' + str(self.args[0])
+    else:
+      return str(self.args)
+
+class UnknownDoctype(DocsError):
+  """Document type / label is unknown."""
+  def __str(self):
+    if len(self.args) == 1:
+      return 'Unknown document type: ' + str(self.args[0])
     else:
       return str(self.args)
 
@@ -96,15 +104,22 @@ class DocsServiceCL(gdata.docs.service.DocsService,
 
   CreateFolder = create_folder
 
-  def edit_doc(self, doc_entry, editor, file_format):
+  def edit_doc(self, doc_entry_or_title, editor, file_format,
+               folder_entry_or_path=None):
     """Edit a document.
     
     Keyword arguments:
-      doc_entry: DocEntry of the document to edit.
+      doc_entry_or_title: DocEntry of the existing document to edit,
+                          or title of the document to create.
       editor: Name of the editor to use. Should be executable from the user's
               working directory.
       file_format: Suffix of the file to download.
                    For example, "txt", "csv", "xcl".
+      folder_entry_or_path: Entry or string representing folder to upload into.
+                   If a string, a new set of folders will ALWAYS be created.
+                   For example, 'my_folder' to upload to my_folder,
+                   'foo/bar' to upload into subfolder bar under folder foo.
+                   Default None for root folder.
     
     """ 
     import subprocess
@@ -112,14 +127,52 @@ class DocsServiceCL(gdata.docs.service.DocsService,
     import shutil
     from gdata.docs.service import SUPPORTED_FILETYPES
     
+    try:
+      doc_title = doc_entry_or_title.title.text
+      new_doc = False
+    except AttributeError:
+      doc_title = doc_entry_or_title
+      new_doc = True
+
     temp_dir = tempfile.mkdtemp()
-    path = os.path.join(temp_dir, doc_entry.title.text + '.' + file_format)
-    self.Export(doc_entry.content.src, path)
-    create_time = os.stat(path).st_mtime
+    # If we're creating a new document and not given a folder entry
+    if new_doc and isinstance(folder_entry_or_path, basestring):
+      folder_path = os.path.normpath(folder_entry_or_path)
+      # Some systems allow more than one path separator
+      if os.altsep:
+        folder_path.replace(os.altsep, os.sep)
+      base_folder = folder_path.split(os.sep)[0]
+      # Define the base path such that upload_docs will create a folder
+      # named base_folder
+      base_path = os.path.join(temp_dir, base_folder)
+      total_basename = os.path.join(temp_dir, folder_path)
+      os.makedirs(total_basename)
+      path = os.path.join(total_basename, doc_title + '.' + file_format)
+    else:
+      path = os.path.join(temp_dir, doc_title + '.' + file_format)
+      base_path = path
+
+    if not new_doc:
+      self.Export(doc_entry_or_title.content.src, path)
+      create_time = os.stat(path).st_mtime
+    else:
+      create_time = None
+
     subprocess.call([editor, path])
-    if create_time == os.stat(path).st_mtime:
+    if create_time and create_time == os.stat(path).st_mtime:
       print 'No modifications to file, not uploading.'
       return
+    elif not os.path.exists(path):
+      print 'No file written, not uploading.'
+      return
+    
+    if new_doc:
+      if isinstance(folder_entry_or_path, basestring):
+        # Let code in upload_docs handle the creation of new folder(s)
+        self.upload_docs([base_path])
+      else:
+        # folder_entry_or_path is None or a GDataEntry.
+        self.upload_single_doc(path, folder_entry=folder_entry_or_path)
     else:
       try:
         content_type = SUPPORTED_FILETYPES[file_format.upper()]
@@ -131,7 +184,8 @@ class DocsServiceCL(gdata.docs.service.DocsService,
                                   ' for a content type to upload as.')
         content_type = SUPPORTED_FILETYPES[file_format]
       mediasource = gdata.MediaSource(file_path=path, content_type=content_type)
-      self.Put(mediasource, doc_entry.GetEditMediaLink().href)
+      self.Put(mediasource, doc_entry_or_title.GetEditMediaLink().href)
+
     try:
       # Good faith effort to keep the temp directory clean.
       shutil.rmtree(temp_dir)
@@ -435,13 +489,19 @@ def get_extension(doctype_label):
       return 'pdf'
     elif doctype_label == PRESENTATION_LABEL:
       return googlecl.CONFIG.get(SECTION_HEADER, 'presentation_format')
-  except ConfigParser.ParsingError, err:
+    else:
+      raise UnknownDoctype(doctype_label)
+  except ConfigParser.NoOptionError, err:
     print err
-    try:
-      return googlecl.CONFIG.get(SECTION_HEADER, 'format')
-    except ConfigParser.ParsingError, err2:
-      print err2
-      return None
+  except UnknownDoctype, err:
+    if doctype_label is not None:
+      print err
+
+  try:
+    return googlecl.CONFIG.get(SECTION_HEADER, 'format')
+  except ConfigParser.NoOptionError, err:
+    print err
+  return None
 
 
 def get_editor(doctype_label):
@@ -469,11 +529,19 @@ def get_editor(doctype_label):
       return googlecl.CONFIG.get(SECTION_HEADER, 'pdf_editor')
     elif doctype_label == PRESENTATION_LABEL:
       return googlecl.CONFIG.get(SECTION_HEADER, 'presentation_editor')
-  except ConfigParser.NoOptionError:
-    try:
-      return googlecl.CONFIG.get(SECTION_HEADER, 'editor')
-    except ConfigParser.NoOptionError:
-      return os.getenv('EDITOR')
+    else:
+      raise UnknownDoctype(doctype_label)
+  except ConfigParser.NoOptionError, err:
+    print err
+  except UnknownDoctype, err:
+    if doctype_label is not None:
+      print err
+
+  try:
+    return googlecl.CONFIG.get(SECTION_HEADER, 'editor')
+  except ConfigParser.NoOptionError, err:
+    print err
+  return os.getenv('EDITOR')
 
 
 #===============================================================================
@@ -533,20 +601,18 @@ def _run_edit(client, options, args):
     return
   folder_entry_list = client.get_folder(options.folder)
   doc_entry = client.get_single_doc(options.title, folder_entry_list)
-  if not doc_entry:
-    print 'No matching documents found! Creating it.'
-    new_entry = gdata.docs.DocumentListEntry()
-    new_entry.title = gdata.atom.Title(text=options.title or 'GoogleCL doc')
-    category = _make_kind_category(DOCUMENT_LABEL)
-    new_entry.category.append(category)
-    folder_entries = client.get_folder(options.folder)
-    folder_entry = client.get_single_entry(folder_entries)
-    if folder_entry:
-      post_uri = folder_entry.content.src
-    else:
-      post_uri = '/feeds/documents/private/full'
-    doc_entry = client.Post(new_entry, post_uri)
-  doc_type = get_document_type(doc_entry)
+  if doc_entry:
+    doc_entry_or_title = doc_entry
+    doc_type = get_document_type(doc_entry)
+  else:
+    doc_entry_or_title = options.title
+    doc_type = None
+    print 'No matching documents found! Will create one.'
+  folder_entry = client.get_single_entry(folder_entry_list)
+  if not folder_entry and options.folder:
+    # Don't tell the user no matching folders were found if they didn't
+    # specify one.
+    print 'No matching folders found! Will create them.'
   format_ext = options.format or get_extension(doc_type)
   editor = options.editor or get_editor(doc_type)
   if not editor:
@@ -554,7 +620,13 @@ def _run_edit(client, options, args):
     print 'Define an "editor" option in your config file, set the ' +\
           'EDITOR environment variable, or pass an editor in with --editor.'
     return
-  client.edit_doc(doc_entry, editor, format_ext)
+  if not format_ext:
+    print 'No format defined!'
+    print 'Define a "format" option in your config file, or pass in a format' +\
+          ' with --format'
+    return
+  client.edit_doc(doc_entry_or_title, editor, format_ext,
+                  folder_entry_or_path=folder_entry or options.folder)
 
 
 def _run_delete(client, options, args):

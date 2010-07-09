@@ -1,6 +1,7 @@
 svn HEAD
  Enhancements
  * Added list styles for contacts.
+ * Allow docs edit task to create folders.
 
  Bugfixes
  * YouTube tasks can retrieve more than 50 results from queries.
