@@ -102,7 +102,7 @@ class BaseServiceCL(gdata.service.GDataService):
 
   Delete = delete
 
-  def get_email(self, _uri=None):
+  def get_email(self, _uri=None, redirects_remaining=4):
     """Get the email address that has the OAuth access token.
 
     Uses the "Email address" scope to return the email address the user
@@ -137,7 +137,8 @@ class BaseServiceCL(gdata.service.GDataService):
         location = (server_response.getheader('Location') or
                     server_response.getheader('location'))
         if location is not None:
-          return BaseServiceCL.get_email(location)
+          return BaseServiceCL.get_email(location,
+                                      redirects_remaining=redirects_remaining-1)
         else:
           raise gdata.service.RequestError, {'status': server_response.status,
                 'reason': '302 received without Location header',
@@ -166,7 +167,6 @@ class BaseServiceCL(gdata.service.GDataService):
       List of entries.
     
     """
-    import warnings
     uri = set_max_results(uri, self.max_results)
     try:
       if converter:
@@ -498,7 +498,7 @@ class BaseEntryToStringWrapper(object):
       href = self.entry.GetHtmlLink().href
 
     if substyle == 'direct':
-      return entry.content.src or href
+      return self.entry.content.src or href
     return href or self.entry.content.src
 
   @property
@@ -506,25 +506,27 @@ class BaseEntryToStringWrapper(object):
     """Summary or description."""
     try:
       # Try to access the "default" description
-      return entry.media.description.text
+      value = self.entry.media.description.text
     except AttributeError:
       # If it's not there, try the summary attribute
-      return entry.summary.text
+      value = self.entry.summary.text
     else:
       if not value:
         # If the "default" description was there, but it was empty,
         # try the summary attribute.
-        return entry.summary.text
+        value = self.entry.summary.text
+    return value
   description = summary
 
   @property
   def tags(self):
     """Tags / keywords or labels."""
     try:
-      return entry.media.description.keywords.text
+      return self.entry.media.description.keywords.text
     except AttributeError:
       # Blogger uses categories.
-      return join_string.join([c.term for c in entry.category if c.term])
+      return self.intra_property_delimiter.join(
+                                [c.term for c in self.entry.category if c.term])
   labels = tags
   keywords = tags
 
