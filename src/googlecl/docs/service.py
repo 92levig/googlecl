@@ -32,6 +32,8 @@ __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import ConfigParser
 import gdata.docs.service
 import os
+import re
+import shutil
 import googlecl
 import googlecl.service
 import warnings
@@ -67,6 +69,9 @@ FOLDER_LABEL = 'folder'
 PDF_LABEL = 'pdf'
 DOCUMENTS_NAMESPACE = 'http://schemas.google.com/docs/2007'
 
+FILE_EXT_PATTERN = re.compile('.*\.([a-zA-Z]{3,}$)')
+
+
 class DocsServiceCL(gdata.docs.service.DocsService,
                     googlecl.service.BaseServiceCL):
   
@@ -76,7 +81,7 @@ class DocsServiceCL(gdata.docs.service.DocsService,
   app with a command line interface.
   
   """
-  
+
   def __init__(self):
     """Constructor.""" 
     gdata.docs.service.DocsService.__init__(self, source='GoogleCL')
@@ -126,7 +131,6 @@ class DocsServiceCL(gdata.docs.service.DocsService,
     """ 
     import subprocess
     import tempfile
-    import shutil
     from gdata.docs.service import SUPPORTED_FILETYPES
     
     try:
@@ -186,7 +190,20 @@ class DocsServiceCL(gdata.docs.service.DocsService,
                                   ' for a content type to upload as.')
         content_type = SUPPORTED_FILETYPES[file_format]
       mediasource = gdata.MediaSource(file_path=path, content_type=content_type)
-      self.Put(mediasource, doc_entry_or_title.GetEditMediaLink().href)
+      try:
+        self.Put(mediasource, doc_entry_or_title.GetEditMediaLink().href)
+      except gdata.service.RequestError, err:
+        if (err.args[0]['status'] == 400 and
+            err.args[0]['body'].find('convert') != -1):
+          print err
+          print 'Is this a new-version document? ' +\
+                'gdata has a bug preventing updates on new version documents.'
+          print 'Please follow the instructions on the FAQ in the wiki on' +\
+                ' how to convert your document.'
+          new_path = safe_move(path, '.')
+          print 'Moved edited document to ' + new_path
+        else:
+          raise
 
     try:
       # Good faith effort to keep the temp directory clean.
@@ -197,6 +214,24 @@ class DocsServiceCL(gdata.docs.service.DocsService,
 
   EditDoc = edit_doc
 
+  def export(self, entry_or_id_or_url, file_path, gid=None, extra_params=None):
+    """Export old and new version docs.
+    
+    Ripped from gdata.docs.DocsService, adds 'format' parameter to make
+    new version documents happy.
+    
+    """
+    ext = get_extension_from_path(file_path)
+    if ext:
+      if extra_params is None:
+        extra_params = {}
+      # Fix issue with new-style docs always downloading to PDF
+      # (gdata-issues Issue 2157)
+      extra_params['format'] = ext
+    self.Download(entry_or_id_or_url, file_path, ext, gid, extra_params)
+
+  Export = export
+
   def get_docs(self, base_path, entries, file_format=None):
     """Download documents.
     
@@ -206,13 +241,14 @@ class DocsServiceCL(gdata.docs.service.DocsService,
       entries: List of DocEntry items representing the files to download.
       file_format: Suffix to give the file when downloading.
                    For example, "txt", "csv", "xcl". Default None to let
-                   get_extension decide the extension.
+                   get_extension_from_doctype decide the extension.
 
     """
     default_format = 'txt'
     for entry in entries:
       if not file_format:
-        file_format = get_extension(get_document_type(entry)) or default_format
+        file_format = get_extension_from_doctype(get_document_type(entry)) or\
+                      default_format
       path = os.path.join(base_path, entry.title.text + '.' + file_format)
       print 'Downloading ' + entry.title.text + ' to ' + path
       try:
@@ -494,7 +530,16 @@ def get_document_type(entry):
     return None
 
 
-def get_extension(doctype_label):
+def get_extension_from_path(path):
+  """Return the extension of a file."""
+  match = FILE_EXT_PATTERN.match(path)
+  if match:
+    return match.group(1)
+  else:
+    return None
+
+
+def get_extension_from_doctype(doctype_label):
   """Return file extension based on document type and preferences file."""
   try:
     if doctype_label == SPREADSHEET_LABEL:
@@ -558,6 +603,32 @@ def get_editor(doctype_label):
   except ConfigParser.NoOptionError, err:
     print err
   return os.getenv('EDITOR')
+
+
+def safe_move(src, dst):
+  """Move file from src to dst.
+
+  If file with same name already exists at dst, rename the new file
+  while preserving the extension.
+
+  Returns:
+    path to new file.
+
+  """
+  new_dir = os.path.abspath(dst)
+  ext = get_extension_from_path(src)
+  if not ext:
+    dotted_ext = ''
+  else:
+    dotted_ext = '.' + ext
+  filename = os.path.basename(src).rstrip(dotted_ext)
+  rename_num = 1
+  new_path = os.path.join(new_dir, filename + dotted_ext)
+  while os.path.exists(new_path):
+    new_filename = filename + '-' + str(rename_num) + dotted_ext
+    new_path = os.path.join(new_dir, new_filename) 
+  shutil.move(src, new_path)
+  return new_path
 
 
 #===============================================================================
@@ -629,7 +700,7 @@ def _run_edit(client, options, args):
     # Don't tell the user no matching folders were found if they didn't
     # specify one.
     print 'No matching folders found! Will create them.'
-  format_ext = options.format or get_extension(doc_type)
+  format_ext = options.format or get_extension_from_doctype(doc_type)
   editor = options.editor or get_editor(doc_type)
   if not editor:
     print 'No editor defined!'
