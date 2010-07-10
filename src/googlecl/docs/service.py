@@ -452,26 +452,32 @@ class DocsServiceCL(gdata.docs.service.DocsService,
       print err
       return None
     entry_title = title or filename.split('.')[0]
-    # Upload() wasn't added until later versions of DocsService, so
-    # we may not have it. To support uploading to folders for earlier
-    # versions of the API, expose the lower-level Post
-    entry = gdata.docs.DocumentListEntry()
-    entry.title = atom.Title(text=entry_title)
-    if extension.lower() in ['csv', 'tsv', 'tab', 'ods', 'xls']:
-      category = _make_kind_category(SPREADSHEET_LABEL)
-    elif extension.lower() in ['ppt', 'pps']:
-      category = _make_kind_category(PRESENTATION_LABEL)
-    elif extension.lower() in ['pdf']:
-      category = _make_kind_category(PDF_LABEL)
-    # Treat everything else as a document
-    else:
-      category = _make_kind_category(DOCUMENT_LABEL)
-    entry.category.append(category)
     try:
-      new_entry = self.Post(entry, post_uri, media_source=media,
-                            extra_headers={'Slug': media.file_name},
-                            converter=gdata.docs.DocumentListEntryFromString)
-    except (gdata.service.RequestError, UnexpectedExtension), err:
+      try:
+        # Upload() wasn't added until later versions of DocsService, so
+        # we may not have it. 
+        new_entry = self.Upload(media, entry_title, post_uri)
+      except AttributeError:
+        entry = gdata.docs.DocumentListEntry()
+        entry.title = atom.Title(text=entry_title)
+        # Cover the supported filetypes in gdata-2.0.10 even though
+        # they aren't listed in gdata 1.2.4... see what happens.
+        if extension.lower() in ['csv', 'tsv', 'tab', 'ods', 'xls', 'xlsx']:
+          category = _make_kind_category(SPREADSHEET_LABEL)
+        elif extension.lower() in ['ppt', 'pps']:
+          category = _make_kind_category(PRESENTATION_LABEL)
+        elif extension.lower() in ['pdf']:
+          category = _make_kind_category(PDF_LABEL)
+        # Treat everything else as a document
+        else:
+          category = _make_kind_category(DOCUMENT_LABEL)
+        entry.category.append(category)
+        # To support uploading to folders for earlier
+        # versions of the API, expose the lower-level Post
+        new_entry = self.Post(entry, post_uri, media_source=media,
+                              extra_headers={'Slug': media.file_name},
+                              converter=gdata.docs.DocumentListEntryFromString)
+    except gdata.service.RequestError, err:
       print 'Failed to upload ' + path
       print err
       return None
