@@ -79,9 +79,11 @@ def load_preferences(path=None):
   def set_options():
     """Set the most basic options in the config file."""
     import googlecl
+    import getpass
     # These may be useful to define at the module level, but for now,
     # keep them here.
     # REMEMBER: updating these means you need to update the CONFIG readme.
+    default_hostid = getpass.getuser() + '@' +  os.uname()[1]
     _youtube = {'max_results': '50'}
     _contacts = {'list_style': 'title,email'}
     _calendar = {'list_style': 'title,when'}
@@ -94,7 +96,8 @@ def load_preferences(path=None):
                'list_style': 'title,url-site',
                'missing_field_value': 'N/A',
                'date_print_format': '%b %d %H:%M',
-               'cap_results': 'False'}
+               'cap_results': 'False',
+               'hostid': default_hostid}
     _docs = {'document_format': 'txt',
              'spreadsheet_format': 'xls',
              'presentation_format': 'ppt',

@@ -164,8 +164,8 @@ def fill_out_options(service_header, task, options):
                         if attr.strip('_') == attr and
                         not getattr(options, attr)]
   for attr in missing_attributes:
-    # "user" is always a required option.
-    if task.requires(attr, options) or attr == 'user':
+    # "user" and "hostid" are always required options.
+    if task.requires(attr, options) or attr == 'user' or attr == 'hostid':
       value = googlecl.get_config_option(service_header, attr)
       if value:
         setattr(options, attr, value)
@@ -379,7 +379,7 @@ def run_once(options, args):
       googlecl.remove_access_token(service, client.email)
   if not authenticated:
     domain = get_hd_domain(client.email)
-    if client.RequestAccess(domain):
+    if client.RequestAccess(domain, options.hostid):
       authorized_account = client.get_email()
       if not verify_email(client.email, authorized_account):
         print 'You specified account ' + client.email +\
@@ -472,6 +472,8 @@ def setup_parser():
                     '/ search in.')
   parser.add_option('--format', dest='format',
                     help='Docs only - format to download documents as.')
+  parser.add_option('--hostid', dest='hostid', 
+                    help='Label the machine being used.')
   parser.add_option('-n', '--title', dest='title',
                     help='Title of the item')
   parser.add_option('--no-convert', dest='convert',

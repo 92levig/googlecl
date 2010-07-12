@@ -266,7 +266,7 @@ class BaseServiceCL(gdata.service.GDataService):
 
   IsTokenValid = is_token_valid
 
-  def request_access(self, domain, scopes=None):
+  def request_access(self, domain, hostid, scopes=None):
     """Do all the steps involved with getting an OAuth access token.
     
     Keyword arguments:
@@ -285,7 +285,7 @@ class BaseServiceCL(gdata.service.GDataService):
     self.SetOAuthInputParameters(gdata.auth.OAuthSignatureMethod.HMAC_SHA1,
                                  consumer_key='anonymous',
                                  consumer_secret='anonymous')
-    display_name = 'GoogleCL'
+    display_name = 'GoogleCL %s' % hostid
     fetch_params = {'xoauth_displayname':display_name}
     # First and third if statements taken from
     # gdata.service.GDataService.FetchOAuthRequestToken.
