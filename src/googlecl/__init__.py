@@ -80,10 +80,11 @@ def load_preferences(path=None):
     """Set the most basic options in the config file."""
     import googlecl
     import getpass
+    import socket
     # These may be useful to define at the module level, but for now,
     # keep them here.
     # REMEMBER: updating these means you need to update the CONFIG readme.
-    default_hostid = getpass.getuser() + '@' +  os.uname()[1]
+    default_hostid = getpass.getuser() + '@' +  socket.gethostname()
     _youtube = {'max_results': '50'}
     _contacts = {'list_style': 'title,email'}
     _calendar = {'list_style': 'title,when'}
