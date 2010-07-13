@@ -335,8 +335,12 @@ def run_once(options, args):
             str(AVAILABLE_SERVICES)[1:-1]
       return
 
+  # Not sure why the fromlist keyword argument became necessary...
+  package = __import__('googlecl.' + service, fromlist=['SECTION_HEADER'])
   client = service_module.SERVICE_CLASS()
-  
+  client.debug = googlecl.get_config_option(package.SECTION_HEADER,
+                                            'debug',
+                                            default=options.debug)
   try:
     task = service_module.TASKS[task_name]
     task.name = task_name
@@ -352,8 +356,6 @@ def run_once(options, args):
     # You can get your own key at http://code.google.com/apis/youtube/dashboard 
     if not options.devkey:
       options.devkey = googlecl.read_devkey() or 'AI39si4d9dBo0dX7TnGyfQ68bNiKfEeO7wORCfY3HAgSStFboTgTgAi9nQwJMfMSizdGIs35W9wVGkygEw8ei3_fWGIiGSiqnQ'
-  # Not sure why the fromlist keyword argument became necessary...
-  package = __import__('googlecl.' + service, fromlist=['SECTION_HEADER'])
   # fill_out_options will read the key from file if necessary, but will not set
   # it since it will always get a non-empty value beforehand.
   fill_out_options(package.SECTION_HEADER, task, options)
@@ -460,6 +462,9 @@ def setup_parser():
                     ' Can also specify a range with a comma:' +
                     ' "YYYY-MM-DD", events between date and future.' +
                     ' "YYYY-MM-DD,YYYY-MM-DD" events between two dates.')
+  parser.add_option('--debug', dest='debug',
+                    action='store_true', default=False,
+                    help=('Enable all debugging output, including HTTP data'))
   parser.add_option('--delimiter', dest='delimiter', default=',',
                     help='Specify a delimiter for the output of the list task.')
   parser.add_option('--draft', dest='draft', default=False,

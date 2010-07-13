@@ -3,6 +3,7 @@ svn HEAD
  * Added list styles for contacts.
  * Allow docs edit task to create folders.
  * Included workaround for downloading new-version documents
+ * Added debug flag option
 
  Bugfixes
  * YouTube tasks can retrieve more than 50 results from queries.
