@@ -18,11 +18,15 @@
 
 __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import gdata.youtube
+import logging
 import os
 import googlecl
 import googlecl.service
 from googlecl.youtube import SECTION_HEADER
 from gdata.youtube.service import YouTubeService
+
+
+LOG = logging.getLogger(googlecl.youtube.LOGGER_NAME)
 
 
 class YouTubeServiceCL(YouTubeService, googlecl.service.BaseServiceCL):
@@ -57,7 +61,8 @@ class YouTubeServiceCL(YouTubeService, googlecl.service.BaseServiceCL):
         self.UpdateVideoEntry(video)
       except gdata.service.RequestError, err:
         if err.args[0]['body'].find('invalid_value') != -1:
-          print 'Category update failed, ' + category + ' is not a category.'
+          LOG.error('Category update failed, ' + category +
+                    ' is not a category.')
         else:
           raise
 
@@ -113,7 +118,7 @@ class YouTubeServiceCL(YouTubeService, googlecl.service.BaseServiceCL):
         taglist = devtags.replace(', ', ',')
         taglist = taglist.split(',')
         video_entry.AddDeveloperTags(taglist)
-      print 'Loading ' + path
+      LOG.info('Loading ' + path)
       self.InsertVideoEntry(video_entry, path)
 
   PostVideos = post_videos
@@ -201,7 +206,7 @@ def _run_list(client, options, args):
 
 def _run_post(client, options, args):
   if not args:
-    print 'Must provide path to video to post!'
+    LOG.error('Must provide path to video to post!')
     return
   client.PostVideos(args, title=options.title, desc=options.summary,
                     tags=options.tags, category=options.category)

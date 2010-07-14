@@ -31,13 +31,16 @@ from __future__ import with_statement
 __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import ConfigParser
 import gdata.docs.service
+import logging
 import os
 import re
 import shutil
 import googlecl
 import googlecl.service
-import warnings
 from googlecl.docs import SECTION_HEADER
+
+
+LOG = logging.getLogger(googlecl.docs.LOGGER_NAME)
 
 
 class DocsError(googlecl.service.Error):
@@ -166,10 +169,10 @@ class DocsServiceCL(gdata.docs.service.DocsService,
 
     subprocess.call([editor, path])
     if file_hash and file_hash == _md5_hash_file(path):
-      print 'No modifications to file, not uploading.'
+      LOG.info('No modifications to file, not uploading.')
       return
     elif not os.path.exists(path):
-      print 'No file written, not uploading.'
+      LOG.info('No file written, not uploading.')
       return
     
     if new_doc:
@@ -195,13 +198,13 @@ class DocsServiceCL(gdata.docs.service.DocsService,
       except gdata.service.RequestError, err:
         if (err.args[0]['status'] == 400 and
             err.args[0]['body'].find('convert') != -1):
-          print err
-          print 'Is this a new-version document? ' +\
-                'gdata has a bug preventing updates on new version documents.'
-          print 'Please follow the instructions on the FAQ in the wiki on' +\
-                ' how to convert your document.'
+          LOG.error(err)
+          LOG.info('Is this a new-version document? gdata has a bug' +
+                   ' preventing updates on new version documents.' +
+                   ' Please follow the instructions on the wiki FAQ ' +
+                   ' to convert your document.')
           new_path = safe_move(path, '.')
-          print 'Moved edited document to ' + new_path
+          LOG.info('Moved edited document to ' + new_path)
         else:
           raise
 
@@ -250,12 +253,11 @@ class DocsServiceCL(gdata.docs.service.DocsService,
         file_format = get_extension_from_doctype(get_document_type(entry)) or\
                       default_format
       path = os.path.join(base_path, entry.title.text + '.' + file_format)
-      print 'Downloading ' + entry.title.text + ' to ' + path
+      LOG.info('Downloading ' + entry.title.text + ' to ' + path)
       try:
         self.Export(entry, path)
       except gdata.service.RequestError, err:
-        print err
-        print 'Download of ' + entry.title.text + ' failed'
+        LOG.error('Download of ' + entry.title.text + ' failed: ' + str(err))
 
   GetDocs = get_docs
 
@@ -332,7 +334,7 @@ class DocsServiceCL(gdata.docs.service.DocsService,
                                                params={'showfolders': 'true'})
       folder_entries = self.GetEntries(query.ToUri(), title=title)
       if not folder_entries:
-        warnings.warn('No folder found that matches ' + title, stacklevel=2)
+        LOG.warning('No folder found that matches ' + title)
       return folder_entries
     else:
       return None
@@ -404,7 +406,7 @@ class DocsServiceCL(gdata.docs.service.DocsService,
           else:
             fentry = self.CreateFolder(folder_name, folder_root)
           folder_entries[dirpath] = fentry
-          print 'Created folder ' + dirpath + ' ' + folder_name
+          LOG.debug('Created folder ' + dirpath + ' ' + folder_name)
           for fname in filenames:
             loc = self.upload_single_doc(os.path.join(dirpath, fname),
                                          folder_entry=fentry)
@@ -437,19 +439,19 @@ class DocsServiceCL(gdata.docs.service.DocsService,
         extension = filename.split('.')[1]
       except IndexError:
         default_ext = 'txt'
-        print 'No extension on filename! Treating as ' + default_ext
+        LOG.info('No extension on filename! Treating as ' + default_ext)
         extension = default_ext
     try:
       content_type = SUPPORTED_FILETYPES[extension.upper()]
     except KeyError:
-      print 'No supported filetype found for extension ' + extension
+      LOG.info('No supported filetype found for extension ' + extension)
       content_type = 'text/plain'
-      print 'Uploading as ' + content_type
-    print 'Loading ' + path
+      LOG.info('Uploading as ' + content_type)
+    LOG.info('Loading ' + path)
     try:
       media = gdata.MediaSource(file_path=path, content_type=content_type)
     except IOError, err:
-      print err
+      LOG.error(err)
       return None
     entry_title = title or filename.split('.')[0]
     try:
@@ -478,13 +480,12 @@ class DocsServiceCL(gdata.docs.service.DocsService,
                               extra_headers={'Slug': media.file_name},
                               converter=gdata.docs.DocumentListEntryFromString)
     except gdata.service.RequestError, err:
-      print 'Failed to upload ' + path
-      print err
+      LOG.error('Failed to upload ' + path + ': ' + str(err))
       return None
     else:
-      print 'Upload success! Direct link: ' +\
-            new_entry.GetAlternateLink().href
-    return  new_entry.GetAlternateLink().href
+      LOG.info('Upload success! Direct link: ' +
+               new_entry.GetAlternateLink().href)
+    return new_entry.GetAlternateLink().href
 
   UploadSingleDoc = upload_single_doc
 
@@ -559,15 +560,15 @@ def get_extension_from_doctype(doctype_label):
     else:
       raise UnknownDoctype(doctype_label)
   except ConfigParser.NoOptionError, err:
-    print err
+    LOG.error(err)
   except UnknownDoctype, err:
     if doctype_label is not None:
-      print err
+      LOG.error(err)
 
   try:
     return googlecl.CONFIG.get(SECTION_HEADER, 'format')
   except ConfigParser.NoOptionError, err:
-    print err
+    LOG.error(err)
   return None
 
 
@@ -599,15 +600,15 @@ def get_editor(doctype_label):
     else:
       raise UnknownDoctype(doctype_label)
   except ConfigParser.NoOptionError, err:
-    print err
+    LOG.error(err)
   except UnknownDoctype, err:
     if doctype_label is not None:
-      print err
+      LOG.error(err)
 
   try:
     return googlecl.CONFIG.get(SECTION_HEADER, 'editor')
   except ConfigParser.NoOptionError, err:
-    print err
+    LOG.error(err)
   return os.getenv('EDITOR')
 
 
@@ -648,14 +649,15 @@ def safe_move(src, dst):
 #===============================================================================
 def _run_get(client, options, args):
   if not hasattr(client, 'Export'):
-    print 'Downloading documents is not supported for gdata-python-client < 2.0'
+    LOG.error('Downloading documents is not supported for' +
+              ' gdata-python-client < 2.0')
     return
   if not args:
     path = os.getcwd()
   else:
     path = args[0]
     if not os.path.exists(path):
-      print 'Path ' + path + ' does not exist!'
+      LOG.error('Path ' + path + ' does not exist!')
       return
   folder_entries = client.get_folder(options.folder)
   entries = client.get_doclist(options.title, folder_entries)
@@ -679,7 +681,7 @@ def _run_list(client, options, args):
 
 def _run_upload(client, options, args):
   if not args:
-    print 'Need to tell me what to upload!'
+    LOG.error('Need to tell me what to upload!')
     return
   folder_entries = client.get_folder(options.folder)
   folder_entry = client.get_single_entry(folder_entries)
@@ -689,8 +691,8 @@ def _run_upload(client, options, args):
 
 def _run_edit(client, options, args):
   if not hasattr(client, 'Export'):
-    print 'Editing documents is not supported' +\
-          ' for gdata-python-client < 2.0'
+    LOG.error('Editing documents is not supported' +
+              ' for gdata-python-client < 2.0')
     return
   folder_entry_list = client.get_folder(options.folder)
   doc_entry = client.get_single_doc(options.title, folder_entry_list)
@@ -700,23 +702,23 @@ def _run_edit(client, options, args):
   else:
     doc_entry_or_title = options.title
     doc_type = None
-    print 'No matching documents found! Will create one.'
+    LOG.debug('No matching documents found! Will create one.')
   folder_entry = client.get_single_entry(folder_entry_list)
   if not folder_entry and options.folder:
     # Don't tell the user no matching folders were found if they didn't
     # specify one.
-    print 'No matching folders found! Will create them.'
+    LOG.debug('No matching folders found! Will create them.')
   format_ext = options.format or get_extension_from_doctype(doc_type)
   editor = options.editor or get_editor(doc_type)
   if not editor:
-    print 'No editor defined!'
-    print 'Define an "editor" option in your config file, set the ' +\
-          'EDITOR environment variable, or pass an editor in with --editor.'
+    LOG.error('No editor defined!')
+    LOG.info('Define an "editor" option in your config file, set the ' +
+             'EDITOR environment variable, or pass an editor in with --editor.')
     return
   if not format_ext:
-    print 'No format defined!'
-    print 'Define a "format" option in your config file, or pass in a format' +\
-          ' with --format'
+    LOG.error('No format defined!')
+    LOG.info('Define a "format" option in your config file,' +
+             ' or pass in a format with --format')
     return
   client.edit_doc(doc_entry_or_title, editor, format_ext,
                   folder_entry_or_path=folder_entry or options.folder)

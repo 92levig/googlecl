@@ -44,6 +44,7 @@ Some terminology in use:
 from __future__ import with_statement
 
 __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
+import logging
 import optparse
 import os
 import urllib
@@ -53,7 +54,8 @@ import googlecl
 VERSION = '0.9.8'
 
 AVAILABLE_SERVICES = ['picasa', 'blogger', 'youtube', 'docs', 'contacts',
-                       'calendar']
+                      'calendar']
+LOG = logging.getLogger(googlecl.LOGGER_NAME)
 
 
 def expand_as_command_line(command_string):
@@ -310,7 +312,7 @@ def run_once(options, args):
     if service == 'help':
       print_help()
     else:
-      print 'Must specify at least a service and a task!'
+      LOG.error('Must specify at least a service and a task!')
     return
 
   if service == 'help':
@@ -318,9 +320,9 @@ def run_once(options, args):
       service_module = __import__('googlecl.' + task_name + '.service',
                                   globals(), locals(), -1)
     except ImportError, err:
-      print err.args[0]
-      print 'Did you specify the service correctly? Must be one of ' +\
-            str(AVAILABLE_SERVICES[1:-1])
+      LOG.error(err.args[0])
+      LOG.error('Did you specify the service correctly? Must be one of ' +
+                str(AVAILABLE_SERVICES)[1:-1])
       return
     else:
       print_help(task_name, service_module.TASKS)
@@ -330,9 +332,9 @@ def run_once(options, args):
       service_module = __import__('googlecl.' + service + '.service',
                                   globals(), locals(), -1)
     except ImportError, err:
-      print err.args[0]
-      print 'Did you specify the service correctly? Must be one of ' +\
-            str(AVAILABLE_SERVICES)[1:-1]
+      LOG.error(err.args[0])
+      LOG.error('Did you specify the service correctly? Must be one of ' +
+                str(AVAILABLE_SERVICES)[1:-1])
       return
 
   # Not sure why the fromlist keyword argument became necessary...
@@ -345,8 +347,8 @@ def run_once(options, args):
     task = service_module.TASKS[task_name]
     task.name = task_name
   except KeyError:
-    print 'Did not recognize task, please use one of ' + \
-          str(service_module.TASKS.keys())
+    LOG.error('Did not recognize task, please use one of ' + \
+              str(service_module.TASKS.keys()))
     return
   
   if task.requires('devkey'):
@@ -365,7 +367,7 @@ def run_once(options, args):
   try:
     token = googlecl.read_access_token(service, client.email)
   except (KeyError, IndexError):
-    print 'WARNING: Token file appears to be corrupted. Not using.'
+    LOG.warning('Token file appears to be corrupted. Not using.')
     token = None
   if token:
     client.SetOAuthToken(token)
@@ -384,16 +386,16 @@ def run_once(options, args):
     if client.RequestAccess(domain, options.hostid):
       authorized_account = client.get_email()
       if not verify_email(client.email, authorized_account):
-        print 'You specified account ' + client.email +\
-              ' but granted access for ' + authorized_account
-        print 'Please log out of ' + authorized_account +\
-              ' and grant access with ' + client.email
+        LOG.error('You specified account ' + client.email +
+                  ' but granted access for ' + authorized_account + '.' +
+                  ' Please log out of ' + authorized_account +
+                  ' and grant access with ' + client.email + '.')
         return
       else:
         # Only write the token if it's for the right user
         googlecl.write_access_token(service, client.email, client.current_token)
     else:
-      print 'Failed to get valid access token!'
+      LOG.error('Failed to get valid access token!')
       return
 
   googlecl.set_missing_default(package.SECTION_HEADER, 'user',
@@ -408,6 +410,21 @@ def run_once(options, args):
     # TODO: It would be nice to make this more efficient.
     googlecl.write_devkey(options.devkey)
   task.run(client, options, args)
+
+
+def setup_logger(options):
+  """Setup the global (root, basic) configuration for logging."""
+  format = '%(message)s'
+  if options.debug:
+    level = logging.DEBUG
+    format = '%(levelname)s:%(name)s:%(message)s'
+  elif options.verbose:
+    level = logging.DEBUG
+  elif options.quiet:
+    level = logging.ERROR
+  else:
+    level = logging.INFO
+  logging.basicConfig(level=level, format=format)
 
 
 def setup_parser():
@@ -488,6 +505,9 @@ def setup_parser():
   parser.add_option('-q', '--query', dest='query',
                     help=('Full text query string for specifying items.'
                           + ' Searches on titles, captions, and tags.'))
+  parser.add_option('--quiet', dest='quiet', 
+                    action='store_true', default=False,
+                    help='Print only prompts and error messages')
   parser.add_option('-s', '--summary', dest='summary', 
                     help=('Description of the upload, ' +
                           'or file containing the description.'))
@@ -498,6 +518,9 @@ def setup_parser():
                           'is task-dependent. If authentication is ' +
                           'necessary, this will force the user to specify a ' +
                           'password through a command line prompt or option.'))
+  parser.add_option('-v', '--verbose', dest='verbose',
+                    default=False, action='store_true',
+                    help='Print all messages')
   return parser
 
 
@@ -526,9 +549,10 @@ def main():
   """Entry point for GoogleCL script."""
   parser = setup_parser()
   (options, args) = parser.parse_args()
+  setup_logger(options)
   if not googlecl.load_preferences(options.config):
     if options.config:
-      print 'Could not read config file at ' + options.config
+      LOG.warning('Could not read config file at ' + options.config)
     return
   if not args:
     run_interactive(parser)

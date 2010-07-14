@@ -19,18 +19,15 @@
 
 import gdata.service
 import googlecl
+import logging
 import re
-import warnings
 
 DATE_FORMAT = '%Y-%m-%d'
+LOG = logging.getLogger(googlecl.LOGGER_NAME)
 
 
 class Error(Exception):
   """Base error for GoogleCL exceptions."""
-  pass
-
-class LeftoverData(Warning):
-  """Data left on server because of max_results and cap_results settings."""
   pass
 
 
@@ -68,8 +65,8 @@ class BaseServiceCL(gdata.service.GDataService):
                                                   type=int)
     if (self.service != 'youtube' and
         (not self.cap_results and self.max_results < large_max_results)):
-      warnings.warn('You are requesting only ' + str(self.max_results) +
-                    ' results per query -- this may be slow', stacklevel=2)
+      LOG.warning('You are requesting only ' + str(self.max_results) +
+                  ' results per query -- this may be slow')
 
   def delete(self, entries, entry_type, delete_default):
     """Extends Delete to handle a list of entries.
@@ -98,7 +95,7 @@ class BaseServiceCL(gdata.service.GDataService):
         try:
           gdata.service.GDataService.Delete(self, item.GetEditLink().href)
         except gdata.service.RequestError, err:
-          print 'Could not delete ' + entry_type + ': ' + str(err)
+          LOG.warning('Could not delete ' + entry_type + ': ' + str(err))
 
   Delete = delete
 
@@ -174,14 +171,13 @@ class BaseServiceCL(gdata.service.GDataService):
       else:
         feed = self.GetFeed(uri)
     except gdata.service.RequestError, err:
-      print 'Failed to get entries: ' + str(err)
+      LOG.error('Failed to get entries: ' + str(err))
       return []
     all_entries = feed.entry
     if feed.GetNextLink():
       if self.cap_results:
-        warnings.warn('Leaving data that matches query on server.' +
-                      ' Increase max_results or set cap_results to False.',
-                      LeftoverData, stacklevel=2)
+        LOG.warning('Leaving data that matches query on server.' +
+                    ' Increase max_results or set cap_results to False.')
       else:
         while feed and feed.GetNextLink():
           feed = self.GetNext(feed)
@@ -259,7 +255,7 @@ class BaseServiceCL(gdata.service.GDataService):
     except gdata.service.RequestError, err:
       # If the complaint is NOT about the token, print the error message.
       if err.args[0]['body'].lower().find('token invalid') == -1:
-        print 'Token invalid! ' + str(err)
+        LOG.info('Token invalid! ' + str(err))
       return False
     else:
       return True
@@ -301,7 +297,7 @@ class BaseServiceCL(gdata.service.GDataService):
       request_token = self.FetchOAuthRequestToken(scopes=scopes,
                                                   extra_parameters=fetch_params)
     except gdata.service.FetchingOAuthRequestTokenFailed, err:
-      print err[0]['body'].strip() + '; Request token retrieval failed!'
+      LOG.error(err[0]['body'].strip() + '; Request token retrieval failed!')
       return False
     auth_params = {'hd': domain}
     auth_url = self.GenerateOAuthAuthorizationURL(request_token=request_token,
@@ -315,7 +311,7 @@ class BaseServiceCL(gdata.service.GDataService):
         browser = webbrowser.get(browser_str)
       browser.open(auth_url)
     except webbrowser.Error, err:
-      print 'Failed to launch web browser: ' + str(err)
+      LOG.info('Failed to launch web browser: ' + str(err))
     message = 'Please log in and/or grant access via your browser at ' +\
               auth_url + ' then hit enter.'
     raw_input(message)
@@ -323,7 +319,7 @@ class BaseServiceCL(gdata.service.GDataService):
     try:
       self.UpgradeToOAuthAccessToken(request_token)
     except gdata.service.TokenUpgradeFailed:
-      print 'Token upgrade failed! Could not get OAuth access token.'
+      LOG.error('Token upgrade failed! Could not get OAuth access token.')
       return False
     else:
       return True
@@ -443,7 +439,7 @@ class Task(object):
 
   def _not_impl(self, *args):
     """Just use this as a place-holder for Task callbacks."""
-    print 'Sorry, this task is not yet implemented!'
+    LOG.error('Sorry, this task is not yet implemented!')
 
 
 class BaseEntryToStringWrapper(object):
@@ -621,7 +617,7 @@ def compile_entry_string(entry, attribute_list, delimiter,
       # with the missing field value.
       val = getattr(entry, attr) or missing_field_value
     except ValueError, err:
-      print err.args[0] + ' (Did not add value for style ' + attr + ')'
+      LOG.debug(err.args[0] + ' (Did not add value for style ' + attr + ')')
     except AttributeError, err:
       val = missing_field_value
     # Ensure the delimiter won't appear in a non-delineation role,

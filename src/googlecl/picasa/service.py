@@ -19,12 +19,16 @@
 from __future__ import with_statement
 
 __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
+import logging
 import os
 import urllib
 import googlecl
 import googlecl.service
 from googlecl.picasa import SECTION_HEADER
 from gdata.photos.service import PhotosService, GooglePhotosException
+
+
+LOG = logging.getLogger(googlecl.picasa.LOGGER_NAME)
 
 
 class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
@@ -101,7 +105,7 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
       entry_type = 'album'
       search_string = title
     if not entries:
-      print 'No %ss matching %s' % (entry_type, search_string)
+      LOG.info('No %ss matching %s' % (entry_type, search_string))
     googlecl.service.BaseServiceCL.Delete(self, entries,
                                           entry_type, delete_default)
 
@@ -150,7 +154,7 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
           while os.path.exists(photo_path):
             photo_path = base_photo_path + '-%i' % photo_concat
             photo_concat += 1
-        print 'Downloading %s to %s' % (photo.title.text, photo_path)
+        LOG.info('Downloading %s to %s' % (photo.title.text, photo_path))
         url = photo.content.src
         high_res_url = url[:url.rfind('/')+1]+'d'+url[url.rfind('/'):]
         urllib.urlretrieve(high_res_url, photo_path)
@@ -197,7 +201,7 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
     for path in photo_list:
       if not tags and self.prompt_for_tags:
         keywords = raw_input('Enter tags for photo %s: ' % path)
-      print 'Loading file %s to album %s' % (path, album.title.text)
+      LOG.info('Loading file ' + path + ' to album ' + album.title.text)
       try:
         self.InsertPhotoSimple(album_url, 
                                title=os.path.split(path)[1], 
@@ -205,9 +209,9 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
                                filename_or_handle=path, 
                                keywords=keywords)
       except GooglePhotosException, err:
-        print 'Failed to upload %s. (%s: %s)' % (path,
-                                                 err.args[0],
-                                                 err.args[1]) 
+        LOG.error('Failed to upload %s. (%s: %s)', path,
+                                                   err.args[0],
+                                                   err.args[1]) 
         failures.append(file)   
     return failures
 
@@ -273,8 +277,8 @@ def _run_create(client, options, args):
       timestamp = time.mktime(time.strptime(options.date,
                                             googlecl.service.DATE_FORMAT))
     except ValueError, err:
-      print err
-      print 'Ignoring date option, using today'
+      LOG.error(err)
+      LOG.info('Ignoring date option, using today')
       options.date = ''
     else:
       # Timestamp needs to be in milliseconds after the epoch
@@ -330,18 +334,18 @@ def _run_list_albums(client, options, args):
 
 def _run_post(client, options, args):
   if not args:
-    print 'Must provide photos to post!'
+    LOG.error('Must provide photos to post!')
     return
   album = client.GetSingleAlbum(title=options.title)
   if album:
     client.InsertPhotoList(album, args, tags=options.tags)
   else:
-    print 'No albums found that match %s' % options.title
+    LOG.error('No albums found that match ' + options.title)
 
 
 def _run_get(client, options, args):
   if not args:
-    print 'Must provide destination of album(s)!'
+    LOG.error('Must provide destination of album(s)!')
     return
   base_path = args[0]
   client.DownloadAlbum(base_path, user=options.user, title=options.title)
@@ -354,7 +358,7 @@ def _run_tag(client, options, args):
   if entries:
     client.TagPhotos(entries, options.tags)
   else:
-    print 'No matches for the title and/or query you gave.'
+    LOG.error('No matches for the title and/or query you gave.')
 
 
 TASKS = {'create': googlecl.service.Task('Create an album',

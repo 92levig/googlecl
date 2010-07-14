@@ -14,8 +14,11 @@
 """Data for GoogleCL's calendar service."""
 import datetime
 import googlecl.service
+import googlecl
 
-SECTION_HEADER = 'CALENDAR'
+service_name = __name__.split('.')[-1]
+LOGGER_NAME = googlecl.LOGGER_NAME + '.' + service_name
+SECTION_HEADER = service_name.upper()
 QUERY_DATE_FORMAT = '%Y-%m-%dT%H:%M:%S'
 
 

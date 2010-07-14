@@ -28,6 +28,8 @@ HISTORY_FILENAME = 'history'
 TOKENS_FILENAME_FORMAT = 'access_tok_%s'
 DEVKEY_FILENAME = 'yt_devkey'
 
+LOGGER_NAME = 'googlecl'
+
 
 def get_config_option(section, option, default=None, type=None):
   """Return option from config file.

@@ -28,11 +28,13 @@ import datetime
 import gdata.calendar.service
 import googlecl
 import googlecl.service
+import logging
 import time
 import urllib
 from googlecl.calendar import SECTION_HEADER
 
 
+LOG = logging.getLogger(googlecl.calendar.LOGGER_NAME)
 USER_BATCH_URL_FORMAT = \
                gdata.calendar.service.DEFAULT_BATCH_URL.replace('default', '%s')
 
@@ -383,7 +385,7 @@ def parse_recurrence(time_string):
 def _list(client, options, args, date):
   cal_user_list = client.get_calendar_user_list(options.cal)
   if not cal_user_list:
-    print 'No calendar matches "' + options.cal + '"'
+    LOG.error('No calendar matches "' + options.cal + '"')
     return
   for cal in cal_user_list:
     print ''
@@ -434,7 +436,7 @@ def _run_list_today(client, options, args):
 def _run_add(client, options, args):
   cal_user_list = client.get_calendar_user_list(options.cal)
   if not cal_user_list:
-    print 'No calendar matches "' + options.cal + '"'
+    LOG.error('No calendar matches "' + options.cal + '"')
     return
   for cal in cal_user_list:
     client.quick_add_event(args, cal.user)
@@ -443,11 +445,11 @@ def _run_add(client, options, args):
 def _run_delete(client, options, args):
   cal_user_list = client.get_calendar_user_list(options.cal)
   if not cal_user_list:
-    print 'No calendar matches "' + options.cal + '"'
+    LOG.error('No calendar matches "' + options.cal + '"')
     return
   date = googlecl.calendar.Date(options.date)
   for cal in cal_user_list:
-    print 'For calendar ' + str(cal)
+    LOG.info('For calendar ' + str(cal))
     events = client.get_events(cal.user,
                                start_date=date.utc_start,
                                end_date=date.utc_end,
@@ -457,7 +459,7 @@ def _run_delete(client, options, args):
     try:
       client.delete_events(events, options.date, cal.user)
     except EventsNotFound:
-      print 'No events found that match your options!'
+      LOG.warning('No events found that match your options!')
 
 
 TASKS = {'list': googlecl.service.Task('List events on a calendar',

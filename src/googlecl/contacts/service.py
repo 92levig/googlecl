@@ -26,10 +26,14 @@ List contacts:
 from __future__ import with_statement
 
 __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
+import logging
 import gdata.contacts.service
 import googlecl
 import googlecl.service
 from googlecl.contacts import SECTION_HEADER
+
+
+LOG = logging.getLogger(googlecl.contacts.LOGGER_NAME)
 
 
 class ContactsServiceCL(gdata.contacts.service.ContactsService,
@@ -68,7 +72,8 @@ class ContactsServiceCL(gdata.contacts.service.ContactsService,
       try:
         name, email = string_or_csv_file.split(',')
       except ValueError:
-        print string_or_csv_file + ' is neither a name,email pair nor a file.'
+        LOG.error(string_or_csv_file +
+                  ' is neither a name,email pair nor a file.')
         return
       new_contact = gdata.contacts.ContactEntry(title=atom.Title(
                                                              text=name.strip()))
@@ -77,7 +82,8 @@ class ContactsServiceCL(gdata.contacts.service.ContactsService,
         self.CreateContact(new_contact)
       except gdata.service.RequestError, err:
         if err.args[0]['reason'] == 'Conflict':
-          print 'Already have a contact for e-mail address ' + email.strip()
+          LOG.error('Already have a contact for e-mail address ' +
+                    email.strip())
         else:
           raise 
 
@@ -195,7 +201,7 @@ def _run_delete(client, options, args):
   if options.title is not None:
     args.append(options.title)
   if len(args) == 0:
-    print "No contacts specified. Try: google contacts delete 'John Doe'"
+    LOG.error('No contacts specified. Try: google contacts delete "John Doe"')
     return
   for name in args:
     entries = client.GetContacts(name)
@@ -210,7 +216,8 @@ def _run_add_groups(client, options, args):
 
 def _run_delete_groups(client, options, args):
   if len(args) == 0:
-    print "No groups specified. Try: google contacts delete-groups 'In-laws'"
+    LOG.error('No groups specified. Try: ' +
+              'google contacts delete-groups "In-laws"')
     return
   for group in args:
     entries = client.GetGroups(group)

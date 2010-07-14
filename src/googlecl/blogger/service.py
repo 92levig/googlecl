@@ -21,10 +21,14 @@ from __future__ import with_statement
 __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import atom
 import gdata
+import logging
 import os
 import googlecl
 import googlecl.service
 from googlecl.blogger import SECTION_HEADER
+
+
+LOG = logging.getLogger(googlecl.blogger.LOGGER_NAME)
 
 
 class BlogNotFound(googlecl.service.Error):
@@ -187,7 +191,7 @@ class BloggerEntryToStringWrapper(googlecl.service.BaseEntryToStringWrapper):
 def _run_post(client, options, args):
   max_size = 500000
   if not args:
-    print 'Must provide paths to files and/or string content to post'
+    LOG.error('Must provide paths to files and/or string content to post')
     return
   if not options.blog:
     options.blog = googlecl.get_config_option(SECTION_HEADER, 'blog')
@@ -196,8 +200,8 @@ def _run_post(client, options, args):
       with open(content_string, 'r') as content_file:
         content = content_file.read(max_size)
         if content_file.read(1):
-          print 'Only read first ' + str(max_size) + ' bytes of file ' +\
-                content_string
+          LOG.warning('Only read first ' + str(max_size) + ' bytes of file ' +
+                      content_string)
       title = os.path.basename(content_string).split('.')[0]
     else:
       if not options.title:
@@ -208,7 +212,7 @@ def _run_post(client, options, args):
                              blog_title=options.blog,
                              is_draft=options.draft)
     except gdata.service.RequestError, err:
-      print 'Failed to post: ' + str(err)
+      LOG.error('Failed to post: ' + str(err))
     else:
       if entry and options.tags:
         client.LabelPosts([entry], options.tags)
@@ -221,7 +225,7 @@ def _run_delete(client, options, args):
     post_entries = client.GetPosts(blog_title=options.blog,
                                    post_title=options.title)
   except BlogNotFound, err:
-    print err
+    LOG.error(err)
     return
   client.Delete(post_entries, entry_type = 'post',
                 delete_default=googlecl.CONFIG.getboolean('GENERAL',
@@ -234,7 +238,7 @@ def _run_list(client, options, args):
   try:
     entries = client.GetPosts(options.blog, options.title)
   except BlogNotFound, err:
-    print err
+    LOG.error(err)
     return
   if args:
     style_list = args[0].split(',')
@@ -254,7 +258,7 @@ def _run_tag(client, options, args):
   try:
     entries = client.GetPosts(options.blog, options.title)
   except BlogNotFound, err:
-    print err
+    LOG.error(err)
     return
   client.LabelPosts(entries, options.tags)
 
