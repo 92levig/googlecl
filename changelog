@@ -1,5 +1,6 @@
 svn HEAD
  Enhancements
+ * Added reminders for Calendar via --reminder option
  * Added list styles for contacts.
  * Allow docs edit task to create folders.
  * Included workaround for downloading new-version documents

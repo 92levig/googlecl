@@ -68,6 +68,7 @@ Tasks:
 Common options:
   * cal: Specify the name of the calendar. This can be a regular expression. If this option is not given, the primary calendar is used.
   * date: Specify a date, or date range. Dates are inclusive, so `--date 2010-06-23,2010-06-25` will include the 23rd, 24th, and 25th of June.
+  * reminder: (for add task only) Add a reminder to the events being added, one per default reminder type in your calendar settings. Default is in minutes, though you can say something like "2h" for one hour, "1d" for one day, etc.
 
 Tasks:
   * add: Add event to calendar. `add "Dinner party with George tomorrow at 6pm"`

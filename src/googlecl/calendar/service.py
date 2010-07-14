@@ -98,6 +98,34 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
     map(request_feed.AddDelete, [None], delete_events, [None])
     self.ExecuteBatch(request_feed, USER_BATCH_URL_FORMAT % cal_user)
 
+  def add_reminders(self, calendar_user, events, minutes):
+    """Add default reminders to events.
+
+    Keyword arguments:
+      calendar_user: "User" of the calendar.
+      events: List of events to add reminder to.
+      minutes: Number of minutes before each event to send reminder.
+
+    Returns:
+      List of events with batch results.
+
+    """
+    request_feed = gdata.calendar.CalendarEventFeed()
+    for event in events:
+      if event.when:
+        for a_when in event.when:
+          a_when.reminder.append(gdata.calendar.Reminder(minutes=minutes))
+      else:
+        LOG.debug('No "when" data for event!')
+        event.when.append(gdata.calendar.When())
+        event.when[0].reminder.append(gdata.calendar.Reminder(minutes=minutes))
+      request_feed.AddUpdate(entry=event)
+    response_feed = self.ExecuteBatch(request_feed,
+                                      USER_BATCH_URL_FORMAT % calendar_user)
+    return response_feed.entry
+
+  AddReminders = add_reminders
+
   def delete_events(self, events, date, calendar_user):
     """Delete events from a calendar.
     
@@ -190,7 +218,7 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
       event = gdata.calendar.CalendarEventEntry()
       event.content = atom.Content(text=event_str)
       event.quick_add = gdata.calendar.QuickAdd(value='true')
-      request_feed.AddInsert(event, 'insert-request' + str(i))
+      request_feed.AddInsert(event, 'insert-' + event_str[0:5] + str(i))
     response_feed = self.ExecuteBatch(request_feed,
                                       USER_BATCH_URL_FORMAT % calendar_user)
     return response_feed.entry
@@ -295,6 +323,39 @@ class CalendarEntryToStringWrapper(googlecl.service.BaseEntryToStringWrapper):
   def where(self):
     """Where event takes place"""
     return self._join(self.entry.where, text_attribute='value_string')
+
+
+def convert_reminder_string(reminder):
+  """Convert reminder string to minutes integer.
+
+  Keyword arguments:
+    reminder: String representation of time,
+              e.g. '10' for 10 minutes,
+                   '1d' for one day,
+                   '3h' for three hours, etc.
+  Returns:
+    Integer of reminder converted to minutes.
+
+  Raises:
+    ValueError if conversion failed.
+
+  """
+  if not reminder:
+    return None
+  unit = reminder.lower()[-1]
+  value = reminder[:-1]
+  if unit == 's':
+    return int(value) / 60
+  elif unit == 'm':
+    return int(value)
+  elif unit == 'h':
+    return int(value) * 60
+  elif unit == 'd':
+    return int(value) * 60 * 24
+  elif unit == 'w':
+    return int(value) * 60 * 24 * 7
+  else:
+    return int(reminder)
 
 
 def get_date_today(include_hour=False, as_range=False):
@@ -438,8 +499,24 @@ def _run_add(client, options, args):
   if not cal_user_list:
     LOG.error('No calendar matches "' + options.cal + '"')
     return
+  minutes = convert_reminder_string(options.reminder)
   for cal in cal_user_list:
-    client.quick_add_event(args, cal.user)
+    results = client.quick_add_event(args, cal.user)
+    if LOG.isEnabledFor(logging.DEBUG):
+      for entry in results:
+        LOG.debug('ID: %s, status: %s, reason: %s',
+                  entry.batch_id.text,
+                  entry.batch_status.code,
+                  entry.batch_status.reason)
+      
+    if minutes:
+      new_results = client.add_reminders(cal.user, results, minutes)
+      if LOG.isEnabledFor(logging.DEBUG):
+        for entry in new_results:
+          LOG.debug('ID: %s, status: %s, reason: %s',
+                    entry.batch_id.text,
+                    entry.batch_status.code,
+                    entry.batch_status.reason)
 
 
 def _run_delete(client, options, args):

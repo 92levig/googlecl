@@ -508,6 +508,9 @@ def setup_parser():
   parser.add_option('--quiet', dest='quiet', 
                     action='store_true', default=False,
                     help='Print only prompts and error messages')
+  parser.add_option('--reminder', dest='reminder',
+                    help=("Calendar only - specify time for added event's " +
+                          'reminder, e.g. "10m", "3h", "1d"'))
   parser.add_option('-s', '--summary', dest='summary', 
                     help=('Description of the upload, ' +
                           'or file containing the description.'))
