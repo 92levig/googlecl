@@ -126,7 +126,7 @@ class YouTubeServiceCL(YouTubeService, googlecl.service.BaseServiceCL):
           err_str = 'Invalid category name'
         else:
           err_str = str(err)
-        LOG.error('Failed to upload video: ' + err_str
+        LOG.error('Failed to upload video: ' + err_str)
 
   PostVideos = post_videos
 
