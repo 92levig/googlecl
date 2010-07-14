@@ -119,7 +119,14 @@ class YouTubeServiceCL(YouTubeService, googlecl.service.BaseServiceCL):
         taglist = taglist.split(',')
         video_entry.AddDeveloperTags(taglist)
       LOG.info('Loading ' + path)
-      self.InsertVideoEntry(video_entry, path)
+      try:
+        self.InsertVideoEntry(video_entry, path)
+      except gdata.service.RequestError, err:
+        if err.args[0]['body'].find('invalid_value') != -1:
+          err_str = 'Invalid category name'
+        else:
+          err_str = str(err)
+        LOG.error('Failed to upload video: ' + err_str
 
   PostVideos = post_videos
 

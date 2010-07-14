@@ -232,7 +232,7 @@ def _run_list_groups(client, options, args):
   for group in args:
     entries = client.GetGroups(group)
     for entry in entries:
-      print googlecl.service.compile_to_string(
+      print googlecl.service.compile_entry_string(
                                            ContactsEntryToStringWrapper(entry),
                                            ['title'],
                                            delimiter=options.delimiter)
