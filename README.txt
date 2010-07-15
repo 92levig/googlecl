@@ -38,7 +38,7 @@ For installation instructions, see INSTALL.txt
 For help with the configuration file, see README.config
 
 1.1 README style
-Wiki markup, is used occasionally in this document:
+Wiki markup is used occasionally in this document:
   * The '`' character is marks example commands.
   * '*' denotes an entry in a list (such as this one).
 
@@ -100,6 +100,9 @@ Tasks:
   * upload: Upload documents. `upload the_bobs.csv ~/work/docs_to_share`
 
 2.1.5 Picasa
+Common options:
+  * owner: Owner of the albums you want to deal with. For example, to download bob's album, add --owner bob to the "get" task. To post to your friend's album that she shared with you, add --owner your_friend to the "post" task.
+
 Tasks:
   * create: Create an album. `create --title "Summer Vacation 2009" --tags Vermont ~/photos/vacation2009/*`
   * delete: Delete photos or albums. `delete --title "Stupid album"`

@@ -502,6 +502,9 @@ def setup_parser():
                     action='store_false', default=True,
                     help='Google Apps Premier only - do not convert the file' +
                     ' on upload. (Else converts to native Google Docs format)')
+  parser.add_option('-o', '--owner', dest='owner',
+                    help=('Username of the owner of the resource. For example,' +
+                          " 'picasa list-albums -o bob' to list bob's albums"))
   parser.add_option('-q', '--query', dest='query',
                     help=('Full text query string for specifying items.'
                           + ' Searches on titles, captions, and tags.'))
@@ -517,13 +520,10 @@ def setup_parser():
   parser.add_option('-t',  '--tags', dest='tags',
                     help='Tags for item, e.g. "Sunsets, Earth Day"')
   parser.add_option('-u', '--user', dest='user',
-                    help=('Username to use for the task. Exact application ' +
-                          'is task-dependent. If authentication is ' +
-                          'necessary, this will force the user to specify a ' +
-                          'password through a command line prompt or option.'))
+                    help='Username to log in with for the service.')
   parser.add_option('-v', '--verbose', dest='verbose',
                     default=False, action='store_true',
-                    help='Print all messages')
+                    help='Print all messages.')
   return parser
 
 

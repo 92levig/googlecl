@@ -184,7 +184,7 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
 
   GetSingleAlbum = get_single_album
 
-  def insert_photo_list(self, album, photo_list, tags=''):
+  def insert_photo_list(self, album, photo_list, tags='', user='default'):
     """Insert photos into an album.
     
     Keyword arguments:
@@ -195,7 +195,7 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
     
     """
     album_url = ('/data/feed/api/user/%s/albumid/%s' %
-                 ('default', album.gphoto_id.text))
+                 (user, album.gphoto_id.text))
     keywords = tags
     failures = []
     for path in photo_list:
@@ -300,7 +300,7 @@ def _run_delete(client, options, args):
 
 
 def _run_list(client, options, args):
-  entries = client.build_entry_list(user=options.user,
+  entries = client.build_entry_list(user=options.owner or options.user,
                                     title=options.title,
                                     query=options.encoded_query,
                                     force_photos=True)
@@ -317,7 +317,7 @@ def _run_list(client, options, args):
 
 
 def _run_list_albums(client, options, args):
-  entries = client.build_entry_list(user=options.user,
+  entries = client.build_entry_list(user=options.owner or options.user,
                                     title=options.title,
                                     force_photos=False)
   if args:
@@ -336,9 +336,11 @@ def _run_post(client, options, args):
   if not args:
     LOG.error('Must provide photos to post!')
     return
-  album = client.GetSingleAlbum(title=options.title)
+  album = client.GetSingleAlbum(user=options.owner or options.user,
+                                title=options.title)
   if album:
-    client.InsertPhotoList(album, args, tags=options.tags)
+    client.InsertPhotoList(album, args, tags=options.tags,
+                           user=options.owner or options.user)
   else:
     LOG.error('No albums found that match ' + options.title)
 
@@ -348,11 +350,14 @@ def _run_get(client, options, args):
     LOG.error('Must provide destination of album(s)!')
     return
   base_path = args[0]
-  client.DownloadAlbum(base_path, user=options.user, title=options.title)
+  client.DownloadAlbum(base_path,
+                       user=options.owner or options.user,
+                       title=options.title)
 
 
 def _run_tag(client, options, args):
-  entries = client.build_entry_list(query=options.query,
+  entries = client.build_entry_list(user=options.owner or options.user,
+                                    query=options.query,
                                     title=options.title,
                                     force_photos=True)
   if entries:
@@ -368,20 +373,22 @@ TASKS = {'create': googlecl.service.Task('Create an album',
                                          args_desc='PATH_TO_PHOTOS'), 
          'post': googlecl.service.Task('Post photos to an album',
                                        callback=_run_post,
-                                       required='title', optional='tags',
+                                       required='title',
+                                       optional=['tags', 'owner'],
                                        args_desc='PATH_TO_PHOTOS'), 
          'delete': googlecl.service.Task('Delete photos or albums',
                                          callback=_run_delete,
                                          required=[['title', 'query']]),
          'list': googlecl.service.Task('List photos', callback=_run_list,
                                        required=['delimiter'],
-                                       optional=['title', 'query']),
+                                       optional=['title', 'query', 'owner']),
          'list-albums': googlecl.service.Task('List albums',
                                               callback=_run_list_albums,
                                               required=['delimiter'],
-                                              optional=['title']),
+                                              optional=['title', 'owner']),
          'get': googlecl.service.Task('Download photos', callback=_run_get,
-                                      optional=['title', 'query'], 
+                                      optional=['title', 'query', 'owner'], 
                                       args_desc='LOCATION'),
          'tag': googlecl.service.Task('Tag photos', callback=_run_tag,
-                                      required=['tags', ['title', 'query']])}
+                                      required=['tags', ['title', 'query']],
+                                      optional='owner')}

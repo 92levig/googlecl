@@ -13,7 +13,7 @@ Available tasks for service picasa: 'get', 'create', 'list', 'list\-albums', 'ta
 .IP
 get: Download photos
 .IP
-Requires: none Optional: title, query Arguments: LOCATION
+Requires: none Optional: title, query, owner Arguments: LOCATION
 .IP
 create: Create an album
 .IP
@@ -21,19 +21,19 @@ Requires: title Optional: date, summary, tags Arguments: PATH_TO_PHOTOS
 .IP
 list: List photos
 .IP
-Requires: delimiter Optional: title, query
+Requires: delimiter Optional: title, query, owner
 .IP
 list\-albums: List albums
 .IP
-Requires: delimiter Optional: title
+Requires: delimiter Optional: title, owner
 .IP
 tag: Tag photos
 .IP
-Requires: tags AND (title OR query)
+Requires: tags AND (title OR query) Optional: owner
 .IP
 post: Post photos to an album
 .IP
-Requires: title Optional: tags Arguments: PATH_TO_PHOTOS
+Requires: title Optional: tags, owner Arguments: PATH_TO_PHOTOS
 .IP
 delete: Delete photos or albums
 .IP
@@ -202,6 +202,10 @@ Title of the item
 Google Apps Premier only \- do not convert the file on
 upload. (Else converts to native Google Docs format)
 .TP
+\fB\-o\fR OWNER, \fB\-\-owner\fR=\fIOWNER\fR
+Username of the owner of the resource. For example,
+\&'picasa list\-albums \fB\-o\fR bob' to list bob's albums
+.TP
 \fB\-q\fR QUERY, \fB\-\-query\fR=\fIQUERY\fR
 Full text query string for specifying items. Searches
 on titles, captions, and tags.
@@ -221,13 +225,10 @@ description.
 Tags for item, e.g. "Sunsets, Earth Day"
 .TP
 \fB\-u\fR USER, \fB\-\-user\fR=\fIUSER\fR
-Username to use for the task. Exact application is
-task\-dependent. If authentication is necessary, this
-will force the user to specify a password through a
-command line prompt or option.
+Username to log in with for the service.
 .TP
 \fB\-v\fR, \fB\-\-verbose\fR
-Print all messages
+Print all messages.
 .SH EXAMPLES
 .nf
 google blogger post \-\-title 'foo' 'command line posting'
