@@ -19,7 +19,7 @@ from __future__ import with_statement
 __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import ConfigParser
 import os
-
+import re
 
 CONFIG = ConfigParser.ConfigParser()
 GOOGLE_CL_DIR = os.path.expanduser(os.path.join('~', '.googlecl'))
@@ -28,6 +28,7 @@ HISTORY_FILENAME = 'history'
 TOKENS_FILENAME_FORMAT = 'access_tok_%s'
 DEVKEY_FILENAME = 'yt_devkey'
 
+FILE_EXT_PATTERN = re.compile('.*\.([a-zA-Z0-9]{3,}$)')
 LOGGER_NAME = 'googlecl'
 
 
@@ -69,6 +70,15 @@ def get_config_option(section, option, default=None, type=None):
       return value
   except ConfigParser.NoOptionError:
     return default
+
+
+def get_extension_from_path(path):
+  """Return the extension of a file."""
+  match = FILE_EXT_PATTERN.match(path)
+  if match:
+    return match.group(1)
+  else:
+    return None
 
 
 def load_preferences(path=None):

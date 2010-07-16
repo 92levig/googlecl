@@ -26,9 +26,28 @@ import googlecl
 import googlecl.service
 from googlecl.picasa import SECTION_HEADER
 from gdata.photos.service import PhotosService, GooglePhotosException
-
+import gdata.photos
 
 LOG = logging.getLogger(googlecl.picasa.LOGGER_NAME)
+SUPPORTED_VIDEO_TYPES = {'wmv': 'video/x-ms-wmv',
+                         'avi': 'video/avi',
+                         '3gp': 'video/3gpp',
+                         'mov': 'video/quicktime',
+                         'qt': 'video/quicktime',
+                         'mp4': 'video/mp4',
+                         'mpa': 'video/mpeg',
+                         'mpe': 'video/mpeg',
+                         'mpeg': 'video/mpeg',
+                         'mpg': 'video/mpeg',
+                         'mpv2': 'video/mpeg',
+                         'mpeg4': 'video/mpeg4',}
+# XXX gdata.photos.service contains a very strange check against (outdated)
+# allowed MIME types. This is a hack to allow videos to be uploaded.
+# We're creating a list of the allowed video types stripped of the initial
+# 'video/', eliminating duplicates via set(), then converting to tuple()
+# since that's what gdata.photos.service uses.
+gdata.photos.service.SUPPORTED_UPLOAD_TYPES += \
+     tuple(set([type.split('/')[1] for type in SUPPORTED_VIDEO_TYPES.values()]))
 
 
 class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
@@ -184,13 +203,14 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
 
   GetSingleAlbum = get_single_album
 
-  def insert_photo_list(self, album, photo_list, tags='', user='default'):
+  def insert_media_list(self, album, photo_list, tags='', user='default'):
     """Insert photos into an album.
     
     Keyword arguments:
-      album: The album entry of the album getting the photos.
-      photo_list: A list of paths, each path a picture on the local host.
-      tags: Text of the tags to be added to each photo, e.g. 'Islands, Vacation'
+      album: The album entry of the album getting the media.
+      photo_list: A list of paths, each path a picture or video on
+                  the local host.
+      tags: Text of the tags to be added to each item, e.g. 'Islands, Vacation'
             (Default '').
     
     """
@@ -202,12 +222,22 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
       if not tags and self.prompt_for_tags:
         keywords = raw_input('Enter tags for photo %s: ' % path)
       LOG.info('Loading file ' + path + ' to album ' + album.title.text)
+      ext = googlecl.get_extension_from_path(path)
+      if not ext:
+        LOG.debug('No extension match on path ' + path)
+        content_type = 'image/jpeg'
+      else:
+        try:
+          content_type = SUPPORTED_VIDEO_TYPES[ext]
+        except KeyError:
+          content_type = 'image/' + ext
       try:
         self.InsertPhotoSimple(album_url, 
                                title=os.path.split(path)[1], 
                                summary='',
                                filename_or_handle=path, 
-                               keywords=keywords)
+                               keywords=keywords,
+                               content_type=content_type)
       except GooglePhotosException, err:
         LOG.error('Failed to upload %s. (%s: %s)', path,
                                                    err.args[0],
@@ -215,7 +245,7 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
         failures.append(file)   
     return failures
 
-  InsertPhotoList = insert_photo_list
+  InsertMediaList = insert_media_list
 
   def is_token_valid(self, test_uri='/data/feed/api/user/default'):
     """Check that the token being used is valid."""
@@ -289,7 +319,7 @@ def _run_create(client, options, args):
                                                         'access'),
                              timestamp=options.date)
   if args:
-    client.InsertPhotoList(album, photo_list=args, tags=options.tags)
+    client.InsertMediaList(album, photo_list=args, tags=options.tags)
 
 
 def _run_delete(client, options, args):
@@ -339,7 +369,7 @@ def _run_post(client, options, args):
   album = client.GetSingleAlbum(user=options.owner or options.user,
                                 title=options.title)
   if album:
-    client.InsertPhotoList(album, args, tags=options.tags,
+    client.InsertMediaList(album, args, tags=options.tags,
                            user=options.owner or options.user)
   else:
     LOG.error('No albums found that match ' + options.title)

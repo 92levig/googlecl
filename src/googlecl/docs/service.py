@@ -33,7 +33,6 @@ import ConfigParser
 import gdata.docs.service
 import logging
 import os
-import re
 import shutil
 import googlecl
 import googlecl.service
@@ -71,8 +70,6 @@ PRESENTATION_LABEL = 'presentation'
 FOLDER_LABEL = 'folder'
 PDF_LABEL = 'pdf'
 DOCUMENTS_NAMESPACE = 'http://schemas.google.com/docs/2007'
-
-FILE_EXT_PATTERN = re.compile('.*\.([a-zA-Z]{3,}$)')
 
 
 class DocsServiceCL(gdata.docs.service.DocsService,
@@ -224,7 +221,7 @@ class DocsServiceCL(gdata.docs.service.DocsService,
     new version documents happy.
     
     """
-    ext = get_extension_from_path(file_path)
+    ext = googlecl.get_extension_from_path(file_path)
     if ext:
       if extra_params is None:
         extra_params = {}
@@ -537,15 +534,6 @@ def get_document_type(entry):
     return None
 
 
-def get_extension_from_path(path):
-  """Return the extension of a file."""
-  match = FILE_EXT_PATTERN.match(path)
-  if match:
-    return match.group(1)
-  else:
-    return None
-
-
 def get_extension_from_doctype(doctype_label):
   """Return file extension based on document type and preferences file."""
   try:
@@ -623,7 +611,7 @@ def safe_move(src, dst):
 
   """
   new_dir = os.path.abspath(dst)
-  ext = get_extension_from_path(src)
+  ext = googlecl.get_extension_from_path(src)
   if not ext:
     dotted_ext = ''
   else:

@@ -1,6 +1,8 @@
 svn HEAD
  Enhancements
+ * Enabled video upload to Picasa
  * Added reminders for Calendar via --reminder option
+ * Added --owner option to specify other accounts to interact with (e.g. Picasa collaborative albums)
  * Added list styles for contacts.
  * Allow docs edit task to create folders.
  * Included workaround for downloading new-version documents
