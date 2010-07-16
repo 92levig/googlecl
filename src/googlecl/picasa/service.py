@@ -48,7 +48,8 @@ SUPPORTED_VIDEO_TYPES = {'wmv': 'video/x-ms-wmv',
 # since that's what gdata.photos.service uses.
 gdata.photos.service.SUPPORTED_UPLOAD_TYPES += \
      tuple(set([type.split('/')[1] for type in SUPPORTED_VIDEO_TYPES.values()]))
-
+DOWNLOAD_VIDEO_TYPES = {'swf': 'application/x-shockwave-flash',
+                        'mp4': 'video/mpeg4',}
 
 class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
   
@@ -130,7 +131,7 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
 
   Delete = delete
 
-  def download_album(self, base_path, user, title=None):
+  def download_album(self, base_path, user, video_format='mp4', title=None):
     """Download an album to the local host.
     
     Keyword arguments:
@@ -142,10 +143,45 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
       title: Title that the album should have. (Default None, for all albums)
        
     """
+    def _get_download_info(photo_or_video, video_format):
+      """Get download link and extension for photo or video.
+      
+      video_format must be in DOWNLOAD_VIDEO_TYPES.
+      
+      Returns:
+        (url, extension)
+      """
+      wanted_content = None
+      for content in photo_or_video.media.content:
+        if content.medium == 'image' and not wanted_content:
+          wanted_content = content
+        elif content.type == DOWNLOAD_VIDEO_TYPES[video_format]:
+          wanted_content = content
+      if not wanted_content:
+        LOG.error('Did not find desired medium!')
+        LOG.debug('photo_or_video.media:\n' + photo_or_video.media)
+        return None
+      elif wanted_content.medium == 'image':
+        url = photo_or_video.content.src
+        url = url[:url.rfind('/')+1]+'d'+url[url.rfind('/'):]
+        mimetype = photo_or_video.content.type
+        extension = mimetype.split('/')[1]
+      else:
+        url = wanted_content.url
+        extension = video_format
+      return (url, extension)
+    # End _get_download_info
+
     if not user:
       user = 'default'
     entries = self.GetAlbum(user=user, title=title)
-    
+    if video_format not in DOWNLOAD_VIDEO_TYPES.keys():
+      LOG.error('Unsupported video format: ' + video_format)
+      LOG.info('Try one of the following video formats: ' +
+               str(DOWNLOAD_VIDEO_TYPES.keys())[1:-1])
+      video_format = 'mp4'
+      LOG.info('Downloading videos as ' + video_format)
+
     for album in entries:
       album_path = os.path.join(base_path, album.title.text)
       album_concat = 1
@@ -159,24 +195,21 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
       photo_feed = self.GetFeed('/data/feed/api/user/%s/albumid/%s?kind=photo' %
                                 (user, album.gphoto_id.text))
       
-      for photo in photo_feed.entry:
+      for photo_or_video in photo_feed.entry:
         #TODO: Test on Windows (upload from one OS, download from another)
-        photo_name = os.path.split(photo.title.text)[1]
-        photo_path = os.path.join(album_path, photo_name)
+        photo_or_video_name = photo_or_video.title.text.split(os.extsep)[0]
+        url, extension = _get_download_info(photo_or_video, video_format)
+        path = os.path.join(album_path,
+                            photo_or_video_name + os.extsep + extension)
         # Check for a file extension, add it if it does not exist.
-        if not '.' in photo_path:
-          photo_ext = photo.content.type
-          photo_path += '.' + photo_ext[photo_ext.find('/')+1:]
-        if os.path.exists(photo_path):
-          base_photo_path = photo_path
+        if os.path.exists(path):
+          base_path = path
           photo_concat = 1
-          while os.path.exists(photo_path):
-            photo_path = base_photo_path + '-%i' % photo_concat
+          while os.path.exists(path):
+            path = base_path + '-%i' % photo_concat
             photo_concat += 1
-        LOG.info('Downloading %s to %s' % (photo.title.text, photo_path))
-        url = photo.content.src
-        high_res_url = url[:url.rfind('/')+1]+'d'+url[url.rfind('/'):]
-        urllib.urlretrieve(high_res_url, photo_path)
+        LOG.info('Downloading %s to %s' % (photo_or_video.title.text, path))
+        urllib.urlretrieve(url, path)
 
   DownloadAlbum = download_album
 
@@ -382,6 +415,7 @@ def _run_get(client, options, args):
   base_path = args[0]
   client.DownloadAlbum(base_path,
                        user=options.owner or options.user,
+                       video_format = options.format,
                        title=options.title)
 
 
@@ -416,8 +450,9 @@ TASKS = {'create': googlecl.service.Task('Create an album',
                                               callback=_run_list_albums,
                                               required=['delimiter'],
                                               optional=['title', 'owner']),
-         'get': googlecl.service.Task('Download photos', callback=_run_get,
-                                      optional=['title', 'query', 'owner'], 
+         'get': googlecl.service.Task('Download albums', callback=_run_get,
+                                      optional=['title', 'query', 'owner',
+                                                'format'], 
                                       args_desc='LOCATION'),
          'tag': googlecl.service.Task('Tag photos', callback=_run_tag,
                                       required=['tags', ['title', 'query']],
