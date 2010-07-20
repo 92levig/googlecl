@@ -186,8 +186,13 @@ class BaseServiceCL(gdata.service.GDataService):
     if not title:
       return all_entries
     if self.use_regex:
-      return [entry for entry in all_entries 
-              if entry.title.text and re.match(title,entry.title.text)]
+      try:
+        return [entry for entry in all_entries 
+                if entry.title.text and re.match(title,entry.title.text)]
+      except re.error, err:
+        LOG.error('Regular expression error: ' + str(err) + '!')
+        LOG.debug('regex provided: ' + title)
+        return []
     else:
       return [entry for entry in all_entries if title == entry.title.text]
 
