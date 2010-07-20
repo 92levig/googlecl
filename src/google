@@ -268,6 +268,12 @@ def run_interactive(parser):
   while True:
     try:
       command_string = raw_input('> ')
+      if command_string.startswith('python '):
+        LOG.info('HINT: No need to include "python" in interactive mode')
+        command_string = command_string.replace('python ', '', 1)
+      if command_string.startswith('google '):
+        LOG.info('HINT: No need to include "google" in interactive mode')
+        command_string = command_string.replace('google ', '', 1)
       if not command_string:
         continue
       elif command_string == '?':
