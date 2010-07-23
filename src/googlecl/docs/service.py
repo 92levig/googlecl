@@ -239,17 +239,34 @@ class DocsServiceCL(gdata.docs.service.DocsService,
                    get_extension_from_doctype decide the extension.
 
     """
+    if not os.path.isdir(base_path):
+      if len(entries) > 1:
+        raise DocsError('Target "' + base_path + '" is not a directory')
+      format_from_filename = googlecl.get_extension_from_path(base_path)
+      if format_from_filename:
+        # Strip the extension off here if it exists. Don't want to double up
+        # on extension in for loop. (+1 for '.')
+        base_path = base_path[:-(len(format_from_filename)+1)]
+    else:
+      format_from_filename = None
     default_format = 'txt'
     for entry in entries:
       if not file_format:
-        file_format = get_extension_from_doctype(get_document_type(entry)) or\
+        file_format = format_from_filename or\
+                      get_extension_from_doctype(get_document_type(entry)) or\
                       default_format
-      path = os.path.join(base_path, entry.title.text + '.' + file_format)
+      if os.path.isdir(base_path):
+        path = os.path.join(base_path, entry.title.text + '.' + file_format)
+      else:
+        path = base_path + '.' + file_format
       LOG.info('Downloading ' + entry.title.text + ' to ' + path)
       try:
         self.Export(entry, path)
       except gdata.service.RequestError, err:
         LOG.error('Download of ' + entry.title.text + ' failed: ' + str(err))
+      except IOError, err:
+        LOG.error(err)
+        LOG.info('Does your destination filename contain invalid characters?')
 
   GetDocs = get_docs
 
@@ -639,12 +656,12 @@ def _run_get(client, options, args):
     path = os.getcwd()
   else:
     path = args[0]
-    if not os.path.exists(path):
-      LOG.error('Path ' + path + ' does not exist!')
-      return
   folder_entries = client.get_folder(options.folder)
   entries = client.get_doclist(options.title, folder_entries)
-  client.get_docs(path, entries, file_format=options.format)
+  try:
+    client.get_docs(path, entries, file_format=options.format)
+  except DocsError, err:
+    LOG.error(err)
 
 
 def _run_list(client, options, args):
