@@ -86,6 +86,9 @@ class DocsServiceCL(gdata.docs.service.DocsService,
     """Constructor.""" 
     gdata.docs.service.DocsService.__init__(self, source='GoogleCL')
     self._set_params(SECTION_HEADER)
+    # 302 Moved Temporarily errors began cropping up for new style docs
+    # during export. Using https solves the problem, so set ssl True here.
+    self.ssl = True
 
   def create_folder(self, title, folder_or_uri=None):
     """Stolen from gdata-2.0.10 to make recursive directory upload work."""
@@ -193,17 +196,9 @@ class DocsServiceCL(gdata.docs.service.DocsService,
       try:
         self.Put(mediasource, doc_entry_or_title.GetEditMediaLink().href)
       except gdata.service.RequestError, err:
-        if (err.args[0]['status'] == 400 and
-            err.args[0]['body'].find('convert') != -1):
-          LOG.error(err)
-          LOG.info('Is this a new-version document? gdata has a bug' +
-                   ' preventing updates on new version documents.' +
-                   ' Please follow the instructions on the wiki FAQ ' +
-                   ' to convert your document.')
-          new_path = safe_move(path, '.')
-          LOG.info('Moved edited document to ' + new_path)
-        else:
-          raise
+        LOG.error(err)
+        new_path = safe_move(path, '.')
+        LOG.info('Moved edited document to ' + new_path)
 
     try:
       # Good faith effort to keep the temp directory clean.
