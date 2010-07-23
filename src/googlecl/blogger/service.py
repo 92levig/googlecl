@@ -84,23 +84,24 @@ class BloggerServiceCL(googlecl.service.BaseServiceCL):
 
   AddPost = add_post
 
-  def _get_blog_id(self, blog_title=None, user='default'):
+  def _get_blog_id(self, blog_title=None, user_id='default'):
     """Return the blog ID of the blog that matches blog_title.
     
     Keyword arguments:
       blog_title: Name or title of the blog.
-      user: Owner of the blog. Default 'default' for the authenticated user.
+      user_id: Profile ID of blog's owner as seen in the profile view URL.
+              Default 'default' for the authenticated user.
     
     Returns:
       Blog ID (blog_entry.GetSelfLink().href.split('/')[-1]) if a blog is
       found matching the user and blog_title. None otherwise.
     
     """
-    blog_entry = self.GetSingleEntry('/feeds/' + user + '/blogs', blog_title)
+    blog_entry = self.GetSingleEntry('/feeds/' + user_id + '/blogs', blog_title)
     if blog_entry:
       return blog_entry.GetSelfLink().href.split('/')[-1]
     else:
-      raise BlogNotFound('No blog matching', blog_title)
+      raise BlogNotFound('No blogs returned matching', blog_title)
     
   def is_token_valid(self, test_uri='/feeds/default/blogs'):
     """Check that the token being used is valid."""
@@ -108,22 +109,20 @@ class BloggerServiceCL(googlecl.service.BaseServiceCL):
 
   IsTokenValid = is_token_valid
     
-  def get_posts(self, blog_title=None, post_title=None):
+  def get_posts(self, blog_title=None, post_title=None, user_id='default'):
     """Get entries for posts that match a title.
-    
-    This will only get posts for the user that has logged in. It's apparently
-    very difficult to obtain the profile ID that Blogger uses unless you have
-    logged in.
     
     Keyword arguments:
       blog_title: Name or title of the blog the post is in. (Default None)
       post_title: Title that the post should have. (Default None, for all posts)
+      user_id: Profile ID of blog's owner as seen in the profile view URL.
+              (Default 'default' for authenticated user)
          
     Returns:
       List of posts that match parameters, or [] if none do.
       
     """
-    blog_id = self._get_blog_id(blog_title)
+    blog_id = self._get_blog_id(blog_title, user_id)
     if blog_id:
       uri = '/feeds/' + blog_id + '/posts/default'
       return self.GetEntries(uri, post_title)
@@ -236,7 +235,8 @@ def _run_list(client, options, args):
   if not options.blog:
     options.blog = googlecl.get_config_option(SECTION_HEADER, 'blog')
   try:
-    entries = client.GetPosts(options.blog, options.title)
+    entries = client.GetPosts(options.blog, options.title,
+                              user_id=options.owner or 'default')
   except BlogNotFound, err:
     LOG.error(err)
     return
@@ -269,10 +269,10 @@ TASKS = {'delete': googlecl.service.Task('Delete a post.', callback=_run_delete,
          'post': googlecl.service.Task('Post content.', callback=_run_post,
                                        optional=['blog', 'title', 'tags'],
                                        args_desc='PATH_TO_CONTENT or CONTENT'),
-         'list': googlecl.service.Task('List posts in your blog',
+         'list': googlecl.service.Task('List posts in a blog',
                                        callback=_run_list,
                                        required=['delimiter'],
-                                       optional=['blog', 'title']),
+                                       optional=['blog', 'title', 'owner']),
          'tag': googlecl.service.Task('Label posts', callback=_run_tag,
                                       required=['tags', 'title'],
                                       optional=['blog'])}

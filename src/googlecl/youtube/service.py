@@ -198,7 +198,8 @@ def build_category(category):
 #        required
 #===============================================================================
 def _run_list(client, options, args):
-  entries = client.GetVideos(title=options.title)
+  entries = client.GetVideos(user=options.owner or options.user,
+                             title=options.title)
   if args:
     style_list = args[0].split(',')
   else:
@@ -239,7 +240,8 @@ TASKS = {'post': googlecl.service.Task('Post a video.', callback=_run_post,
                                        args_desc='PATH_TO_VIDEO'),
          'list': googlecl.service.Task('List videos by user.',
                                        callback=_run_list,
-                                       required='delimiter', optional='title'),
+                                       required='delimiter',
+                                       optional=['title', 'owner']),
          'tag': googlecl.service.Task('Add tags to a video and/or ' +\
                                       'change its category.',
                                       callback=_run_tag,

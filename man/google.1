@@ -49,9 +49,9 @@ tag: Label posts
 .IP
 Requires: tags AND title Optional: blog
 .IP
-list: List posts in your blog
+list: List posts in a blog
 .IP
-Requires: delimiter Optional: blog, title
+Requires: delimiter Optional: blog, title, owner
 .IP
 delete: Delete a post.
 .IP
@@ -69,7 +69,7 @@ Requires: devkey AND title AND (category OR tags)
 .IP
 list: List videos by user.
 .IP
-Requires: delimiter Optional: title
+Requires: delimiter Optional: title, owner
 .IP
 delete: Delete videos.
 .IP
@@ -203,8 +203,9 @@ Google Apps Premier only \- do not convert the file on
 upload. (Else converts to native Google Docs format)
 .TP
 \fB\-o\fR OWNER, \fB\-\-owner\fR=\fIOWNER\fR
-Username of the owner of the resource. For example,
-\&'picasa list\-albums \fB\-o\fR bob' to list bob's albums
+Username or ID of the owner of the resource. For
+example, 'picasa list\-albums \fB\-o\fR bob' to list bob's
+albums
 .TP
 \fB\-q\fR QUERY, \fB\-\-query\fR=\fIQUERY\fR
 Full text query string for specifying items. Searches

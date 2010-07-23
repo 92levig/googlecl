@@ -2,7 +2,7 @@ svn HEAD
  Enhancements
  * Enabled video upload and download for Picasa.
  * Added reminders for Calendar via --reminder option.
- * Added --owner option to specify other accounts to interact with (e.g. Picasa collaborative albums).
+ * Added --owner option to specify other accounts to interact with (e.g. Picasa collaborative albums, listing videos from other YouTube accounts).
  * Added list styles for contacts.
  * Allow docs edit task to create folders.
  * Included workaround for downloading new-version documents.
@@ -10,6 +10,7 @@ svn HEAD
 
  Bugfixes
  * YouTube tasks can retrieve more than 50 results from queries.
+ * Googlemail domains can authenticate properly.
 
 version 0.9.8
  Enhancements
