@@ -1,4 +1,4 @@
-svn HEAD
+version 0.9.9
  Enhancements
  * Enabled video upload and download for Picasa.
  * Added reminders for Calendar via --reminder option.
