@@ -415,7 +415,7 @@ def _run_get(client, options, args):
   base_path = args[0]
   client.DownloadAlbum(base_path,
                        user=options.owner or options.user,
-                       video_format = options.format,
+                       video_format=options.format or 'mp4',
                        title=options.title)
 
 
@@ -451,8 +451,7 @@ TASKS = {'create': googlecl.service.Task('Create an album',
                                               required=['delimiter'],
                                               optional=['title', 'owner']),
          'get': googlecl.service.Task('Download albums', callback=_run_get,
-                                      optional=['title', 'query', 'owner',
-                                                'format'], 
+                                      optional=['title', 'owner', 'format'], 
                                       args_desc='LOCATION'),
          'tag': googlecl.service.Task('Tag photos', callback=_run_tag,
                                       required=['tags', ['title', 'query']],
