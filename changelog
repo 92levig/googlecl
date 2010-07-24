@@ -7,6 +7,7 @@ svn HEAD
  * Allow docs edit task to create folders.
  * Included workaround for downloading new-version documents.
  * Added debug, verbose, and quiet flag options.
+ * Added configuration file option decode_utf_8 to automatically decode downloaded Google Docs.
 
  Bugfixes
  * YouTube tasks can retrieve more than 50 results from queries.

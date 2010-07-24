@@ -90,6 +90,37 @@ class DocsServiceCL(gdata.docs.service.DocsService,
     # during export. Using https solves the problem, so set ssl True here.
     self.ssl = True
 
+  def _DownloadFile(self, uri, file_path):
+    """Downloads a file.
+
+    Overloaded from docs.service.DocsService to optionally decode from UTF.
+
+    Args:
+      uri: string The full Export URL to download the file from.
+      file_path: string The full path to save the file to.
+
+    Raises:
+      RequestError: on error response from server.
+    """
+    server_response = self.request('GET', uri)
+    response_body = server_response.read()
+    if server_response.status != 200:
+      raise gdata.service.RequestError, {'status': server_response.status,
+                                         'reason': server_response.reason,
+                                         'body': response_body}
+    if googlecl.get_config_option(SECTION_HEADER, 'decode_utf_8',
+                                  False, bool):
+      try:
+        file_string = response_body.decode('utf-8-sig')
+      except UnicodeError, err:
+        LOG.error('Could not decode: ' + str(err))
+        file_string = response_body
+    else:
+      file_string = response_body
+    with open(file_path, 'wb') as download_file:
+      download_file.write(file_string)
+      download_file.flush()
+
   def create_folder(self, title, folder_or_uri=None):
     """Stolen from gdata-2.0.10 to make recursive directory upload work."""
     try:
