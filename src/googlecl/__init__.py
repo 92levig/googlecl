@@ -18,18 +18,20 @@ from __future__ import with_statement
 
 __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import ConfigParser
+import logging
 import os
 import re
 
 CONFIG = ConfigParser.ConfigParser()
-GOOGLE_CL_DIR = os.path.expanduser(os.path.join('~', '.googlecl'))
-CONFIG_FILENAME = 'config'
+SUBDIR_NAME = 'googlecl'
+DEFAULT_GOOGLECL_DIR = os.path.expanduser(os.path.join('~', '.googlecl'))
 HISTORY_FILENAME = 'history'
 TOKENS_FILENAME_FORMAT = 'access_tok_%s'
 DEVKEY_FILENAME = 'yt_devkey'
 
 FILE_EXT_PATTERN = re.compile('.*\.([a-zA-Z0-9]{3,}$)')
 LOGGER_NAME = 'googlecl'
+LOG = logging.getLogger(LOGGER_NAME)
 
 
 def get_config_option(section, option, default=None, type=None):
@@ -72,6 +74,30 @@ def get_config_option(section, option, default=None, type=None):
     return default
 
 
+def get_config_path(filename='config',
+                    default_directories=None,
+                    create_missing_dir=False):
+  """Get the full path to the configuration file.
+
+  See _get_xdg_path()
+
+  """
+  return _get_xdg_path(filename, 'CONFIG', default_directories,
+                       create_missing_dir)
+
+
+def get_data_path(filename,
+                  default_directories=None,
+                  create_missing_dir=False):
+  """Get the full path to the history file.
+
+  See _get_xdg_path()
+
+  """
+  return _get_xdg_path(filename, 'DATA', default_directories,
+                       create_missing_dir)
+
+
 def get_extension_from_path(path):
   """Return the extension of a file."""
   match = FILE_EXT_PATTERN.match(path)
@@ -79,6 +105,76 @@ def get_extension_from_path(path):
     return match.group(1)
   else:
     return None
+
+
+def _get_xdg_path(filename, data_type, default_directories=None,
+                  create_missing_dir=False):
+  """Get the full path to a file using XDG file layout spec.
+
+  Follows XDG Base Directory Specification.
+  (http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html).
+  Tries default_directories and DEFAULT_GOOGLECL_DIR if no file is found
+  via XDG spec.
+
+  Keyword arguments:
+    filename: Filename of the file.
+    data_type: One of 'config' for config files or 'data' for data files.
+    default_directories: List of directories to check if no file is found
+        in directories specified by XDG spec and DEFAULT_GOOGLECL_DIR.
+        Default None.
+    create_missing_dir: Whether or not to create a missing config subdirectory
+        in the default base directory. Default False.
+
+  Returns:
+    Path to config file, which may not exist. If create_missing_dir,
+    the directory where the config file should be will be created if it
+    does not exist.
+
+  """
+  data_type = data_type.upper()
+  if data_type not in ('CONFIG', 'DATA'):
+    raise Exception('Invalid value for data_type: ' + data_type)
+  xdg_home_dir = os.environ.get('XDG_' + data_type + '_HOME')
+  if not xdg_home_dir:
+    if data_type == 'DATA':
+      xdg_home_dir = os.path.join(os.environ.get('HOME'), '.local', 'share')
+    elif data_type == 'CONFIG':
+      # No variable defined, using $HOME/.config
+      xdg_home_dir = os.path.join(os.environ.get('HOME'), '.config')
+  xdg_home_dir = os.path.join(xdg_home_dir, SUBDIR_NAME)
+
+  xdg_dir_list = os.environ.get('XDG_' + data_type + '_DIRS')
+  if not xdg_dir_list:
+    if data_type == 'DATA':
+      xdg_dir_list = '/usr/local/share/:/usr/share/'
+    elif data_type == 'CONFIG':
+      xdg_dir_list = '/etc/xdg'
+  xdg_dir_list = [os.path.join(d, SUBDIR_NAME)
+                  for d in xdg_dir_list.split(':')]
+
+  dir_list = [os.path.abspath('.'), xdg_home_dir] + xdg_dir_list +\
+             [DEFAULT_GOOGLECL_DIR]
+  if default_directories:
+    dir_list += default_directories
+  for directory in dir_list:
+    config_path = os.path.join(directory, filename)
+    if os.path.exists(config_path):
+      return config_path
+  LOG.debug('Could not find ' + filename + ' in any of ' + str(dir_list))
+
+  if os.name == 'posix':
+    default_dir = xdg_home_dir
+    mode = 0700
+  else:
+    default_dir = DEFAULT_GOOGLECL_DIR
+    mode = 0777
+  if not os.path.isdir(default_dir) and create_missing_dir:
+    try:
+      os.mkdir(default_dir, mode)
+    except OSError, err:
+      LOG.error(err)
+      return ''
+  return os.path.join(default_dir, filename)
 
 
 def load_preferences(path=None):
@@ -135,24 +231,23 @@ def load_preferences(path=None):
         CONFIG.set(section_name, opt, section[opt])
     return made_changes
   
-  if path:
+  if not path:
+    path = get_config_path(create_missing_dir=True)
+    if not path:
+      LOG.error('Could not create config directory!')
+      return False
+  if not os.path.exists(path):
+    print 'Did not find config / preferences file at ' + path
+    print '... making new one.'
+  else:
     try:
       CONFIG.read(path)
     except ConfigParser.ParsingError, err:
-      print err
+      LOG.error(err)
       return False
-  else:
-    if not os.path.exists(GOOGLE_CL_DIR):
-      os.makedirs(GOOGLE_CL_DIR)
-    config_path = os.path.join(GOOGLE_CL_DIR, CONFIG_FILENAME)
-    if os.path.exists(config_path):
-      CONFIG.read(config_path)
-    else:
-      print 'Did not find config / preferences file at ' + config_path
-      print '... making new one.'
   made_changes = set_options()
   if made_changes:
-    with open(config_path, 'w') as config_file:
+    with open(path, 'w') as config_file:
       CONFIG.write(config_file)
   return True
 
@@ -170,7 +265,7 @@ def read_access_token(service, user):
   
   """
   import pickle
-  token_path = os.path.join(GOOGLE_CL_DIR, TOKENS_FILENAME_FORMAT % user)
+  token_path = get_data_path(TOKENS_FILENAME_FORMAT % user)
   if os.path.exists(token_path):
     with open(token_path, 'rb') as token_file:
       token_dict = pickle.load(token_file)
@@ -186,7 +281,7 @@ def read_access_token(service, user):
 
 def read_devkey():
   """Return the cached YouTube developer's key."""
-  key_path = os.path.join(GOOGLE_CL_DIR, DEVKEY_FILENAME)
+  key_path = get_data_path(DEVKEY_FILENAME)
   devkey = None
   if os.path.exists(key_path):
     with open(key_path, 'r') as key_file:
@@ -197,7 +292,7 @@ def read_devkey():
 def remove_access_token(service, user):
   """Remove an auth token for a particular user and service."""
   import pickle
-  token_path = os.path.join(GOOGLE_CL_DIR, TOKENS_FILENAME_FORMAT % user)
+  token_path = get_data_path(TOKENS_FILENAME_FORMAT % user)
   success = False
   if os.path.exists(token_path):
     with open(token_path, 'r+') as token_file:
@@ -233,7 +328,7 @@ def set_missing_default(section, option, value, config_path=None):
     pass
   if not existing_value:
     if not config_path:
-      config_path = os.path.join(GOOGLE_CL_DIR, CONFIG_FILENAME)
+      config_path = get_config_path()
     if os.path.exists(config_path):
       CONFIG.set(section, option, value)
       with open(config_path, 'w') as config_file:
@@ -250,7 +345,8 @@ def write_access_token(service, user, token):
   """
   import pickle
   import stat
-  token_path = os.path.join(GOOGLE_CL_DIR, TOKENS_FILENAME_FORMAT % user)
+  token_path = get_data_path(TOKENS_FILENAME_FORMAT % user,
+                             create_missing_dir=True)
   if os.path.exists(token_path):
     with open(token_path, 'rb') as token_file:
       try:
@@ -277,7 +373,7 @@ def write_access_token(service, user, token):
 def write_devkey(devkey):
   """Write the devkey to the youtube devkey file."""
   import stat
-  key_path = os.path.join(GOOGLE_CL_DIR, DEVKEY_FILENAME)
+  key_path = get_data_path(DEVKEY_FILENAME)
   with open(key_path, 'w') as key_file:
     os.chmod(key_path, stat.S_IRUSR | stat.S_IWUSR)
     key_file.write(devkey)
