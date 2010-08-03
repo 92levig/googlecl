@@ -1,6 +1,9 @@
 svn HEAD
-Enhancements
+ Enhancements
  * Follow XDG Base Directory Specification.
+
+ Bugfixes
+ * youtube list works without --owner flag again.
 
 version 0.9.9
  Enhancements

@@ -198,7 +198,7 @@ def build_category(category):
 #        required
 #===============================================================================
 def _run_list(client, options, args):
-  entries = client.GetVideos(user=options.owner or options.user,
+  entries = client.GetVideos(user=options.owner or 'default',
                              title=options.title)
   if args:
     style_list = args[0].split(',')
