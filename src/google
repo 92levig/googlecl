@@ -58,6 +58,64 @@ AVAILABLE_SERVICES = ['picasa', 'blogger', 'youtube', 'docs', 'contacts',
 LOG = logging.getLogger(googlecl.LOGGER_NAME)
 
 
+def authenticate(service_name, client, hostid):
+  """Get a valid access token to a single service for a Google account.
+
+  This function will look for a stored token and check its validity before
+  requesting a new one. It also verifies that the token is given for the
+  account specified by the user on the command line, not whatever account
+  the user happens to be logged in to.
+  
+  Keyword arguments:
+    service_name: Name of the service, e.g. 'picasa', 'calendar'.
+    client: The BaseServiceCL object requesting access to the service.
+    hostid: Identifier for the machine where the access token is stored.
+            Typically username@host, but can be any string.
+
+  Returns:
+    False if no valid access token was found or obtained, True otherwise.
+  
+  """
+  authenticated = False
+  try:
+    token = googlecl.read_access_token(service_name, client.email)
+  except (KeyError, IndexError):
+    LOG.warning('Token file appears to be corrupted. Not using.')
+    token = None
+  if token:
+    client.SetOAuthToken(token)
+    try:
+      token_valid = client.IsTokenValid()
+    except AttributeError:
+      # Attribute errors crop up when using different gdata libraries
+      # but the same token.
+      token_valid = False
+    if token_valid:
+      authenticated = True
+    else:
+      googlecl.remove_access_token(service_name, client.email)
+
+  if not authenticated:
+    domain = get_hd_domain(client.email)
+    if client.RequestAccess(domain, hostid):
+      authorized_account = client.get_email()
+      if verify_email(client.email, authorized_account):
+        # Only write the token if it's for the right user
+        googlecl.write_access_token(service_name,
+                                    client.email,
+                                    client.current_token)
+      else:
+        LOG.error('You specified account ' + client.email +
+                  ' but granted access for ' + authorized_account + '.' +
+                  ' Please log out of ' + authorized_account +
+                  ' and grant access with ' + client.email + '.')
+        return False
+    else:
+      LOG.error('Failed to get valid access token!')
+      return False
+  return True
+
+
 def expand_as_command_line(command_string):
   """Expand a string as if it was entered at the command line.
   
@@ -220,6 +278,43 @@ def get_task_help(service, tasks):
   return help
 
 
+def import_service(service):
+  """Import vital information about a service.
+
+  The goal of this function is to allow expansion to other "service" classes
+  in the future. In the same way that the v2 and v3 API python library uses
+  a module called "client", googlecl will do the same.
+
+  Keyword arguments:
+    service: Name of the service to import e.g. 'picasa', 'youtube'
+
+  Returns:
+    Tuple of service_class, tasks, and section header, where
+      service_class is the class to instantiate for the service
+      tasks is the dictionary mapping names to Task objects
+      section_header is the name of the section in the config file that contains
+                     options specific to the service.
+
+  """
+  try:
+    # Not sure why the fromlist keyword argument became necessary...
+    package = __import__('googlecl.' + service, fromlist=['SECTION_HEADER'])
+  except ImportError, err:
+    LOG.error(err.args[0])
+    LOG.error('Did you specify the service correctly? Must be one of ' +
+              str(AVAILABLE_SERVICES)[1:-1])
+    return (None, None, None)
+  try:
+    service_module = __import__('googlecl.' + service + '.client',
+                                globals(), locals(), -1)
+  except ImportError:
+    service_module = __import__('googlecl.' + service + '.service',
+                                globals(), locals(), -1)
+  return (service_module.SERVICE_CLASS,
+          service_module.TASKS,
+          package.SECTION_HEADER)
+
+
 def print_help(service=None, tasks=None):
   """Print help messages to the screen.
   
@@ -321,39 +416,25 @@ def run_once(options, args):
     return
 
   if service == 'help':
-    try:
-      service_module = __import__('googlecl.' + task_name + '.service',
-                                  globals(), locals(), -1)
-    except ImportError, err:
-      LOG.error(err.args[0])
-      LOG.error('Did you specify the service correctly? Must be one of ' +
-                str(AVAILABLE_SERVICES)[1:-1])
+    service_class, tasks, section_header = import_service(task_name)
+    if tasks:
+      print_help(task_name, tasks)
       return
-    else:
-      print_help(task_name, service_module.TASKS)
+  else:
+    service_class, tasks, section_header = import_service(service)
+  if not service_class:
     return
-  else: 
-    try:
-      service_module = __import__('googlecl.' + service + '.service',
-                                  globals(), locals(), -1)
-    except ImportError, err:
-      LOG.error(err.args[0])
-      LOG.error('Did you specify the service correctly? Must be one of ' +
-                str(AVAILABLE_SERVICES)[1:-1])
-      return
 
-  # Not sure why the fromlist keyword argument became necessary...
-  package = __import__('googlecl.' + service, fromlist=['SECTION_HEADER'])
-  client = service_module.SERVICE_CLASS()
-  client.debug = googlecl.get_config_option(package.SECTION_HEADER,
+  client = service_class()
+  client.debug = googlecl.get_config_option(section_header,
                                             'debug',
                                             default=options.debug)
   try:
-    task = service_module.TASKS[task_name]
+    task = tasks[task_name]
     task.name = task_name
   except KeyError:
     LOG.error('Did not recognize task, please use one of ' + \
-              str(service_module.TASKS.keys()))
+              str(tasks.keys()))
     return
   
   if task.requires('devkey'):
@@ -365,48 +446,18 @@ def run_once(options, args):
       options.devkey = googlecl.read_devkey() or 'AI39si4d9dBo0dX7TnGyfQ68bNiKfEeO7wORCfY3HAgSStFboTgTgAi9nQwJMfMSizdGIs35W9wVGkygEw8ei3_fWGIiGSiqnQ'
   # fill_out_options will read the key from file if necessary, but will not set
   # it since it will always get a non-empty value beforehand.
-  fill_out_options(package.SECTION_HEADER, task, options)
-
-  authenticated = False
+  fill_out_options(section_header, task, options)
   client.email = options.user
-  try:
-    token = googlecl.read_access_token(service, client.email)
-  except (KeyError, IndexError):
-    LOG.warning('Token file appears to be corrupted. Not using.')
-    token = None
-  if token:
-    client.SetOAuthToken(token)
-    try:
-      token_valid = client.IsTokenValid()
-    except AttributeError:
-      # Attribute errors crop up when using different gdata libraries
-      # but the same token.
-      token_valid = False
-    if token_valid:
-      authenticated = True
-    else:
-      googlecl.remove_access_token(service, client.email)
-  if not authenticated:
-    domain = get_hd_domain(client.email)
-    if client.RequestAccess(domain, options.hostid):
-      authorized_account = client.get_email()
-      if not verify_email(client.email, authorized_account):
-        LOG.error('You specified account ' + client.email +
-                  ' but granted access for ' + authorized_account + '.' +
-                  ' Please log out of ' + authorized_account +
-                  ' and grant access with ' + client.email + '.')
-        return
-      else:
-        # Only write the token if it's for the right user
-        googlecl.write_access_token(service, client.email, client.current_token)
-    else:
-      LOG.error('Failed to get valid access token!')
-      return
 
-  googlecl.set_missing_default(package.SECTION_HEADER, 'user',
+  success = authenticate(service, client, options.hostid)
+
+  if not success:
+    return
+
+  googlecl.set_missing_default(section_header, 'user',
                                client.email, options.config)
   if options.blog:
-    googlecl.set_missing_default(package.SECTION_HEADER, 'blog',
+    googlecl.set_missing_default(section_header, 'blog',
                                  options.blog, options.config)
   if options.devkey:
     client.developer_key = options.devkey
