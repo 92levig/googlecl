@@ -83,17 +83,24 @@ def authenticate(service_name, client, hostid):
     LOG.warning('Token file appears to be corrupted. Not using.')
     token = None
   if token:
+    LOG.debug('Loaded token from file')
     client.SetOAuthToken(token)
     try:
       token_valid = client.IsTokenValid()
-    except AttributeError:
+    except AttributeError, err:
       # Attribute errors crop up when using different gdata libraries
       # but the same token.
       token_valid = False
+      LOG.debug('Caught AttributeError: ' + str(err))
     if token_valid:
+      LOG.debug('Token valid!')
       authenticated = True
     else:
-      googlecl.remove_access_token(service_name, client.email)
+      removed = googlecl.remove_access_token(service_name, client.email)
+      if removed:
+        LOG.debug('Removed invalid token')
+      else:
+        LOG.debug('Failed to remove invalid token')
 
   if not authenticated:
     domain = get_hd_domain(client.email)
@@ -101,9 +108,11 @@ def authenticate(service_name, client, hostid):
       authorized_account = client.get_email()
       if verify_email(client.email, authorized_account):
         # Only write the token if it's for the right user
+        # token is client.auth_token for GDClient,
+        # client.current_token for GDataService.
         googlecl.write_access_token(service_name,
                                     client.email,
-                                    client.current_token)
+                                    client.auth_token or client.current_token)
       else:
         LOG.error('You specified account ' + client.email +
                   ' but granted access for ' + authorized_account + '.' +

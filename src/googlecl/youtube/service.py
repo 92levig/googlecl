@@ -21,6 +21,7 @@ import gdata.youtube
 import logging
 import os
 import googlecl
+import googlecl.base
 import googlecl.service
 from googlecl.youtube import SECTION_HEADER
 from gdata.youtube.service import YouTubeService
@@ -41,7 +42,7 @@ class YouTubeServiceCL(YouTubeService, googlecl.service.BaseServiceCL):
   def __init__(self):
     """Constructor."""
     YouTubeService.__init__(self)
-    self._set_params(SECTION_HEADER)
+    googlecl.service.BaseServiceCL.__init__(self, SECTION_HEADER)
   
   def categorize_videos(self, video_entries, category):
     """Change the categories of a list of videos to a single category.
@@ -136,11 +137,11 @@ class YouTubeServiceCL(YouTubeService, googlecl.service.BaseServiceCL):
     Keyword arguments:
       video_entries: List of YouTubeVideoEntry objects. 
       tags: String representation of tags in a comma separated list. For how 
-            tags are generated from the string, see googlecl.service.generate_tag_sets().
+            tags are generated from the string, see googlecl.base.generate_tag_sets().
     
     """
     from gdata.media import Group, Keywords
-    remove_set, add_set, replace_tags = googlecl.service.generate_tag_sets(tags)
+    remove_set, add_set, replace_tags = googlecl.base.generate_tag_sets(tags)
     for video in video_entries:
       if not video.media:
         video.media = Group()
@@ -206,8 +207,8 @@ def _run_list(client, options, args):
     style_list = googlecl.get_config_option(SECTION_HEADER,
                                             'list_style').split(',')
   for vid in entries:
-    print googlecl.service.compile_entry_string(
-                                 googlecl.service.BaseEntryToStringWrapper(vid),
+    print googlecl.base.compile_entry_string(
+                                 googlecl.base.BaseEntryToStringWrapper(vid),
                                  style_list,
                                  delimiter=options.delimiter)
 
@@ -230,22 +231,22 @@ def _run_tag(client, options, args):
 
 def _run_delete(client, options, args):
   entries = client.GetVideos(title=options.title)
-  client.Delete(entries, 'video',
+  client.DeleteEntryList(entries, 'video',
                 googlecl.CONFIG.getboolean('GENERAL', 'delete_by_default'))
 
 
-TASKS = {'post': googlecl.service.Task('Post a video.', callback=_run_post,
-                                       required=['category', 'devkey'],
-                                       optional=['title', 'summary', 'tags'],
-                                       args_desc='PATH_TO_VIDEO'),
-         'list': googlecl.service.Task('List videos by user.',
-                                       callback=_run_list,
-                                       required='delimiter',
-                                       optional=['title', 'owner']),
-         'tag': googlecl.service.Task('Add tags to a video and/or ' +\
-                                      'change its category.',
-                                      callback=_run_tag,
-                                      required=['devkey', 'title',
+TASKS = {'post': googlecl.base.Task('Post a video.', callback=_run_post,
+                                     required=['category', 'devkey'],
+                                     optional=['title', 'summary', 'tags'],
+                                     args_desc='PATH_TO_VIDEO'),
+         'list': googlecl.base.Task('List videos by user.',
+                                     callback=_run_list,
+                                     required='delimiter',
+                                     optional=['title', 'owner']),
+         'tag': googlecl.base.Task('Add tags to a video and/or ' +\
+                                    'change its category.',
+                                    callback=_run_tag,
+                                    required=['devkey', 'title',
                                                 ['category', 'tags']]),
-         'delete': googlecl.service.Task('Delete videos.', callback=_run_delete,
-                                         required='devkey', optional='title')}
+         'delete': googlecl.base.Task('Delete videos.', callback=_run_delete,
+                                       required='devkey', optional='title')}

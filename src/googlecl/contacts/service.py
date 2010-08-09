@@ -30,6 +30,7 @@ import logging
 import gdata.contacts.service
 import googlecl
 import googlecl.service
+import googlecl.base
 from googlecl.contacts import SECTION_HEADER
 
 
@@ -49,7 +50,7 @@ class ContactsServiceCL(gdata.contacts.service.ContactsService,
   def __init__(self):
     """Constructor."""
     gdata.contacts.service.ContactsService.__init__(self)
-    self._set_params(SECTION_HEADER)
+    googlecl.service.BaseServiceCL.__init__(self, SECTION_HEADER)
 
   def add_contact(self, string_or_csv_file):
     """Add contact(s).
@@ -125,7 +126,7 @@ class ContactsServiceCL(gdata.contacts.service.ContactsService,
 SERVICE_CLASS = ContactsServiceCL
 
 
-class ContactsEntryToStringWrapper(googlecl.service.BaseEntryToStringWrapper):
+class ContactsEntryToStringWrapper(googlecl.base.BaseEntryToStringWrapper):
   @property
   def address(self):
     """Postal addresses."""
@@ -186,7 +187,7 @@ def _run_list(client, options, args):
     style_list = googlecl.get_config_option(SECTION_HEADER,
                                             'list_style').split(',')
   for entry in entries:
-    print googlecl.service.compile_entry_string(
+    print googlecl.base.compile_entry_string(
                                             ContactsEntryToStringWrapper(entry),
                                             style_list,
                                             delimiter=options.delimiter)
@@ -205,7 +206,7 @@ def _run_delete(client, options, args):
     return
   for name in args:
     entries = client.GetContacts(name)
-    client.Delete(entries, 'contact',
+    client.DeleteEntryList(entries, 'contact',
                   googlecl.CONFIG.getboolean('GENERAL', 'delete_by_default'))
 
 
@@ -221,7 +222,7 @@ def _run_delete_groups(client, options, args):
     return
   for group in args:
     entries = client.GetGroups(group)
-    client.Delete(entries, 'group',
+    client.DeleteEntryList(entries, 'group',
                   googlecl.CONFIG.getboolean('GENERAL', 'delete_by_default'))
 
 
@@ -232,26 +233,26 @@ def _run_list_groups(client, options, args):
   for group in args:
     entries = client.GetGroups(group)
     for entry in entries:
-      print googlecl.service.compile_entry_string(
+      print googlecl.base.compile_entry_string(
                                            ContactsEntryToStringWrapper(entry),
                                            ['title'],
                                            delimiter=options.delimiter)
 
 
-TASKS = {'list': googlecl.service.Task('List contacts', callback=_run_list,
+TASKS = {'list': googlecl.base.Task('List contacts', callback=_run_list,
              args_desc='Fields to show (example: name,email)'),
-         'add': googlecl.service.Task('Add contacts', callback=_run_add,
+         'add': googlecl.base.Task('Add contacts', callback=_run_add,
              args_desc='"name,email" pair or CSV filename'),
-         'delete': googlecl.service.Task('Delete contacts',
+         'delete': googlecl.base.Task('Delete contacts',
              callback=_run_delete,
         args_desc='names of contact(s) to delete (e.g. "John Doe" "Jane Doe")'),
-         'add-groups': googlecl.service.Task('Add contact group(s)',
+         'add-groups': googlecl.base.Task('Add contact group(s)',
                                              callback=_run_add_groups,
                                              args_desc='Group name(s)'),
-         'delete-groups': googlecl.service.Task('Delete contact group(s)',
+         'delete-groups': googlecl.base.Task('Delete contact group(s)',
                                                 callback=_run_delete_groups,
                                                 args_desc='Group name(s)'),
-         'list-groups': googlecl.service.Task('List contact groups',
+         'list-groups': googlecl.base.Task('List contact groups',
              callback=_run_list_groups,
              args_desc='Specific groups to list (if any)')}
 

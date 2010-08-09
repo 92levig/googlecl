@@ -13,8 +13,8 @@
 # limitations under the License.
 """Data for GoogleCL's calendar service."""
 import datetime
-import googlecl.service
 import googlecl
+import googlecl.base
 
 service_name = __name__.split('.')[-1]
 LOGGER_NAME = googlecl.LOGGER_NAME + '.' + service_name
@@ -46,7 +46,7 @@ class Date(object):
     if self.start:
       try:
         start_time = datetime.datetime.strptime(self.start,
-                                                googlecl.service.DATE_FORMAT)
+                                                googlecl.base.DATE_FORMAT)
       except ValueError:
         start_time = datetime.datetime.strptime(self.start, QUERY_DATE_FORMAT)
       self.utc_start_data = start_time + (utc_timedelta)
@@ -59,7 +59,7 @@ class Date(object):
     if self.end:
       try:
         end_time = datetime.datetime.strptime(self.end,
-                                              googlecl.service.DATE_FORMAT)
+                                              googlecl.base.DATE_FORMAT)
       except ValueError:
         end_time = datetime.datetime.strptime(self.end, QUERY_DATE_FORMAT)
       self.utc_end_data = end_time + (utc_timedelta)

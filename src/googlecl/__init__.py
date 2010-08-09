@@ -268,7 +268,10 @@ def read_access_token(service, user):
   token_path = get_data_path(TOKENS_FILENAME_FORMAT % user)
   if os.path.exists(token_path):
     with open(token_path, 'rb') as token_file:
-      token_dict = pickle.load(token_file)
+      try:
+        token_dict = pickle.load(token_file)
+      except ImportError:
+        return None
     try:
       token = token_dict[service.lower()]
     except KeyError:
@@ -296,7 +299,13 @@ def remove_access_token(service, user):
   success = False
   if os.path.exists(token_path):
     with open(token_path, 'r+') as token_file:
-      token_dict = pickle.load(token_file)
+      try:
+        token_dict = pickle.load(token_file)
+      except ImportError, err:
+        LOG.error(err)
+        LOG.info('You probably have been using different versions of gdata.')
+        LOG.info('Backup or delete ' + token_path + ' and try again')
+        return False
       try:
         del token_dict[service.lower()]
       except KeyError:
@@ -351,9 +360,14 @@ def write_access_token(service, user, token):
     with open(token_path, 'rb') as token_file:
       try:
         token_dict = pickle.load(token_file)
-      except (KeyError, IndexError):
-        print 'Failed to load token_file (may be corrupted?)'
+      except (KeyError, IndexError), err:
+        LOG.error(err)
+        LOG.error('Failed to load token_file (may be corrupted?)')
         file_invalid = True
+      except ImportError, err:
+        LOG.error(err)
+        LOG.info('You probably have been using different versions of gdata.')
+        file_invalid = True 
       else:
         file_invalid = False
     if file_invalid:
@@ -363,7 +377,7 @@ def write_access_token(service, user, token):
       token_dict = {}
   else:
     token_dict = {}
-  token_dict[service] = token 
+  token_dict[service] = token
   with open(token_path, 'wb') as token_file:
     # Ensure only the owner of the file has read/write permission
     os.chmod(token_path, stat.S_IRUSR | stat.S_IWUSR)

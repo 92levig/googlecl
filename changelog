@@ -1,6 +1,7 @@
 svn HEAD
  Enhancements
  * Follow XDG Base Directory Specification.
+ * Refactored to include library support of v2 and v3 of the gdata protocol.
 
  Bugfixes
  * youtube list works without --owner flag again.

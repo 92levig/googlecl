@@ -24,6 +24,7 @@ import gdata
 import logging
 import os
 import googlecl
+import googlecl.base
 import googlecl.service
 from googlecl.blogger import SECTION_HEADER
 
@@ -31,16 +32,17 @@ from googlecl.blogger import SECTION_HEADER
 LOG = logging.getLogger(googlecl.blogger.LOGGER_NAME)
 
 
-class BlogNotFound(googlecl.service.Error):
+class BlogNotFound(googlecl.base.Error):
   """Specified blog is not found."""
   def __str__(self):
     if len(self.args) == 2:
-      return self.args[0] + ': ' + self.args[1]
+      return str(self.args[0]) + ': ' + str(self.args[1])
     else:
       return self.args
 
 
-class BloggerServiceCL(googlecl.service.BaseServiceCL):
+class BloggerServiceCL(gdata.service.GDataService,
+                       googlecl.service.BaseServiceCL):
   
   """Command-line-friendly service for the Blogger API. 
   
@@ -50,11 +52,10 @@ class BloggerServiceCL(googlecl.service.BaseServiceCL):
   
   def __init__(self):
     """Constructor."""
-    googlecl.service.BaseServiceCL.__init__(self)
-    self.service = 'blogger'
-    self.server = 'www.blogger.com'
-    self.account_type = 'GOOGLE'
-    self._set_params(SECTION_HEADER)
+    gdata.service.GDataService.__init__(self, service='blogger',
+                                        server='www.blogger.com',
+                                        account_type='GOOGLE')
+    googlecl.service.BaseServiceCL.__init__(self, SECTION_HEADER)
     
   def add_post(self, post_title, content, blog_title=None, is_draft=False):
     """Add a post.
@@ -138,12 +139,12 @@ class BloggerServiceCL(googlecl.service.BaseServiceCL):
       post_entries: List of post entry objects. 
       tags: String representation of tags in a comma separated list.
             For how tags are generated from the string, 
-            see googlecl.service.generate_tag_sets().
+            see googlecl.base.generate_tag_sets().
     
     """
     from atom import Category
     scheme = 'http://www.blogger.com/atom/ns#'
-    remove_set, add_set, replace_tags = googlecl.service.generate_tag_sets(tags)
+    remove_set, add_set, replace_tags = googlecl.base.generate_tag_sets(tags)
     for post in post_entries:
       # No point removing tags if we're replacing all of them.
       if remove_set and not replace_tags:
@@ -169,7 +170,7 @@ class BloggerServiceCL(googlecl.service.BaseServiceCL):
 SERVICE_CLASS = BloggerServiceCL
 
 
-class BloggerEntryToStringWrapper(googlecl.service.BaseEntryToStringWrapper):
+class BloggerEntryToStringWrapper(googlecl.base.BaseEntryToStringWrapper):
   @property
   def author(self):
     """Author."""
@@ -226,7 +227,7 @@ def _run_delete(client, options, args):
   except BlogNotFound, err:
     LOG.error(err)
     return
-  client.Delete(post_entries, entry_type = 'post',
+  client.DeleteEntryList(post_entries, entry_type = 'post',
                 delete_default=googlecl.CONFIG.getboolean('GENERAL',
                                                       'delete_by_default'))
 
@@ -246,7 +247,7 @@ def _run_list(client, options, args):
     style_list = googlecl.get_config_option(SECTION_HEADER,
                                             'list_style').split(',')
   for entry in entries:
-    print googlecl.service.compile_entry_string(
+    print googlecl.base.compile_entry_string(
                                              BloggerEntryToStringWrapper(entry),
                                              style_list,
                                              delimiter=options.delimiter)
@@ -263,16 +264,16 @@ def _run_tag(client, options, args):
   client.LabelPosts(entries, options.tags)
 
 
-TASKS = {'delete': googlecl.service.Task('Delete a post.', callback=_run_delete,
+TASKS = {'delete': googlecl.base.Task('Delete a post.', callback=_run_delete,
                                          required=['title'],
                                          optional='blog'),
-         'post': googlecl.service.Task('Post content.', callback=_run_post,
+         'post': googlecl.base.Task('Post content.', callback=_run_post,
                                        optional=['blog', 'title', 'tags'],
                                        args_desc='PATH_TO_CONTENT or CONTENT'),
-         'list': googlecl.service.Task('List posts in a blog',
+         'list': googlecl.base.Task('List posts in a blog',
                                        callback=_run_list,
                                        required=['delimiter'],
                                        optional=['blog', 'title', 'owner']),
-         'tag': googlecl.service.Task('Label posts', callback=_run_tag,
+         'tag': googlecl.base.Task('Label posts', callback=_run_tag,
                                       required=['tags', 'title'],
                                       optional=['blog'])}

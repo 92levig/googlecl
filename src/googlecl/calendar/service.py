@@ -27,6 +27,7 @@ __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import datetime
 import gdata.calendar.service
 import googlecl
+import googlecl.base
 import googlecl.service
 import logging
 import time
@@ -38,7 +39,7 @@ LOG = logging.getLogger(googlecl.calendar.LOGGER_NAME)
 USER_BATCH_URL_FORMAT = \
                gdata.calendar.service.DEFAULT_BATCH_URL.replace('default', '%s')
 
-class CalendarError(googlecl.service.Error):
+class CalendarError(googlecl.base.Error):
   """Base error for Calendar errors."""
   pass
 
@@ -81,7 +82,7 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
   def __init__(self):
     """Constructor."""
     gdata.calendar.service.CalendarService.__init__(self)
-    self._set_params(SECTION_HEADER)
+    googlecl.service.BaseServiceCL.__init__(self, SECTION_HEADER)
 
   def _batch_delete_recur(self, event, cal_user,
                           start_date=None, end_date=None):
@@ -144,7 +145,7 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
     if not single_events and not recurring_events:
       raise EventsNotFound
     delete_default = googlecl.CONFIG.getboolean('GENERAL', 'delete_by_default')
-    self.Delete(single_events, 'event', delete_default)
+    self.DeleteEntryList(single_events, 'event', delete_default)
     
     date = googlecl.calendar.Date(date)
     # option_list is a list of tuples, (prompt_string, deletion_instruction)
@@ -302,7 +303,7 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
 SERVICE_CLASS = CalendarServiceCL
 
 
-class CalendarEntryToStringWrapper(googlecl.service.BaseEntryToStringWrapper):
+class CalendarEntryToStringWrapper(googlecl.base.BaseEntryToStringWrapper):
   @property
   def when(self):
     """When event takes place."""
@@ -372,7 +373,7 @@ def get_date_today(include_hour=False, as_range=False):
   if include_hour:
     date_str = date_data.strftime(googlecl.calendar.QUERY_DATE_FORMAT)
   else:
-    date_str = date_data.strftime(googlecl.service.DATE_FORMAT)
+    date_str = date_data.strftime(googlecl.base.DATE_FORMAT)
   if as_range:
     date_str += ','
   return date_str
@@ -463,7 +464,7 @@ def _list(client, options, args, date):
       style_list = googlecl.get_config_option(SECTION_HEADER,
                                               'list_style').split(',')
     for entry in entries:
-      print googlecl.service.compile_entry_string(
+      print googlecl.base.compile_entry_string(
                                             CalendarEntryToStringWrapper(entry),
                                             style_list,
                                             delimiter=options.delimiter)
@@ -539,20 +540,20 @@ def _run_delete(client, options, args):
       LOG.warning('No events found that match your options!')
 
 
-TASKS = {'list': googlecl.service.Task('List events on a calendar',
+TASKS = {'list': googlecl.base.Task('List events on a calendar',
                                        callback=_run_list,
                                        required=['delimiter'],
                                        optional=['title', 'query',
                                                  'date', 'cal']),
-         'today': googlecl.service.Task('List events for the next 24 hours',
+         'today': googlecl.base.Task('List events for the next 24 hours',
                                         callback=_run_list_today,
                                         required='delimiter',
                                         optional=['title', 'query', 'cal']),
-         'add': googlecl.service.Task('Add event to a calendar',
+         'add': googlecl.base.Task('Add event to a calendar',
                                       callback=_run_add,
                                       optional='cal',
                                       args_desc='QUICK_ADD_TEXT'),
-         'delete': googlecl.service.Task('Delete event from a calendar',
+         'delete': googlecl.base.Task('Delete event from a calendar',
                                          callback=_run_delete,
                                          required=[['title', 'query']],
                                          optional=['date', 'cal'])}

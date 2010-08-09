@@ -23,6 +23,7 @@ import logging
 import os
 import urllib
 import googlecl
+import googlecl.base
 import googlecl.service
 from googlecl.picasa import SECTION_HEADER
 from gdata.photos.service import PhotosService, GooglePhotosException
@@ -63,7 +64,7 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
   def __init__(self):
     """Constructor."""
     PhotosService.__init__(self)
-    self._set_params(SECTION_HEADER)
+    googlecl.service.BaseServiceCL.__init__(self, SECTION_HEADER)
   
   def build_entry_list(self, user='default', title=None, query=None,
                        force_photos=False):
@@ -105,31 +106,6 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
       entries = album_entry
       
     return entries
-  
-  def delete(self, title='', query='', delete_default=False):
-    """Delete album(s) or photo(s).
-    
-    Keyword arguments:
-      title: Albums matching this title should be deleted.
-      query: Photos matching this url-encoded query should be deleted.
-      delete_default: If the user is being prompted to confirm deletion, hitting
-            enter at the prompt will delete or keep the album if this is True or
-            False, respectively. (Default False)
-    
-    """
-    entries = self.build_entry_list(title=title, query=query)
-    if query:
-      entry_type = 'photo'
-      search_string = query
-    else:
-      entry_type = 'album'
-      search_string = title
-    if not entries:
-      LOG.info('No %ss matching %s' % (entry_type, search_string))
-    googlecl.service.BaseServiceCL.Delete(self, entries,
-                                          entry_type, delete_default)
-
-  Delete = delete
 
   def download_album(self, base_path, user, video_format='mp4', title=None):
     """Download an album to the local host.
@@ -282,7 +258,7 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
 
   def is_token_valid(self, test_uri='/data/feed/api/user/default'):
     """Check that the token being used is valid."""
-    return googlecl.service.BaseServiceCL.IsTokenValid(self, test_uri)
+    return googlecl.base.BaseCL.IsTokenValid(self, test_uri)
 
   IsTokenValid = is_token_valid
 
@@ -293,11 +269,11 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
       photo_entries: List of photo entry objects. 
       tags: String representation of tags in a comma separated list.
             For how tags are generated from the string, 
-            see googlecl.service.generate_tag_sets().
+            see googlecl.base.generate_tag_sets().
     
     """
     from gdata.media import Group, Keywords
-    remove_set, add_set, replace_tags = googlecl.service.generate_tag_sets(tags)
+    remove_set, add_set, replace_tags = googlecl.base.generate_tag_sets(tags)
     for photo in photo_entries:
       if not photo.media:
         photo.media = Group()
@@ -338,7 +314,7 @@ def _run_create(client, options, args):
     import time
     try:
       timestamp = time.mktime(time.strptime(options.date,
-                                            googlecl.service.DATE_FORMAT))
+                                            googlecl.base.DATE_FORMAT))
     except ValueError, err:
       LOG.error(err)
       LOG.info('Ignoring date option, using today')
@@ -356,8 +332,18 @@ def _run_create(client, options, args):
 
 
 def _run_delete(client, options, args):
-  client.Delete(title=options.title,
-                query=options.encoded_query,
+  if options.encoded_query:
+    entry_type = 'photo'
+    search_string = options.query
+  else:
+    entry_type = 'album'
+    search_string = options.title
+  entries = client.build_entry_list(title=options.title,
+                                    query=options.encoded_query)
+  if not entries:
+    LOG.info('No %ss matching %s' % (entry_type, search_string))
+  else:
+    client.DeleteEntryList(entries, entry_type,
                 delete_default=googlecl.CONFIG.getboolean('GENERAL',
                                                           'delete_by_default'))
 
@@ -373,8 +359,8 @@ def _run_list(client, options, args):
     style_list = googlecl.get_config_option(SECTION_HEADER,
                                             'list_style').split(',')
   for entry in entries:
-    print googlecl.service.compile_entry_string(
-                               googlecl.service.BaseEntryToStringWrapper(entry),
+    print googlecl.base.compile_entry_string(
+                               googlecl.base.BaseEntryToStringWrapper(entry),
                                style_list,
                                delimiter=options.delimiter)
 
@@ -389,8 +375,8 @@ def _run_list_albums(client, options, args):
     style_list = googlecl.get_config_option(SECTION_HEADER,
                                             'list_style').split(',')
   for entry in entries:
-    print googlecl.service.compile_entry_string(
-                               googlecl.service.BaseEntryToStringWrapper(entry),
+    print googlecl.base.compile_entry_string(
+                               googlecl.base.BaseEntryToStringWrapper(entry),
                                style_list,
                                delimiter=options.delimiter)
 
@@ -430,29 +416,29 @@ def _run_tag(client, options, args):
     LOG.error('No matches for the title and/or query you gave.')
 
 
-TASKS = {'create': googlecl.service.Task('Create an album',
+TASKS = {'create': googlecl.base.Task('Create an album',
                                          callback=_run_create,
                                          required='title',
                                          optional=['date', 'summary', 'tags'],
                                          args_desc='PATH_TO_PHOTOS'), 
-         'post': googlecl.service.Task('Post photos to an album',
+         'post': googlecl.base.Task('Post photos to an album',
                                        callback=_run_post,
                                        required='title',
                                        optional=['tags', 'owner'],
                                        args_desc='PATH_TO_PHOTOS'), 
-         'delete': googlecl.service.Task('Delete photos or albums',
+         'delete': googlecl.base.Task('Delete photos or albums',
                                          callback=_run_delete,
                                          required=[['title', 'query']]),
-         'list': googlecl.service.Task('List photos', callback=_run_list,
+         'list': googlecl.base.Task('List photos', callback=_run_list,
                                        required=['delimiter'],
                                        optional=['title', 'query', 'owner']),
-         'list-albums': googlecl.service.Task('List albums',
+         'list-albums': googlecl.base.Task('List albums',
                                               callback=_run_list_albums,
                                               required=['delimiter'],
                                               optional=['title', 'owner']),
-         'get': googlecl.service.Task('Download albums', callback=_run_get,
+         'get': googlecl.base.Task('Download albums', callback=_run_get,
                                       optional=['title', 'owner', 'format'], 
                                       args_desc='LOCATION'),
-         'tag': googlecl.service.Task('Tag photos', callback=_run_tag,
+         'tag': googlecl.base.Task('Tag photos', callback=_run_tag,
                                       required=['tags', ['title', 'query']],
                                       optional='owner')}

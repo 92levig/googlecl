@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-"""Service details and instances for the Docs service.
+"""Service details and instances for the Docs service using GData 3.0.
  
 Some use cases:
 Upload a document:
@@ -29,24 +29,23 @@ Download docs:
 from __future__ import with_statement
 
 __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
-import gdata.docs.service
+import gdata.docs.client
 import logging
 import os
 import shutil
 import googlecl
-import googlecl.base
-import googlecl.service
+import googlecl.client
 from googlecl.docs import SECTION_HEADER
 import googlecl.docs.base
 
 
-LOG = logging.getLogger(googlecl.docs.LOGGER_NAME + '.service')
+LOG = logging.getLogger(googlecl.docs.LOGGER_NAME + '.client')
 
 
-class DocsServiceCL(gdata.docs.service.DocsService,
-                    googlecl.service.BaseServiceCL):
+class DocsClientCL(gdata.docs.client.DocsClient,
+                   googlecl.client.BaseClientCL):
   
-  """Extends gdata.docs.service.DocsClient for the command line.
+  """Extends gdata.docs.client.DocsClient for the command line.
   
   This class adds some features focused on using Google Docs via an installed
   app with a command line interface.
@@ -55,67 +54,38 @@ class DocsServiceCL(gdata.docs.service.DocsService,
 
   def __init__(self):
     """Constructor.""" 
-    gdata.docs.service.DocsService.__init__(self, source='GoogleCL')
-    googlecl.service.BaseServiceCL.__init__(self, SECTION_HEADER)
-    # 302 Moved Temporarily errors began cropping up for new style docs
-    # during export. Using https solves the problem, so set ssl True here.
-    self.ssl = True
+    gdata.docs.client.DocsClient.__init__(self, source='GoogleCL')
+    googlecl.client.BaseClientCL.__init__(self, section=SECTION_HEADER)
 
-  def _DownloadFile(self, uri, file_path):
-    """Downloads a file.
+  def _download_file(self, uri, file_path, auth_token=None, **kwargs):
+    """Downloads a file, optionally decoding from UTF-8.
 
-    Overloaded from docs.service.DocsService to optionally decode from UTF.
+    Overridden from gdata.docs.client to support decoding.
 
     Args:
       uri: string The full Export URL to download the file from.
       file_path: string The full path to save the file to.
+      auth_token: (optional) gdata.gauth.ClientLoginToken, AuthSubToken, or
+          OAuthToken which authorizes this client to edit the user's data.
+      decode: bool (default False) Whether or not to decode UTF-8.
+      kwargs: Other parameters to pass to self.get_file_content().
 
     Raises:
       RequestError: on error response from server.
+
     """
-    server_response = self.request('GET', uri)
-    response_body = server_response.read()
-    if server_response.status != 200:
-      raise gdata.service.RequestError, {'status': server_response.status,
-                                         'reason': server_response.reason,
-                                         'body': response_body}
-    if googlecl.get_config_option(SECTION_HEADER, 'decode_utf_8',
-                                  False, bool):
+    response_string = self.get_file_content(uri, auth_token=auth_token)
+    if googlecl.get_config_option(SECTION_HEADER, 'decode_utf_8', False, bool):
       try:
-        file_string = response_body.decode('utf-8-sig')
+        file_string = response_string.decode('utf-8-sig')
       except UnicodeError, err:
         LOG.error('Could not decode: ' + str(err))
-        file_string = response_body
+        file_string = response_string
     else:
-      file_string = response_body
+      file_string = response_string
     with open(file_path, 'wb') as download_file:
       download_file.write(file_string)
       download_file.flush()
-
-  def create_folder(self, title, folder_or_uri=None):
-    """Stolen from gdata-2.0.10 to make recursive directory upload work."""
-    try:
-      return gdata.docs.service.DocsService.CreateFolder(self, title,
-                                                         folder_or_uri)
-    except AttributeError:
-      import atom
-      if folder_or_uri:
-        try:
-          uri = folder_or_uri.content.src
-        except AttributeError:
-          uri = folder_or_uri
-      else:
-        uri = '/feeds/documents/private/full'
-
-      folder_entry = gdata.docs.DocumentListEntry()
-      folder_entry.title = atom.Title(text=title)
-      folder_entry.category.append(_make_kind_category(
-                                               googlecl.docs.base.FOLDER_LABEL))
-      folder_entry = self.Post(folder_entry, uri,
-                               converter=gdata.docs.DocumentListEntryFromString)
-      return folder_entry
-
-  CreateFolder = create_folder
 
   def edit_doc(self, doc_entry_or_title, editor, file_format,
                folder_entry_or_path=None):
@@ -137,7 +107,7 @@ class DocsServiceCL(gdata.docs.service.DocsService,
     """ 
     import subprocess
     import tempfile
-    from gdata.docs.service import SUPPORTED_FILETYPES
+    from gdata.docs.data import MIMETYPES
     
     try:
       doc_title = doc_entry_or_title.title.text
@@ -165,7 +135,7 @@ class DocsServiceCL(gdata.docs.service.DocsService,
       base_path = path
 
     if not new_doc:
-      self.Export(doc_entry_or_title.content.src, path)
+      self.export(doc_entry_or_title.content.src, path)
       file_hash = googlecl.docs.base._md5_hash_file(path)
     else:
       file_hash = None
@@ -187,18 +157,19 @@ class DocsServiceCL(gdata.docs.service.DocsService,
         self.upload_single_doc(path, folder_entry=folder_entry_or_path)
     else:
       try:
-        content_type = SUPPORTED_FILETYPES[file_format.upper()]
+        content_type = MIMETYPES[file_format.upper()]
       except KeyError:
         print 'Could not find mimetype for ' + file_format
-        while file_format not in SUPPORTED_FILETYPES.keys():
+        while file_format not in MIMETYPES.keys():
           file_format = raw_input('Please enter one of ' +
                                   SUPPORTED_FILETYPES.keys() + 
                                   ' for a content type to upload as.')
-        content_type = SUPPORTED_FILETYPES[file_format]
-      mediasource = gdata.MediaSource(file_path=path, content_type=content_type)
+        content_type = MIMETYPES[file_format]
+      mediasource = gdata.data.MediaSource(file_path=path,
+                                           content_type=content_type)
       try:
-        self.Put(mediasource, doc_entry_or_title.GetEditMediaLink().href)
-      except gdata.service.RequestError, err:
+        self.Update(doc_entry_or_title, media_source=mediasource)
+      except gdata.client.RequestError, err:
         LOG.error(err)
         new_path = googlecl.docs.base.safe_move(path, '.')
         LOG.info('Moved edited document to ' + new_path)
@@ -212,21 +183,44 @@ class DocsServiceCL(gdata.docs.service.DocsService,
 
   EditDoc = edit_doc
 
-  def export(self, entry_or_id_or_url, file_path, gid=None, extra_params=None):
-    """Export old and new version docs.
-    
-    Ripped from gdata.docs.DocsService, adds 'format' parameter to make
-    new version documents happy.
-    
+  def export(self, entry_or_id_or_url, file_path, gid=None, auth_token=None,
+             **kwargs):
+    """Exports a document from the Document List in a different format.
+
+    Overloaded from docs.client.DocsClient to fix "always-download-as-pdf"
+    issue
+
+    Args:
+      entry_or_id_or_url: gdata.docs.data.DocsEntry or string representing a
+          resource id or URL to download the document from (such as the content
+          src link).
+      file_path: str The full path to save the file to.  The export
+          format is inferred from the the file extension.
+      gid: str (optional) grid id for downloading a single grid of a
+          spreadsheet. The param should only be used for .csv and .tsv
+          spreadsheet exports.
+      auth_token: (optional) gdata.gauth.ClientLoginToken, AuthSubToken, or
+          OAuthToken which authorizes this client to edit the user's data.
+      kwargs: Other parameters to pass to self.download().
+
+    Raises:
+      gdata.client.RequestError if the download URL is malformed or the server's
+      response was not successful.
     """
-    ext = googlecl.get_extension_from_path(file_path)
-    if ext:
-      if extra_params is None:
-        extra_params = {}
+    extra_params = {}
+
+    match = gdata.docs.data.FILE_EXT_PATTERN.match(file_path)
+    if match:
+      extra_params['exportFormat'] = match.group(1)
       # Fix issue with new-style docs always downloading to PDF
       # (gdata-issues Issue 2157)
-      extra_params['format'] = ext
-    self.Download(entry_or_id_or_url, file_path, ext, gid, extra_params)
+      extra_params['format'] = match.group(1)
+
+    if gid is not None:
+      extra_params['gid'] = gid
+
+    self.download(entry_or_id_or_url, file_path, extra_params,
+                  auth_token=auth_token, **kwargs)
 
   Export = export
 
@@ -259,15 +253,15 @@ class DocsServiceCL(gdata.docs.service.DocsService,
         file_format = format_from_filename or\
                       googlecl.docs.base.get_extension_from_doctype(
                                 googlecl.docs.base.get_document_type(entry)) or\
-                                default_format
+                      default_format
       if os.path.isdir(base_path):
         path = os.path.join(base_path, entry.title.text + '.' + file_format)
       else:
         path = base_path + '.' + file_format
       LOG.info('Downloading ' + entry.title.text + ' to ' + path)
       try:
-        self.Export(entry, path)
-      except gdata.service.RequestError, err:
+        self.export(entry, path)
+      except gdata.client.RequestError, err:
         LOG.error('Download of ' + entry.title.text + ' failed: ' + str(err))
       except IOError, err:
         LOG.error(err)
@@ -296,12 +290,11 @@ class DocsServiceCL(gdata.docs.service.DocsService,
         # folder.content.src is the uri to query for documents in that folder.
         entries.extend(self.GetEntries(folder.content.src,
                                        title,
-                               converter=gdata.docs.DocumentListFeedFromString))
+                                       desired_class=gdata.docs.data.DocList))
     else:
-      query = gdata.docs.service.DocumentQuery()
-      entries = self.GetEntries(query.ToUri(),
+      entries = self.GetEntries(gdata.docs.client.DOCLIST_FEED_URI,
                                 title,
-                                converter=gdata.docs.DocumentListFeedFromString)
+                                desired_class=gdata.docs.data.DocList)
     return entries
 
   def get_single_doc(self, title=None, folder_entry_list=None):
@@ -320,16 +313,16 @@ class DocsServiceCL(gdata.docs.service.DocsService,
       if len(folder_entry_list) == 1:
         return self.GetSingleEntry(folder_entry_list[0].content.src,
                                    title,
-                                converter=gdata.docs.DocumentListFeedFromString)
+                                   desired_class=gdata.docs.data.DocList)
       else:
         entries = self.get_doclist(title, folder_entry_list)
-        # Technically don't need the converter for this call
+        # Technically don't need the desired_class for this call
         # because we have the entries.
         return self.GetSingleEntry(entries, title)
     else:
-      return self.GetSingleEntry(gdata.docs.service.DocumentQuery().ToUri(),
+      return self.GetSingleEntry(gdata.docs.client.DOCLIST_FEED_URI,
                                  title,
-                                converter=gdata.docs.DocumentListFeedFromString)
+                                 desired_class=gdata.docs.data.DocList)
 
   GetSingleDoc = get_single_doc
 
@@ -344,9 +337,8 @@ class DocsServiceCL(gdata.docs.service.DocsService,
 
     """
     if title:
-      query = gdata.docs.service.DocumentQuery(categories=['folder'],
-                                               params={'showfolders': 'true'})
-      folder_entries = self.GetEntries(query.ToUri(), title=title)
+      uri = gdata.docs.client.DOCLIST_FEED_URI + '-/folder'
+      folder_entries = self.GetEntries(uri, title=title)
       if not folder_entries:
         LOG.warning('No folder found that matches ' + title)
       return folder_entries
@@ -358,24 +350,24 @@ class DocsServiceCL(gdata.docs.service.DocsService,
   def is_token_valid(self, test_uri=None):
     """Check that the token being used is valid."""
     if not test_uri:
-      docs_uri = gdata.docs.service.DocumentQuery().ToUri()
+      docs_uri = gdata.docs.client.DOCLIST_FEED_URI
       sheets_uri = \
                'https://spreadsheets.google.com/feeds/spreadsheets/private/full'
-    docs_test = googlecl.service.BaseServiceCL.IsTokenValid(self, docs_uri)
-    sheets_test = googlecl.service.BaseServiceCL.IsTokenValid(self, sheets_uri)
+    docs_test = googlecl.client.BaseClientCL.IsTokenValid(self, docs_uri)
+    sheets_test = googlecl.client.BaseClientCL.IsTokenValid(self, sheets_uri)
     return docs_test and sheets_test
 
   IsTokenValid = is_token_valid
 
   def request_access(self, domain, node, scopes=None):
-    """Request access as in BaseServiceCL, but specify scopes."""
+    """Request access as in BaseClientCL, but specify scopes."""
     # When people use docs (writely), they expect access to
     # spreadsheets as well (wise).
     if not scopes:
-      scopes = gdata.service.CLIENT_LOGIN_SCOPES['writely'] +\
-               gdata.service.CLIENT_LOGIN_SCOPES['wise']
-    return googlecl.service.BaseServiceCL.request_access(self, domain, node,
-                                                         scopes=scopes)
+      scopes = gdata.gauth.AUTH_SCOPES['writely'] +\
+               gdata.gauth.AUTH_SCOPES['wise']
+    return googlecl.client.BaseClientCL.request_access(self, domain, node,
+                                                       scopes=scopes)
 
   RequestAccess = request_access
 
@@ -416,9 +408,11 @@ class DocsServiceCL(gdata.docs.service.DocsService,
           directory = os.path.dirname(dirpath)
           folder_name = os.path.basename(dirpath)
           if directory in folder_entries:
-            fentry = self.CreateFolder(folder_name, folder_entries[directory])
+            fentry = self.create(gdata.docs.data.FOLDER_LABEL, folder_name,
+                                 folder_entries[directory])
           else:
-            fentry = self.CreateFolder(folder_name, folder_root)
+            fentry = self.create(gdata.docs.data.FOLDER_LABEL, folder_name,
+                                 folder_root)
           folder_entries[dirpath] = fentry
           LOG.debug('Created folder ' + dirpath + ' ' + folder_name)
           for fname in filenames:
@@ -438,63 +432,29 @@ class DocsServiceCL(gdata.docs.service.DocsService,
 
   def upload_single_doc(self, path, title=None, folder_entry=None,
                         file_format=None):
-    import atom
-    from gdata.docs.service import SUPPORTED_FILETYPES
+    import mimetypes
 
-    if folder_entry:
-      post_uri = folder_entry.content.src
-    else:
-      post_uri = '/feeds/documents/private/full'
     filename = os.path.basename(path)
+    content_type = None
     if file_format:
-      extension = file_format
-    else:
+      from gdata.docs.data import MIMETYPES
       try:
-        extension = filename.split('.')[1]
-      except IndexError:
-        default_ext = 'txt'
-        LOG.info('No extension on filename! Treating as ' + default_ext)
-        extension = default_ext
-    try:
-      content_type = SUPPORTED_FILETYPES[extension.upper()]
-    except KeyError:
-      LOG.info('No supported filetype found for extension ' + extension)
-      content_type = 'text/plain'
-      LOG.info('Uploading as ' + content_type)
+        content_type = MIMETYPES[file_format.upper()]
+      except KeyError:
+        LOG.info('No supported filetype found for extension ' + file_format +
+                 ', letting mimetypes module guess mime type')
+    if not content_type:
+      content_type = mimetypes.guess_type(path)[0]
+    LOG.debug('Uploading with MIME type: ' + content_type)
     LOG.info('Loading ' + path)
-    try:
-      media = gdata.MediaSource(file_path=path, content_type=content_type)
-    except IOError, err:
-      LOG.error(err)
-      return None
     entry_title = title or filename.split('.')[0]
     try:
-      try:
-        # Upload() wasn't added until later versions of DocsService, so
-        # we may not have it. 
-        new_entry = self.Upload(media, entry_title, post_uri)
-      except AttributeError:
-        entry = gdata.docs.DocumentListEntry()
-        entry.title = atom.Title(text=entry_title)
-        # Cover the supported filetypes in gdata-2.0.10 even though
-        # they aren't listed in gdata 1.2.4... see what happens.
-        if extension.lower() in ['csv', 'tsv', 'tab', 'ods', 'xls', 'xlsx']:
-          category = _make_kind_category(googlecl.docs.base.SPREADSHEET_LABEL)
-        elif extension.lower() in ['ppt', 'pps']:
-          category = _make_kind_category(googlecl.docs.base.PRESENTATION_LABEL)
-        elif extension.lower() in ['pdf']:
-          category = _make_kind_category(googlecl.docs.base.PDF_LABEL)
-        # Treat everything else as a document
-        else:
-          category = _make_kind_category(googlecl.docs.base.DOCUMENT_LABEL)
-        entry.category.append(category)
-        # To support uploading to folders for earlier
-        # versions of the API, expose the lower-level Post
-        new_entry = self.Post(entry, post_uri, media_source=media,
-                              extra_headers={'Slug': media.file_name},
-                              converter=gdata.docs.DocumentListEntryFromString)
-    except gdata.service.RequestError, err:
+      new_entry = self.upload(path, entry_title, folder_entry, content_type)
+    except gdata.client.RequestError, err:
       LOG.error('Failed to upload ' + path + ': ' + str(err))
+      if err.args[0].find('ServiceForbiddenException') != -1:
+        LOG.info('You may have to specify a format with --format. Try ' +
+                 '--format=txt')
       return None
     else:
       LOG.info('Upload success! Direct link: ' +
@@ -504,17 +464,7 @@ class DocsServiceCL(gdata.docs.service.DocsService,
   UploadSingleDoc = upload_single_doc
 
 
-SERVICE_CLASS = DocsServiceCL
-
-
-def _make_kind_category(label):
-  """Stolen from gdata-2.0.10 docs.service."""
-  import atom
-  if label is None:
-    return None
-  documents_namespace = 'http://schemas.google.com/docs/2007'
-  return atom.Category(scheme=gdata.docs.service.DATA_KIND_SCHEME,
-                       term=documents_namespace + '#' + label, label=label)
+SERVICE_CLASS = DocsClientCL
 
 
 #===============================================================================
@@ -587,7 +537,7 @@ def _run_edit(client, options, args):
     # Don't tell the user no matching folders were found if they didn't
     # specify one.
     LOG.debug('No matching folders found! Will create them.')
-  format_ext = options.format or \
+  format_ext = options.format or\
                googlecl.docs.base.get_extension_from_doctype(doc_type)
   editor = options.editor or googlecl.docs.base.get_editor(doc_type)
   if not editor:
@@ -600,6 +550,7 @@ def _run_edit(client, options, args):
     LOG.info('Define a "format" option in your config file,' +
              ' or pass in a format with --format')
     return
+  LOG.debug('format_ext: ' + format_ext)
   client.edit_doc(doc_entry_or_title, editor, format_ext,
                   folder_entry_or_path=folder_entry or options.folder)
 
@@ -611,19 +562,19 @@ def _run_delete(client, options, args):
 
 
 TASKS = {'upload': googlecl.base.Task('Upload a document',
-                                       callback=_run_upload,
-                                       optional=['title', 'folder', 'format'],
-                                       args_desc='PATH_TO_FILE'),
+                                      callback=_run_upload,
+                                      optional=['title', 'folder', 'format'],
+                                      args_desc='PATH_TO_FILE'),
          'edit': googlecl.base.Task('Edit a document', callback=_run_edit,
-                                     required=['title'],
-                                     optional=['format', 'editor', 'folder']),
+                                    required=['title'],
+                                    optional=['format', 'editor', 'folder']),
          'get': googlecl.base.Task('Download a document', callback=_run_get,
-                                    required=[['title', 'folder']],
-                                    optional='format',
-                                    args_desc='LOCATION'),
+                                   required=[['title', 'folder']],
+                                   optional='format',
+                                   args_desc='LOCATION'),
          'list': googlecl.base.Task('List documents', callback=_run_list,
-                                     required='delimiter',
-                                     optional=['title', 'folder']),
+                                    required='delimiter',
+                                    optional=['title', 'folder']),
          'delete': googlecl.base.Task('Delete documents',
-                                       callback=_run_delete,
-                                       optional='title')}
+                                      callback=_run_delete,
+                                      optional='title')}
