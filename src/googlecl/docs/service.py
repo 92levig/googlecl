@@ -44,6 +44,7 @@ LOG = logging.getLogger(googlecl.docs.LOGGER_NAME + '.service')
 
 
 class DocsServiceCL(gdata.docs.service.DocsService,
+                    googlecl.docs.base.DocsBaseCL,
                     googlecl.service.BaseServiceCL):
   
   """Extends gdata.docs.service.DocsClient for the command line.
@@ -92,7 +93,7 @@ class DocsServiceCL(gdata.docs.service.DocsService,
       download_file.write(file_string)
       download_file.flush()
 
-  def create_folder(self, title, folder_or_uri=None):
+  def _create_folder(self, title, folder_or_uri=None):
     """Stolen from gdata-2.0.10 to make recursive directory upload work."""
     try:
       return gdata.docs.service.DocsService.CreateFolder(self, title,
@@ -115,103 +116,6 @@ class DocsServiceCL(gdata.docs.service.DocsService,
                                converter=gdata.docs.DocumentListEntryFromString)
       return folder_entry
 
-  CreateFolder = create_folder
-
-  def edit_doc(self, doc_entry_or_title, editor, file_format,
-               folder_entry_or_path=None):
-    """Edit a document.
-    
-    Keyword arguments:
-      doc_entry_or_title: DocEntry of the existing document to edit,
-                          or title of the document to create.
-      editor: Name of the editor to use. Should be executable from the user's
-              working directory.
-      file_format: Suffix of the file to download.
-                   For example, "txt", "csv", "xcl".
-      folder_entry_or_path: Entry or string representing folder to upload into.
-                   If a string, a new set of folders will ALWAYS be created.
-                   For example, 'my_folder' to upload to my_folder,
-                   'foo/bar' to upload into subfolder bar under folder foo.
-                   Default None for root folder.
-    
-    """ 
-    import subprocess
-    import tempfile
-    from gdata.docs.service import SUPPORTED_FILETYPES
-    
-    try:
-      doc_title = doc_entry_or_title.title.text
-      new_doc = False
-    except AttributeError:
-      doc_title = doc_entry_or_title
-      new_doc = True
-
-    temp_dir = tempfile.mkdtemp()
-    # If we're creating a new document and not given a folder entry
-    if new_doc and isinstance(folder_entry_or_path, basestring):
-      folder_path = os.path.normpath(folder_entry_or_path)
-      # Some systems allow more than one path separator
-      if os.altsep:
-        folder_path.replace(os.altsep, os.sep)
-      base_folder = folder_path.split(os.sep)[0]
-      # Define the base path such that upload_docs will create a folder
-      # named base_folder
-      base_path = os.path.join(temp_dir, base_folder)
-      total_basename = os.path.join(temp_dir, folder_path)
-      os.makedirs(total_basename)
-      path = os.path.join(total_basename, doc_title + '.' + file_format)
-    else:
-      path = os.path.join(temp_dir, doc_title + '.' + file_format)
-      base_path = path
-
-    if not new_doc:
-      self.Export(doc_entry_or_title.content.src, path)
-      file_hash = googlecl.docs.base._md5_hash_file(path)
-    else:
-      file_hash = None
-
-    subprocess.call([editor, path])
-    if file_hash and file_hash == googlecl.docs.base._md5_hash_file(path):
-      LOG.info('No modifications to file, not uploading.')
-      return
-    elif not os.path.exists(path):
-      LOG.info('No file written, not uploading.')
-      return
-    
-    if new_doc:
-      if isinstance(folder_entry_or_path, basestring):
-        # Let code in upload_docs handle the creation of new folder(s)
-        self.upload_docs([base_path])
-      else:
-        # folder_entry_or_path is None or a GDataEntry.
-        self.upload_single_doc(path, folder_entry=folder_entry_or_path)
-    else:
-      try:
-        content_type = SUPPORTED_FILETYPES[file_format.upper()]
-      except KeyError:
-        print 'Could not find mimetype for ' + file_format
-        while file_format not in SUPPORTED_FILETYPES.keys():
-          file_format = raw_input('Please enter one of ' +
-                                  SUPPORTED_FILETYPES.keys() + 
-                                  ' for a content type to upload as.')
-        content_type = SUPPORTED_FILETYPES[file_format]
-      mediasource = gdata.MediaSource(file_path=path, content_type=content_type)
-      try:
-        self.Put(mediasource, doc_entry_or_title.GetEditMediaLink().href)
-      except gdata.service.RequestError, err:
-        LOG.error(err)
-        new_path = googlecl.docs.base.safe_move(path, '.')
-        LOG.info('Moved edited document to ' + new_path)
-
-    try:
-      # Good faith effort to keep the temp directory clean.
-      shutil.rmtree(temp_dir)
-    except OSError:
-      # Only seen errors on Windows, but catch the more general OSError.
-      pass
-
-  EditDoc = edit_doc
-
   def export(self, entry_or_id_or_url, file_path, gid=None, extra_params=None):
     """Export old and new version docs.
     
@@ -229,51 +133,6 @@ class DocsServiceCL(gdata.docs.service.DocsService,
     self.Download(entry_or_id_or_url, file_path, ext, gid, extra_params)
 
   Export = export
-
-  def get_docs(self, base_path, entries, file_format=None):
-    """Download documents.
-    
-    Keyword arguments:
-      base_path: The path to download files to. This plus an entry's title plus
-                 its format-specific extension will form the complete path.
-      entries: List of DocEntry items representing the files to download.
-      file_format: Suffix to give the file when downloading.
-                   For example, "txt", "csv", "xcl". Default None to let
-                   get_extension_from_doctype decide the extension.
-
-    """
-    if not os.path.isdir(base_path):
-      if len(entries) > 1:
-        raise googlecl.docs.base.DocsError('Target "' + base_path + 
-                                           '" is not a directory')
-      format_from_filename = googlecl.get_extension_from_path(base_path)
-      if format_from_filename:
-        # Strip the extension off here if it exists. Don't want to double up
-        # on extension in for loop. (+1 for '.')
-        base_path = base_path[:-(len(format_from_filename)+1)]
-    else:
-      format_from_filename = None
-    default_format = 'txt'
-    for entry in entries:
-      if not file_format:
-        file_format = format_from_filename or\
-                      googlecl.docs.base.get_extension_from_doctype(
-                                googlecl.docs.base.get_document_type(entry)) or\
-                                default_format
-      if os.path.isdir(base_path):
-        path = os.path.join(base_path, entry.title.text + '.' + file_format)
-      else:
-        path = base_path + '.' + file_format
-      LOG.info('Downloading ' + entry.title.text + ' to ' + path)
-      try:
-        self.Export(entry, path)
-      except gdata.service.RequestError, err:
-        LOG.error('Download of ' + entry.title.text + ' failed: ' + str(err))
-      except IOError, err:
-        LOG.error(err)
-        LOG.info('Does your destination filename contain invalid characters?')
-
-  GetDocs = get_docs
 
   def get_doclist(self, title=None, folder_entry_list=None):
     """Get a list of document entries from a feed.
@@ -367,6 +226,30 @@ class DocsServiceCL(gdata.docs.service.DocsService,
 
   IsTokenValid = is_token_valid
 
+  def _modify_entry(self, doc_entry, path_to_new_content, file_format):
+    """Replace content of a DocEntry.
+
+    Args:
+      doc_entry: DocEntry whose content will be replaced.
+      path_to_new_content: str Path to file that has new content.
+      file_format: str Extension to use to determine MIME type of upload
+                   (e.g. 'txt', 'doc')
+
+    """
+    from gdata.docs.service import SUPPORTED_FILETYPES
+    try:
+      content_type = SUPPORTED_FILETYPES[file_format.upper()]
+    except KeyError:
+      print 'Could not find mimetype for ' + file_format
+      while file_format not in SUPPORTED_FILETYPES.keys():
+        file_format = raw_input('Please enter one of ' +
+                                SUPPORTED_FILETYPES.keys() + 
+                                ' for a content type to upload as.')
+      content_type = SUPPORTED_FILETYPES[file_format.upper()]
+    mediasource = gdata.MediaSource(file_path=path_to_new_content,
+                                    content_type=content_type)
+    self.Put(mediasource, doc_entry.GetEditMediaLink().href)
+
   def request_access(self, domain, node, scopes=None):
     """Request access as in BaseServiceCL, but specify scopes."""
     # When people use docs (writely), they expect access to
@@ -379,65 +262,23 @@ class DocsServiceCL(gdata.docs.service.DocsService,
 
   RequestAccess = request_access
 
-  def upload_docs(self, paths, title=None, folder_entry=None,
-                  file_format=None):
-    """Upload a list of documents or directories.
-    
-    For each item in paths:
-      if item is a directory, upload all files found in the directory
-        in a manner roughly equivalent to "cp -R directory/ <docs_folder>"
-      if item is a file, upload that file to <docs_folder>
-
-    Keyword arguments:
-      paths: List of file paths and/or directories to upload.
-      title: Title to give the files once uploaded.
-             Default None for the names of the files.
-      folder_entry: GDataEntry of the folder to treat as the new root for
-                    directories/files.
-                    Default None for no folder (the Google Docs root).
-      file_format: Replace (or specify) the extension on the file when figuring
-              out the upload format. For example, 'txt' will upload the
-              file as if it was plain text. Default None for the file's
-              extension (which defaults to 'txt' if there is none).
-
-    Returns:
-      Dictionary mapping filenames to where they can be accessed online.
-    
-    """
-    url_locs = {}
-    for path in paths:
-      folder_root = folder_entry
-      if os.path.isdir(path):
-        folder_entries = {}
-        # final '/' sets folder_name to '' which causes
-        # 503 "Service Unavailable". 
-        path = path.rstrip('/')
-        for dirpath, dirnames, filenames in os.walk(path):
-          directory = os.path.dirname(dirpath)
-          folder_name = os.path.basename(dirpath)
-          if directory in folder_entries:
-            fentry = self.CreateFolder(folder_name, folder_entries[directory])
-          else:
-            fentry = self.CreateFolder(folder_name, folder_root)
-          folder_entries[dirpath] = fentry
-          LOG.debug('Created folder ' + dirpath + ' ' + folder_name)
-          for fname in filenames:
-            loc = self.upload_single_doc(os.path.join(dirpath, fname),
-                                         folder_entry=fentry)
-            if loc:
-              url_locs[fname] = loc
-      else:
-        loc = self.upload_single_doc(path, title=title,
-                                     folder_entry=folder_entry,
-                                     file_format=file_format)
-        if loc:
-          url_locs[os.path.basename(path)] = loc
-    return url_locs
-
-  UploadDocs = upload_docs
 
   def upload_single_doc(self, path, title=None, folder_entry=None,
                         file_format=None):
+    """Upload one file to Google Docs.
+    
+    Args:
+      path: str Path to file to upload.
+      title: str (optional) Title to give the upload. Defaults to the filename.
+      folder_entry: DocsEntry (optional) (sub)Folder to upload into.
+      file_format: str (optional) Extension used to determine MIME type of
+                   upload. Defaults to whatever the extension is on the path,
+                   or 'txt'
+
+    Returns:
+      str Link to the document on Google Docs
+
+    """
     import atom
     from gdata.docs.service import SUPPORTED_FILETYPES
 
@@ -517,113 +358,4 @@ def _make_kind_category(label):
                        term=documents_namespace + '#' + label, label=label)
 
 
-#===============================================================================
-# Each of the following _run_* functions execute a particular task.
-#  
-# Keyword arguments:
-#  client: Client to the service being used.
-#  options: Contains all attributes required to perform the task
-#  args: Additional arguments passed in on the command line, may or may not be
-#        required
-#===============================================================================
-def _run_get(client, options, args):
-  if not hasattr(client, 'Export'):
-    LOG.error('Downloading documents is not supported for' +
-              ' gdata-python-client < 2.0')
-    return
-  if not args:
-    path = os.getcwd()
-  else:
-    path = args[0]
-  folder_entries = client.get_folder(options.folder)
-  entries = client.get_doclist(options.title, folder_entries)
-  try:
-    client.get_docs(path, entries, file_format=options.format)
-  except googlecl.docs.base.DocsError, err:
-    LOG.error(err)
-
-
-def _run_list(client, options, args):
-  folder_entries = client.get_folder(options.folder)
-  entries = client.get_doclist(options.title, folder_entries)
-  if args:
-    style_list = args[0].split(',')
-  else:
-    style_list = googlecl.get_config_option(SECTION_HEADER,
-                                            'list_style').split(',')
-  for entry in entries:
-    print googlecl.base.compile_entry_string(
-                               googlecl.base.BaseEntryToStringWrapper(entry),
-                               style_list,
-                               delimiter=options.delimiter)
-
-
-def _run_upload(client, options, args):
-  if not args:
-    LOG.error('Need to tell me what to upload!')
-    return
-  folder_entries = client.get_folder(options.folder)
-  folder_entry = client.get_single_entry(folder_entries)
-  client.upload_docs(args, title=options.title, folder_entry=folder_entry,
-                     file_format=options.format)
-
-
-def _run_edit(client, options, args):
-  if not hasattr(client, 'Export'):
-    LOG.error('Editing documents is not supported' +
-              ' for gdata-python-client < 2.0')
-    return
-  folder_entry_list = client.get_folder(options.folder)
-  doc_entry = client.get_single_doc(options.title, folder_entry_list)
-  if doc_entry:
-    doc_entry_or_title = doc_entry
-    doc_type = googlecl.docs.base.get_document_type(doc_entry)
-  else:
-    doc_entry_or_title = options.title
-    doc_type = None
-    LOG.debug('No matching documents found! Will create one.')
-  folder_entry = client.get_single_entry(folder_entry_list)
-  if not folder_entry and options.folder:
-    # Don't tell the user no matching folders were found if they didn't
-    # specify one.
-    LOG.debug('No matching folders found! Will create them.')
-  format_ext = options.format or \
-               googlecl.docs.base.get_extension_from_doctype(doc_type)
-  editor = options.editor or googlecl.docs.base.get_editor(doc_type)
-  if not editor:
-    LOG.error('No editor defined!')
-    LOG.info('Define an "editor" option in your config file, set the ' +
-             'EDITOR environment variable, or pass an editor in with --editor.')
-    return
-  if not format_ext:
-    LOG.error('No format defined!')
-    LOG.info('Define a "format" option in your config file,' +
-             ' or pass in a format with --format')
-    return
-  client.edit_doc(doc_entry_or_title, editor, format_ext,
-                  folder_entry_or_path=folder_entry or options.folder)
-
-
-def _run_delete(client, options, args):
-  entries = client.get_doclist(options.title)
-  client.DeleteEntryList(entries, 'document',
-                googlecl.CONFIG.getboolean('GENERAL', 'delete_by_default'))
-
-
-TASKS = {'upload': googlecl.base.Task('Upload a document',
-                                       callback=_run_upload,
-                                       optional=['title', 'folder', 'format'],
-                                       args_desc='PATH_TO_FILE'),
-         'edit': googlecl.base.Task('Edit a document', callback=_run_edit,
-                                     required=['title'],
-                                     optional=['format', 'editor', 'folder']),
-         'get': googlecl.base.Task('Download a document', callback=_run_get,
-                                    required=[['title', 'folder']],
-                                    optional='format',
-                                    args_desc='LOCATION'),
-         'list': googlecl.base.Task('List documents', callback=_run_list,
-                                     required='delimiter',
-                                     optional=['title', 'folder']),
-         'delete': googlecl.base.Task('Delete documents',
-                                       callback=_run_delete,
-                                       optional='title')}
+TASKS = googlecl.docs.base.TASKS
