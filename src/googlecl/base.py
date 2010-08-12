@@ -193,17 +193,22 @@ class BaseCL(object):
           if feed:
             all_entries.extend(feed.entry)
     if not title:
+      LOG.debug('Retrieved ' + str(len(all_entries)) + 
+                ' entries, returning them all')
       return all_entries
     if self.use_regex:
       try:
-        return [entry for entry in all_entries 
-                if entry.title.text and re.match(title,entry.title.text)]
+        entries = [entry for entry in all_entries 
+                   if entry.title.text and re.match(title,entry.title.text)]
       except re.error, err:
         LOG.error('Regular expression error: ' + str(err) + '!')
         LOG.debug('regex provided: ' + title)
         return []
     else:
-      return [entry for entry in all_entries if title == entry.title.text]
+      entries = [entry for entry in all_entries if title == entry.title.text]
+    LOG.debug('Retrieved ' + str(len(all_entries)) +
+              ' entries, returning ' + str(len(entries)) + ' of them')
+    return entries
 
   GetEntries = get_entries
 

@@ -313,12 +313,20 @@ def import_service(service):
     LOG.error('Did you specify the service correctly? Must be one of ' +
               str(AVAILABLE_SERVICES)[1:-1])
     return (None, None, None)
-  try:
-    service_module = __import__('googlecl.' + service + '.client',
-                                globals(), locals(), -1)
-  except ImportError:
+  use_v1 = googlecl.get_config_option(package.SECTION_HEADER,
+                                      'force_gdata_v1',
+                                      default=False,
+                                      type=bool)
+  if use_v1:
     service_module = __import__('googlecl.' + service + '.service',
                                 globals(), locals(), -1)
+  else:
+    try:
+      service_module = __import__('googlecl.' + service + '.client',
+                                  globals(), locals(), -1)
+    except ImportError:
+      service_module = __import__('googlecl.' + service + '.service',
+                                  globals(), locals(), -1)
   return (service_module.SERVICE_CLASS,
           service_module.TASKS,
           package.SECTION_HEADER)
@@ -439,7 +447,8 @@ def run_once(options, args):
   # "client" versions need to set self.http_client.debug in their own __init__
   client.debug = googlecl.get_config_option(section_header,
                                             'debug',
-                                            default=options.debug)
+                                            default=options.debug,
+                                            type=bool)
   # XXX: Not the best place for this.
   if hasattr(client, 'http_client'):
     client.http_client.debug = client.debug
