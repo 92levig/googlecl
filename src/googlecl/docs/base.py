@@ -215,7 +215,7 @@ class DocsBaseCL(object):
     raise NotImplementedError('_modify_entry must be defined!')
 
   def upload_docs(self, paths, title=None, folder_entry=None,
-                  file_format=None):
+                  file_format=None, **kwargs):
     """Upload a list of documents or directories.
     
     For each item in paths:
@@ -234,6 +234,9 @@ class DocsBaseCL(object):
               out the upload format. For example, 'txt' will upload the
               file as if it was plain text. Default None for the file's
               extension (which defaults to 'txt' if there is none).
+      kwargs: Typically contains 'convert', indicates if we should convert the
+              file on upload. False will only be honored if the user is a Google
+              Apps Premier account.
 
     Returns:
       Dictionary mapping filenames to where they can be accessed online.
@@ -264,7 +267,8 @@ class DocsBaseCL(object):
       else:
         loc = self.upload_single_doc(path, title=title,
                                      folder_entry=folder_entry,
-                                     file_format=file_format)
+                                     file_format=file_format,
+                                     **kwargs)
         if loc:
           url_locs[os.path.basename(path)] = loc
     return url_locs
@@ -449,7 +453,7 @@ def _run_upload(client, options, args):
   folder_entries = client.get_folder(options.folder)
   folder_entry = client.get_single_entry(folder_entries)
   client.upload_docs(args, title=options.title, folder_entry=folder_entry,
-                     file_format=options.format)
+                     file_format=options.format, convert=options.convert)
 
 
 def _run_edit(client, options, args):

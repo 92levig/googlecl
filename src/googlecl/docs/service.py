@@ -264,8 +264,10 @@ class DocsServiceCL(gdata.docs.service.DocsService,
 
 
   def upload_single_doc(self, path, title=None, folder_entry=None,
-                        file_format=None):
+                        file_format=None, **kwargs):
     """Upload one file to Google Docs.
+
+    kwargs is ignored -- it contains parameters for v3 of the API.
     
     Args:
       path: str Path to file to upload.

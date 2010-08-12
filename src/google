@@ -435,9 +435,14 @@ def run_once(options, args):
     return
 
   client = service_class()
+  # Activate debugging output from HTTP requests. "service" clients only!
+  # "client" versions need to set self.http_client.debug in their own __init__
   client.debug = googlecl.get_config_option(section_header,
                                             'debug',
                                             default=options.debug)
+  # XXX: Not the best place for this.
+  if hasattr(client, 'http_client'):
+    client.http_client.debug = client.debug
   try:
     task = tasks[task_name]
     task.name = task_name
