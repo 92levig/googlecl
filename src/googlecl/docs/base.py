@@ -189,19 +189,35 @@ class DocsBaseCL(object):
         base_path = base_path[:-(len(format_from_filename)+1)]
     else:
       format_from_filename = None
-    default_format = 'txt'
     for entry in entries:
       if not file_format:
-        file_format = format_from_filename or\
-                      get_extension_from_doctype(get_document_type(entry)) or\
-                      default_format
-      if os.path.isdir(base_path):
-        path = os.path.join(base_path, entry.title.text + '.' + file_format)
+        if format_from_filename:
+          file_format = format_from_filename
+        # Don't set file_format if we cannot do export.
+        # get_extension_from_doctype will check the config file for 'format'
+        # which will set an undesired file_format for raw, unconverted downloads
+        elif can_export(entry):
+          file_format = get_extension_from_doctype(get_document_type(entry))
+      if file_format:
+        LOG.debug('Decided file_format is ' + file_format)
+        extension = '.' + file_format
       else:
-        path = base_path + '.' + file_format
+        LOG.debug('Could not (or would not) set file_format')
+        if can_export(entry):
+          extension = '.txt'
+        else:
+          extension = ''
+
+      if os.path.isdir(base_path):
+        path = os.path.join(base_path, entry.title.text + extension)
+      else:
+        path = base_path + extension
       LOG.info('Downloading ' + entry.title.text + ' to ' + path)
       try:
-        self.Export(entry, path)
+        if can_export(entry):
+          self.Export(entry, path)
+        else:
+          self.Download(entry, path)
       except self.request_error, err:
         LOG.error('Download of ' + entry.title.text + ' failed: ' + str(err))
       except IOError, err:
@@ -287,6 +303,24 @@ def _md5_hash_file(path, read_size=2560):
       hash_function.update(data)
       data = my_file.read(read_size)
   return hash_function.digest()
+
+
+def can_export(entry_or_url):
+  """See if the given entry can be exported.
+
+  Based off check done in gdata.docs.client.DocsClient.export
+
+  Returns:
+    True if entry can be exported to a specific format (can use client.export)
+    False if not (must use client.Download)
+
+  """
+  if isinstance(entry_or_url, (str, unicode)):
+    url = entry_or_url
+  else:
+    url = entry_or_url.content.src
+  can_export = url.find('/Export?') != -1
+  return can_export
 
 
 def get_document_type(entry):

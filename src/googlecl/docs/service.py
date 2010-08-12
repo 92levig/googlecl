@@ -80,8 +80,8 @@ class DocsServiceCL(gdata.docs.service.DocsService,
       raise gdata.service.RequestError, {'status': server_response.status,
                                          'reason': server_response.reason,
                                          'body': response_body}
-    if googlecl.get_config_option(SECTION_HEADER, 'decode_utf_8',
-                                  False, bool):
+    if googlecl.docs.base.can_export(uri) and\
+       googlecl.get_config_option(SECTION_HEADER, 'decode_utf_8', False, bool):
       try:
         file_string = response_body.decode('utf-8-sig')
       except UnicodeError, err:

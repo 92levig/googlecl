@@ -81,7 +81,8 @@ class DocsClientCL(gdata.docs.client.DocsClient,
 
     """
     response_string = self.get_file_content(uri, auth_token=auth_token)
-    if googlecl.get_config_option(SECTION_HEADER, 'decode_utf_8', False, bool):
+    if googlecl.docs.base.can_export(uri) and\
+       googlecl.get_config_option(SECTION_HEADER, 'decode_utf_8', False, bool):
       try:
         file_string = response_string.decode('utf-8-sig')
       except UnicodeError, err:
@@ -313,7 +314,6 @@ class DocsClientCL(gdata.docs.client.DocsClient,
     if not convert:
       post_uri += '?convert=false'
 
-    LOG.debug('debug: ' + str(self.debug))
     try:
       new_entry = self.upload(path, entry_title, post_uri, content_type)
     except gdata.client.RequestError, err:
