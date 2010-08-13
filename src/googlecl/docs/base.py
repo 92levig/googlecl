@@ -83,7 +83,7 @@ class DocsBaseCL(object):
   def _create_folder(folder_name, folder_or_uri=None):
     raise NotImplementedError('_modify_entry must be defined!')
 
-  def edit_doc(self, doc_entry_or_title, editor, file_format,
+  def edit_doc(self, doc_entry_or_title, editor, file_ext,
                folder_entry_or_path=None):
     """Edit a document.
     
@@ -92,8 +92,8 @@ class DocsBaseCL(object):
                           or title of the document to create.
       editor: Name of the editor to use. Should be executable from the user's
               working directory.
-      file_format: Suffix of the file to download.
-                   For example, "txt", "csv", "xcl".
+      file_ext: Suffix of the file to download.
+                For example, "txt", "csv", "xcl".
       folder_entry_or_path: Entry or string representing folder to upload into.
                    If a string, a new set of folders will ALWAYS be created.
                    For example, 'my_folder' to upload to my_folder,
@@ -124,9 +124,9 @@ class DocsBaseCL(object):
       base_path = os.path.join(temp_dir, base_folder)
       total_basename = os.path.join(temp_dir, folder_path)
       os.makedirs(total_basename)
-      path = os.path.join(total_basename, doc_title + '.' + file_format)
+      path = os.path.join(total_basename, doc_title + '.' + file_ext)
     else:
-      path = os.path.join(temp_dir, doc_title + '.' + file_format)
+      path = os.path.join(temp_dir, doc_title + '.' + file_ext)
       base_path = path
 
     if not new_doc:
@@ -152,7 +152,7 @@ class DocsBaseCL(object):
         self.upload_single_doc(path, folder_entry=folder_entry_or_path)
     else:
       try:
-        self._modify_entry(doc_entry_or_title, path, file_format)
+        self._modify_entry(doc_entry_or_title, path, file_ext)
       except self.request_error, err:
         LOG.error(err)
         new_path = safe_move(path, '.')
@@ -167,16 +167,17 @@ class DocsBaseCL(object):
 
   EditDoc = edit_doc
 
-  def get_docs(self, base_path, entries, file_format=None):
+  def get_docs(self, base_path, entries, file_ext=None):
     """Download documents.
     
     Keyword arguments:
       base_path: The path to download files to. This plus an entry's title plus
                  its format-specific extension will form the complete path.
       entries: List of DocEntry items representing the files to download.
-      file_format: Suffix to give the file when downloading.
-                   For example, "txt", "csv", "xcl". Default None to let
-                   get_extension_from_doctype decide the extension.
+      file_ext: Suffix to give the file(s) when downloading.
+                For example, "txt", "csv", "xcl". Default None to let
+                get_extension_from_doctype decide the extension. Ignored
+                when downloading arbitrary files.
 
     """
     if not os.path.isdir(base_path):
@@ -187,25 +188,29 @@ class DocsBaseCL(object):
         # Strip the extension off here if it exists. Don't want to double up
         # on extension in for loop. (+1 for '.')
         base_path = base_path[:-(len(format_from_filename)+1)]
+        # We can just set the file_ext here, since there's only one file.
+        file_ext = format_from_filename
     else:
       format_from_filename = None
     for entry in entries:
-      if not file_format:
-        if format_from_filename:
-          file_format = format_from_filename
-        # Don't set file_format if we cannot do export.
-        # get_extension_from_doctype will check the config file for 'format'
-        # which will set an undesired file_format for raw, unconverted downloads
-        elif can_export(entry):
-          file_format = get_extension_from_doctype(get_document_type(entry))
-      if file_format:
-        LOG.debug('Decided file_format is ' + file_format)
-        extension = '.' + file_format
+      # Don't set file_ext if we cannot do export.
+      # get_extension_from_doctype will check the config file for 'format'
+      # which will set an undesired entry_file_ext for 
+      # unconverted downloads
+      if not file_ext and can_export(entry):
+        entry_file_ext = get_extension_from_doctype(get_document_type(entry))
       else:
-        LOG.debug('Could not (or would not) set file_format')
+        entry_file_ext = file_ext
+      if entry_file_ext:
+        LOG.debug('Decided file_ext is ' + entry_file_ext)
+        extension = '.' + entry_file_ext
+      else:
+        LOG.debug('Could not (or would not) set file_ext')
         if can_export(entry):
           extension = '.txt'
         else:
+          # Files that cannot be exported typically have a file extension
+          # in their name / title.
           extension = ''
 
       if os.path.isdir(base_path):
@@ -226,12 +231,12 @@ class DocsBaseCL(object):
 
   GetDocs = get_docs
 
-  def _modify_entry(doc_entry, path_to_new_content, file_format):
+  def _modify_entry(doc_entry, path_to_new_content, file_ext):
     """Modify the file data associated with a document entry."""
     raise NotImplementedError('_modify_entry must be defined!')
 
   def upload_docs(self, paths, title=None, folder_entry=None,
-                  file_format=None, **kwargs):
+                  file_ext=None, **kwargs):
     """Upload a list of documents or directories.
     
     For each item in paths:
@@ -246,7 +251,7 @@ class DocsBaseCL(object):
       folder_entry: GDataEntry of the folder to treat as the new root for
                     directories/files.
                     Default None for no folder (the Google Docs root).
-      file_format: Replace (or specify) the extension on the file when figuring
+      file_ext: Replace (or specify) the extension on the file when figuring
               out the upload format. For example, 'txt' will upload the
               file as if it was plain text. Default None for the file's
               extension (which defaults to 'txt' if there is none).
@@ -283,7 +288,7 @@ class DocsBaseCL(object):
       else:
         loc = self.upload_single_doc(path, title=title,
                                      folder_entry=folder_entry,
-                                     file_format=file_format,
+                                     file_ext=file_ext,
                                      **kwargs)
         if loc:
           url_locs[os.path.basename(path)] = loc
@@ -460,7 +465,7 @@ def _run_get(client, options, args):
   folder_entries = client.get_folder(options.folder)
   entries = client.get_doclist(options.title, folder_entries)
   try:
-    client.get_docs(path, entries, file_format=options.format)
+    client.get_docs(path, entries, file_ext=options.format)
   except DocsError, err:
     LOG.error(err)
 
@@ -487,7 +492,7 @@ def _run_upload(client, options, args):
   folder_entries = client.get_folder(options.folder)
   folder_entry = client.get_single_entry(folder_entries)
   client.upload_docs(args, title=options.title, folder_entry=folder_entry,
-                     file_format=options.format, convert=options.convert)
+                     file_ext=options.format, convert=options.convert)
 
 
 def _run_edit(client, options, args):

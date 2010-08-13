@@ -226,26 +226,26 @@ class DocsServiceCL(gdata.docs.service.DocsService,
 
   IsTokenValid = is_token_valid
 
-  def _modify_entry(self, doc_entry, path_to_new_content, file_format):
+  def _modify_entry(self, doc_entry, path_to_new_content, file_ext):
     """Replace content of a DocEntry.
 
     Args:
       doc_entry: DocEntry whose content will be replaced.
       path_to_new_content: str Path to file that has new content.
-      file_format: str Extension to use to determine MIME type of upload
-                   (e.g. 'txt', 'doc')
+      file_ext: str Extension to use to determine MIME type of upload
+                (e.g. 'txt', 'doc')
 
     """
     from gdata.docs.service import SUPPORTED_FILETYPES
     try:
-      content_type = SUPPORTED_FILETYPES[file_format.upper()]
+      content_type = SUPPORTED_FILETYPES[file_ext.upper()]
     except KeyError:
-      print 'Could not find mimetype for ' + file_format
-      while file_format not in SUPPORTED_FILETYPES.keys():
-        file_format = raw_input('Please enter one of ' +
+      print 'Could not find mimetype for ' + file_ext
+      while file_ext not in SUPPORTED_FILETYPES.keys():
+        file_ext = raw_input('Please enter one of ' +
                                 SUPPORTED_FILETYPES.keys() + 
                                 ' for a content type to upload as.')
-      content_type = SUPPORTED_FILETYPES[file_format.upper()]
+      content_type = SUPPORTED_FILETYPES[file_ext.upper()]
     mediasource = gdata.MediaSource(file_path=path_to_new_content,
                                     content_type=content_type)
     self.Put(mediasource, doc_entry.GetEditMediaLink().href)
@@ -264,7 +264,7 @@ class DocsServiceCL(gdata.docs.service.DocsService,
 
 
   def upload_single_doc(self, path, title=None, folder_entry=None,
-                        file_format=None, **kwargs):
+                        file_ext=None, **kwargs):
     """Upload one file to Google Docs.
 
     kwargs is ignored -- it contains parameters for v3 of the API.
@@ -273,9 +273,9 @@ class DocsServiceCL(gdata.docs.service.DocsService,
       path: str Path to file to upload.
       title: str (optional) Title to give the upload. Defaults to the filename.
       folder_entry: DocsEntry (optional) (sub)Folder to upload into.
-      file_format: str (optional) Extension used to determine MIME type of
-                   upload. Defaults to whatever the extension is on the path,
-                   or 'txt'
+      file_ext: str (optional) Extension used to determine MIME type of
+                upload. Defaults to whatever the extension is on the path,
+                or 'txt'
 
     Returns:
       str Link to the document on Google Docs
@@ -289,8 +289,8 @@ class DocsServiceCL(gdata.docs.service.DocsService,
     else:
       post_uri = '/feeds/documents/private/full'
     filename = os.path.basename(path)
-    if file_format:
-      extension = file_format
+    if file_ext:
+      extension = file_ext
     else:
       try:
         extension = filename.split('.')[1]

@@ -225,26 +225,26 @@ class DocsClientCL(gdata.docs.client.DocsClient,
 
   IsTokenValid = is_token_valid
 
-  def _modify_entry(self, doc_entry, path_to_new_content, file_format):
+  def _modify_entry(self, doc_entry, path_to_new_content, file_ext):
     """Replace content of a DocEntry.
 
     Args:
       doc_entry: DocEntry whose content will be replaced.
       path_to_new_content: str Path to file that has new content.
-      file_format: str Extension to use to determine MIME type of upload
-                   (e.g. 'txt', 'doc')
+      file_ext: str Extension to use to determine MIME type of upload
+                (e.g. 'txt', 'doc')
 
     """
     from gdata.docs.data import MIMETYPES
     try:
-      content_type = MIMETYPES[file_format.upper()]
+      content_type = MIMETYPES[file_ext.upper()]
     except KeyError:
-      print 'Could not find mimetype for ' + file_format
-      while file_format not in MIMETYPES.keys():
-        file_format = raw_input('Please enter one of ' +
+      print 'Could not find mimetype for ' + file_ext
+      while file_ext not in MIMETYPES.keys():
+        file_ext = raw_input('Please enter one of ' +
                                 MIMETYPES.keys() + 
                                 ' to determine the content type to upload as.')
-      content_type = MIMETYPES[file_format.upper()]
+      content_type = MIMETYPES[file_ext.upper()]
     mediasource = gdata.data.MediaSource(file_path=path_to_new_content,
                                          content_type=content_type)
     self.Update(doc_entry, media_source=mediasource)
@@ -262,15 +262,15 @@ class DocsClientCL(gdata.docs.client.DocsClient,
   RequestAccess = request_access
 
   def upload_single_doc(self, path, title=None, folder_entry=None,
-                        file_format=None, **kwargs):
+                        file_ext=None, **kwargs):
     """Upload one file to Google Docs.
     
     Args:
       path: str Path to file to upload.
       title: str (optional) Title to give the upload. Defaults to the filename.
       folder_entry: DocsEntry (optional) (sub)Folder to upload into.
-      file_format: str (optional) Extension used to determine MIME type of
-                   upload. If not specified, uses mimetypes module to guess it.
+      file_ext: str (optional) Extension used to determine MIME type of
+                upload. If not specified, uses mimetypes module to guess it.
       kwargs: Should contain value for 'convert', either True or False.
               Indicates if upload should be converted. Only Apps Premier
               users can specify False.
@@ -287,12 +287,12 @@ class DocsClientCL(gdata.docs.client.DocsClient,
 
     filename = os.path.basename(path)
     content_type = None
-    if file_format:
+    if file_ext:
       from gdata.docs.data import MIMETYPES
       try:
-        content_type = MIMETYPES[file_format.upper()]
+        content_type = MIMETYPES[file_ext.upper()]
       except KeyError:
-        LOG.info('No supported filetype found for extension ' + file_format +
+        LOG.info('No supported filetype found for extension ' + file_ext +
                  ', letting mimetypes module guess mime type')
     if not content_type:
       content_type = mimetypes.guess_type(path)[0]
