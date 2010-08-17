@@ -14,6 +14,7 @@ All instructions assume a current working directory of trunk
 10) cd .. ; tar zcvf googlecl-x.x.x.tar.gz googlecl-x.x.x
 11) When you're convinced it's correct, use svn copy to tag the release:
  $ svn copy https://googlecl.googlecode.com/svn/trunk https://googlecl.googlecode.com/svn/tags/release-x.x.x -m "x.x.x release"
+12) Update release at pypi: http://pypi.python.org/pypi/googlecl/
 
 ===Debian package===
 Our .deb build currently uses git-buildpackage with a private git repo (sorry, hackers).

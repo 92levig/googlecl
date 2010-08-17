@@ -129,10 +129,11 @@ will output those styles, in that order, with ": " as a delimiter. Valid values 
 	* 'company' - company name. (Contacts)
   * 'email' - email address(es). (Contacts)
 	* 'im' - instant messanger handles. (Contacts)
+	* 'name' - name. For any service but Contacts, this is the same as 'title'
 	* 'notes' - notes on a contact. (Contacts)
 	* 'phone' - phone numbers. (Contacts)
   * 'summary' - summary text.
-  * 'title' or 'name' - displayed title or name.
+  * 'title' - displayed title or name. For Contacts, this is the job title, not the name of the person.
   * 'url' - treated as 'url-direct' or 'url-site' depending on setting in preferences file.
   * 'url-site' - url of the site.
   * 'url-direct' - url directly to the resource.

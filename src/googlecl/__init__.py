@@ -194,7 +194,7 @@ def load_preferences(path=None):
     # REMEMBER: updating these means you need to update the CONFIG readme.
     default_hostid = getpass.getuser() + '@' +  socket.gethostname()
     _youtube = {'max_results': '50'}
-    _contacts = {'list_style': 'title,email'}
+    _contacts = {'list_style': 'name,email'}
     _calendar = {'list_style': 'title,when'}
     _picasa = {'access': 'public'}
     _general = {'regex': 'True',
