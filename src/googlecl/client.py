@@ -38,7 +38,7 @@ class BaseClientCL(googlecl.base.BaseCL):
                                        *args, **kwargs)
     LOG.debug('Initialized googlecl.client.BaseClientCL')
 
-  def request_access(self, domain, hostid, scopes):
+  def request_access(self, domain, hostid, scopes=None):
     """Do all the steps involved with getting an OAuth access token.
     
     Keyword arguments:
@@ -47,7 +47,7 @@ class BaseClientCL(googlecl.base.BaseCL):
       hostid: string Descriptor for the machine doing the requesting.
               e.g. 'username@host'
       scopes: String or list of strings describing scopes to request
-              access to.
+              access to. If None, tries to access self.auth_scopes
 
     Returns:
       True if access token was succesfully retrieved and set, otherwise False.
@@ -59,6 +59,8 @@ class BaseClientCL(googlecl.base.BaseCL):
     import time
     # XXX: Not sure if get_oauth_token() will accept a list of mixed strings and
     # atom.http_core.Uri objects...
+    if not scopes:
+      scopes = self.auth_scopes
     if not isinstance(scopes, list):
       scopes = [scopes,]
     # Some scopes are packaged as tuples, which is a no-no for

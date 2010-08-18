@@ -28,19 +28,19 @@ from __future__ import with_statement
 __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import atom
 import logging
-import gdata.contacts.service
-import googlecl.service
+import gdata.contacts.client
+import googlecl.client
 import googlecl.base
 import googlecl.contacts.base
 from googlecl.contacts import SECTION_HEADER
 
 
-LOG = logging.getLogger(googlecl.contacts.LOGGER_NAME + '.service')
+LOG = logging.getLogger(googlecl.contacts.LOGGER_NAME + '.client')
 
 
-class ContactsServiceCL(gdata.contacts.service.ContactsService,
-                        googlecl.contacts.base.ContactsBaseCL,
-                        googlecl.service.BaseServiceCL):
+class ContactsClientCL(gdata.contacts.client.ContactsClient,
+                       googlecl.contacts.base.ContactsBaseCL,
+                       googlecl.client.BaseClientCL):
   
   """Extends gdata.contacts.service.ContactsService for the command line.
 
@@ -51,8 +51,8 @@ class ContactsServiceCL(gdata.contacts.service.ContactsService,
 
   def __init__(self):
     """Constructor."""
-    gdata.contacts.service.ContactsService.__init__(self)
-    googlecl.service.BaseServiceCL.__init__(self, SECTION_HEADER)
+    gdata.contacts.client.ContactsClient.__init__(self)
+    googlecl.client.BaseClientCL.__init__(self, SECTION_HEADER)
 
   def parse_contact_string(self, contact_string):
     """Add contact(s).
@@ -71,22 +71,25 @@ class ContactsServiceCL(gdata.contacts.service.ContactsService,
     except ValueError:
       LOG.error(contact_string + ' is not a name,email pair nor a file.')
       return
-    new_contact = gdata.contacts.ContactEntry(title=atom.Title(
-                                                           text=name.strip()))
-    new_contact.email.append(gdata.contacts.Email(address=email.strip()))
+    new_contact = gdata.contacts.data.ContactEntry()
+    new_contact.name = gdata.data.Name()
+    new_contact.name.full_name = gdata.data.FullName(text=name.strip())
+    new_contact.email.append(gdata.data.Email(address=email.strip(),
+                                              label='Home'))
     return new_contact
 
   def get_contacts(self, name):
     """Get all contacts that match a name."""
     uri = self.GetFeedUri()
     return self.GetEntries(uri, name,
-                           converter=gdata.contacts.ContactsFeedFromString)
+                           desired_class=gdata.contacts.data.ContactsFeed)
 
   GetContacts = get_contacts
 
   def add_group(self, name):
     """Add group."""
-    new_group = gdata.contacts.GroupEntry(title=atom.Title(text=name))
+    new_group = gdata.contacts.data.GroupEntry()
+    new_group.title = atom.data.Title(text=name)
     self.CreateGroup(new_group)
 
   AddGroup = add_group
@@ -95,12 +98,12 @@ class ContactsServiceCL(gdata.contacts.service.ContactsService,
     """Get all groups that match a name."""
     uri = self.GetFeedUri(kind='groups')
     return self.GetEntries(uri, name,
-                           converter=gdata.contacts.GroupsFeedFromString)
+                           desired_class=gdata.contacts.data.GroupsFeed)
 
   GetGroups = get_groups
 
 
-SERVICE_CLASS = ContactsServiceCL
+SERVICE_CLASS = ContactsClientCL
 
 
 TASKS = googlecl.contacts.base.TASKS

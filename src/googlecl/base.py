@@ -428,6 +428,11 @@ class BaseEntryToStringWrapper(object):
     self.label_delimiter = label_delimiter
 
   @property
+  def debug(self):
+    """dir(self.entry)."""
+    return str(dir(self.entry))
+
+  @property
   def title(self):
     """Title or name."""
     return self.entry.title.text
