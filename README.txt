@@ -126,17 +126,24 @@ The list task can be given additional arguments to specify what exactly is being
 will output those styles, in that order, with ": " as a delimiter. Valid values for `<`style1`>` etc. are (with common services in parentheses):
   * 'address' - postal addresses. (Contacts)
   * 'author' - author(s). (Blogger)
+	* 'birthday' - birthday. (Contacts)
 	* 'company' - company name. (Contacts)
   * 'email' - email address(es). (Contacts)
+	* 'event' - events such as birthdays, anniversaries, etc. (Contacts)
 	* 'im' - instant messanger handles. (Contacts)
 	* 'name' - name. For any service but Contacts, this is the same as 'title'
+	* 'nickname' - nickname. (Contacts)
 	* 'notes' - notes on a contact. (Contacts)
+	* 'organization' - company or organization. (Contacts)
 	* 'phone' - phone numbers. (Contacts)
+	* 'relation' - names of relations, such as manager, spouse, etc. (Contacts)
   * 'summary' - summary text.
   * 'title' - displayed title or name. For Contacts, this is the job title, not the name of the person.
   * 'url' - treated as 'url-direct' or 'url-site' depending on setting in preferences file.
   * 'url-site' - url of the site.
   * 'url-direct' - url directly to the resource.
+	* 'user_defined' or 'other' - custom labels. (Contacts)
+	* 'website' - websites and links. (Contacts)
   * 'when' - "when" data. (Calendar)
   * 'where' - "where" data. (Calendar)
   * 'xml' - full XML dump.

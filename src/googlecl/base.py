@@ -434,7 +434,7 @@ class BaseEntryToStringWrapper(object):
 
   @property
   def title(self):
-    """Title or name."""
+    """Title or name. For Contacts v1, job title."""
     return self.entry.title.text
   name = title
 
@@ -553,18 +553,20 @@ class BaseEntryToStringWrapper(object):
       return joined_string.rstrip(separating_string)
 
 
-def compile_entry_string(entry, attribute_list, delimiter,
-                         missing_field_value=None):
+def compile_entry_string(wrapped_entry, attribute_list, delimiter,
+                         missing_field_value=None, newline_replacer=' '):
   """Return a useful string describing a gdata.data.GDEntry.
   
   Keyword arguments:
-    wrapped_entry: BaseEntryToStringWrapper to display.
+    wrapped_entry: BaseEntryToStringWrapper or subclass to display.
     attribute_list: List of attributes to access
     delimiter: String to use as the delimiter between attributes.
     missing_field_value: If any of the styles for any of the entries are
                          invalid or undefined, put this in its place
                          (Default None to use "missing_field_value" config
                          option).
+    newline_replacer: String to replace newlines with. Default ' '. Set to
+                      NoneType to leave newlines in place.
   
   """
 
@@ -574,24 +576,31 @@ def compile_entry_string(entry, attribute_list, delimiter,
   if not delimiter:
     delimiter = ','
   if delimiter.strip() == ',':
-    entry.intra_property_delimiter = ';'
+    wrapped_entry.intra_property_delimiter = ';'
   else:
-    entry.intra_property_delimiter = ','
+    wrapped_entry.intra_property_delimiter = ','
   for attr in attribute_list:
     try:
       # Get the value, replacing NoneTypes and empty strings
       # with the missing field value.
-      val = getattr(entry, attr) or missing_field_value
+      val = getattr(wrapped_entry, attr) or missing_field_value
     except ValueError, err:
       LOG.debug(err.args[0] + ' (Did not add value for style ' + attr + ')')
     except AttributeError, err:
-      val = missing_field_value
+      try:
+        # Last ditch effort to blindly grab the attribute
+        val = getattr(wrapped_entry.entry, attr).text or missing_field_value
+      except AttributeError:
+        val = missing_field_value
     # Ensure the delimiter won't appear in a non-delineation role,
     # but let it slide if the raw xml is being dumped
     if attr != 'xml':
       return_string += val.replace(delimiter, ' ') + delimiter
     else:
       return_string = val
+    # Don't do processing if attribute is xml
+    if attr != 'xml':
+      return_string = return_string.replace('\n', newline_replacer)
   
   return return_string.rstrip(delimiter)
 
