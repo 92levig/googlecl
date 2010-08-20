@@ -14,14 +14,14 @@
 
 
 """Service details and instances for the Docs service using GData 3.0.
- 
+
 Some use cases:
 Upload a document:
   docs upload --folder "Some folder" path_to_doc
-  
+
 Edit a document in your word editor:
   docs edit --title "Grocery List" --editor vim (editor also set in prefs)
-  
+
 Download docs:
   docs get --folder "Some folder"
 
@@ -86,7 +86,7 @@ class DocsBaseCL(object):
   def edit_doc(self, doc_entry_or_title, editor, file_ext,
                folder_entry_or_path=None):
     """Edit a document.
-    
+
     Keyword arguments:
       doc_entry_or_title: DocEntry of the existing document to edit,
                           or title of the document to create.
@@ -99,11 +99,11 @@ class DocsBaseCL(object):
                    For example, 'my_folder' to upload to my_folder,
                    'foo/bar' to upload into subfolder bar under folder foo.
                    Default None for root folder.
-    
-    """ 
+
+    """
     import subprocess
     import tempfile
-    
+
     try:
       doc_title = doc_entry_or_title.title.text
       new_doc = False
@@ -142,7 +142,7 @@ class DocsBaseCL(object):
     elif not os.path.exists(path):
       LOG.info('No file written, not uploading.')
       return
-    
+
     if new_doc:
       if isinstance(folder_entry_or_path, basestring):
         # Let code in upload_docs handle the creation of new folder(s)
@@ -169,7 +169,7 @@ class DocsBaseCL(object):
 
   def get_docs(self, base_path, entries, file_ext=None):
     """Download documents.
-    
+
     Keyword arguments:
       base_path: The path to download files to. This plus an entry's title plus
                  its format-specific extension will form the complete path.
@@ -195,7 +195,7 @@ class DocsBaseCL(object):
     for entry in entries:
       # Don't set file_ext if we cannot do export.
       # get_extension_from_doctype will check the config file for 'format'
-      # which will set an undesired entry_file_ext for 
+      # which will set an undesired entry_file_ext for
       # unconverted downloads
       if not file_ext and can_export(entry):
         entry_file_ext = get_extension_from_doctype(get_document_type(entry))
@@ -238,7 +238,7 @@ class DocsBaseCL(object):
   def upload_docs(self, paths, title=None, folder_entry=None,
                   file_ext=None, **kwargs):
     """Upload a list of documents or directories.
-    
+
     For each item in paths:
       if item is a directory, upload all files found in the directory
         in a manner roughly equivalent to "cp -R directory/ <docs_folder>"
@@ -261,7 +261,7 @@ class DocsBaseCL(object):
 
     Returns:
       Dictionary mapping filenames to where they can be accessed online.
-    
+
     """
     url_locs = {}
     for path in paths:
@@ -269,7 +269,7 @@ class DocsBaseCL(object):
       if os.path.isdir(path):
         folder_entries = {}
         # final '/' sets folder_name to '' which causes
-        # 503 "Service Unavailable". 
+        # 503 "Service Unavailable".
         path = path.rstrip('/')
         for dirpath, dirnames, filenames in os.walk(path):
           directory = os.path.dirname(dirpath)
@@ -338,7 +338,7 @@ def get_document_type(entry):
 
   Returns:
     A string representing the type of document.
-  
+
   """
   data_kind_scheme = 'http://schemas.google.com/g/2005#kind'
   if entry.category:
@@ -379,19 +379,19 @@ def get_extension_from_doctype(doctype_label):
 
 def get_editor(doctype_label):
   """Return editor for file based on entry type and preferences file.
-  
+
   Editor is determined in an order of preference:
   1) Try to load the editor for the specific type (spreadsheet, document, etc.)
   2) If no specification, try to load the "editor" option from config file.
   3) If no default editor, try to load the EDITOR environment variable.
   4) If no EDITOR variable, return None.
-  
+
   Keyword arguments:
     doctype_label: A string representing the type of document to edit.
-  
+
   Returns:
     Editor to use to edit the document.
-  
+
   """
   LOG.debug('In get_editor, doctype_label: ' + str(doctype_label))
   try:
@@ -439,14 +439,14 @@ def safe_move(src, dst):
   new_path = os.path.join(new_dir, filename + dotted_ext)
   while os.path.exists(new_path):
     new_filename = filename + '-' + str(rename_num) + dotted_ext
-    new_path = os.path.join(new_dir, new_filename) 
+    new_path = os.path.join(new_dir, new_filename)
   shutil.move(src, new_path)
   return new_path
 
 
 #===============================================================================
 # Each of the following _run_* functions execute a particular task.
-#  
+#
 # Keyword arguments:
 #  client: Client to the service being used.
 #  options: Contains all attributes required to perform the task
@@ -474,14 +474,14 @@ def _run_list(client, options, args):
   folder_entries = client.get_folder(options.folder)
   entries = client.get_doclist(options.title, folder_entries)
   if args:
-    style_list = args[0].split(',')
+    field_list = args[0].split(',')
   else:
-    style_list = googlecl.get_config_option(SECTION_HEADER,
-                                            'list_style').split(',')
+    field_list = googlecl.get_config_option(SECTION_HEADER,
+                                            'list_fields').split(',')
   for entry in entries:
     print googlecl.base.compile_entry_string(
                                googlecl.base.BaseEntryToStringWrapper(entry),
-                               style_list,
+                               field_list,
                                delimiter=options.delimiter)
 
 

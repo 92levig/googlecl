@@ -440,8 +440,8 @@ class BaseEntryToStringWrapper(object):
 
   @property
   def url(self):
-    """url_direct or url_site, depending on url_style defined in config."""
-    return self._url(googlecl.get_config_option('GENERAL', 'url_style'))
+    """url_direct or url_site, depending on url_field defined in config."""
+    return self._url(googlecl.get_config_option('GENERAL', 'url_field'))
 
   @property
   def url_direct(self):
@@ -453,13 +453,13 @@ class BaseEntryToStringWrapper(object):
     """Url that leads to site hosting content."""
     return self._url('site')
 
-  def _url(self, substyle):
+  def _url(self, subfield):
     if not self.entry.GetHtmlLink():
       href = ''
     else:
       href = self.entry.GetHtmlLink().href
 
-    if substyle == 'direct':
+    if subfield == 'direct':
       return self.entry.content.src or href
     return href or self.entry.content.src
 
@@ -561,7 +561,7 @@ def compile_entry_string(wrapped_entry, attribute_list, delimiter,
     wrapped_entry: BaseEntryToStringWrapper or subclass to display.
     attribute_list: List of attributes to access
     delimiter: String to use as the delimiter between attributes.
-    missing_field_value: If any of the styles for any of the entries are
+    missing_field_value: If any of the fields for any of the entries are
                          invalid or undefined, put this in its place
                          (Default None to use "missing_field_value" config
                          option).
@@ -585,7 +585,7 @@ def compile_entry_string(wrapped_entry, attribute_list, delimiter,
       # with the missing field value.
       val = getattr(wrapped_entry, attr) or missing_field_value
     except ValueError, err:
-      LOG.debug(err.args[0] + ' (Did not add value for style ' + attr + ')')
+      LOG.debug(err.args[0] + ' (Did not add value for field ' + attr + ')')
     except AttributeError, err:
       try:
         # Last ditch effort to blindly grab the attribute

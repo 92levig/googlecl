@@ -121,34 +121,42 @@ Tasks:
 2.2. The List task
 The list task can be given additional arguments to specify what exactly is being listed. For example,
 
-`$ google <service> list style1,style2,style3 --delimiter ": "`
+`$ google <service> list field1,field2,field3 --delimiter ": "`
 
-will output those styles, in that order, with ": " as a delimiter. Valid values for `<`style1`>` etc. are (with common services in parentheses):
-  * 'address' - postal addresses. (Contacts)
-  * 'author' - author(s). (Blogger)
-	* 'birthday' - birthday. (Contacts)
-	* 'company' - company name. (Contacts)
-  * 'email' - email address(es). (Contacts)
-	* 'event' - events such as birthdays, anniversaries, etc. (Contacts)
-	* 'im' - instant messanger handles. (Contacts)
-	* 'name' - name. For any service but Contacts, this is the same as 'title'
-	* 'nickname' - nickname. (Contacts)
-	* 'notes' - notes on a contact. (Contacts)
-	* 'organization' - company or organization. (Contacts)
-	* 'phone' - phone numbers. (Contacts)
-	* 'relation' - names of relations, such as manager, spouse, etc. (Contacts)
-  * 'summary' - summary text.
-  * 'title' - displayed title or name. For Contacts, this is the job title, not the name of the person.
-  * 'url' - treated as 'url-direct' or 'url-site' depending on setting in preferences file.
-  * 'url-site' - url of the site.
+will output those fields, in that order, with ": " as a delimiter. Valid values for `<`field1`>` etc. are dependent on the service being used.
+
+Common (all services):
+  * 'summary' - summary text. Includes Picasa captions.
+  * 'title', 'name' - displayed title or name.
+  * 'url' - treated as 'url-direct' or 'url-site' depending on setting in preferences file. See the note at the end of this section.
+  * 'url-site' - url of the site associated with the resource.
   * 'url-direct' - url directly to the resource.
-	* 'user_defined' or 'other' - custom labels. (Contacts)
-	* 'website' - websites and links. (Contacts)
-  * 'when' - "when" data. (Calendar)
-  * 'where' - "where" data. (Calendar)
-  * 'xml' - full XML dump.
+  * 'xml' - dump the XML representation of the result.
 
-The difference between 'url-site' and 'url-direct' is best exemplified by a picasa PhotoEntry: 'url-site' gives a link to the photo in the user's album, 'url-direct' gives a link to the image url. If 'url-direct' is specified but is not applicable, 'url-site' is placed in its stead, and vice-versa.
+Blogger:
+  * 'author' - author of the post
+
+Calendar:
+  * 'when' - when an event takes place.
+  * 'where' - where the event takes place.
+
+Contacts:
+  * 'address', 'where' - postal addresses.
+  * 'birthday', 'bday' - birthday.
+  * 'email' - email address(es).
+  * 'event', 'dates', 'when' - events such as birthdays, anniversaries, etc.
+  * 'im' - instant messanger handles.
+  * 'name' - full name.
+  * 'nickname' - nickname.
+  * 'notes' - notes on a contact.
+  * 'organization', 'company' - company or organization.
+  * 'phone_number', 'phone' - phone numbers.
+  * 'relation' - names of relations, such as manager, spouse, etc.
+  * 'title', 'org_title' - job title.
+  * 'user_defined', 'other' - custom labels.
+  * 'website', 'links' - websites and links.
+
+The difference between 'url-site' and 'url-direct' is best exemplified by a picasa photo: 'url-site' gives a link to the photo in the user's album, 'url-direct' gives a link to the image url. If 'url-direct' is specified but is not applicable, 'url-site' is placed in its stead, and vice-versa.
 
 3. Options
 Some more details on the trickier options you can specify.

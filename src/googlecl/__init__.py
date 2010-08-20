@@ -36,11 +36,11 @@ LOG = logging.getLogger(LOGGER_NAME)
 
 def get_config_option(section, option, default=None, type=None):
   """Return option from config file.
-  
+
   Tries to retrieve <option> from the given section. If that fails, tries to
   retrieve the same option from the GENERAL section. If that fails,
   returns value of "default" parameter.
-  
+
   Keyword arguments:
     section: Name of the section to initially try to retrieve the option from.
     option: Name of the option to retrieve.
@@ -48,11 +48,11 @@ def get_config_option(section, option, default=None, type=None):
     type: Conversion function to use on the string, or None to leave as string.
           For example, if you want an integer value returned, this should be
           set to int. This is not applied to the "default" parameter.
-  
+
   Returns:
     Value of the option if it exists in the prefs file, or value of "default"
     if option does not exist.
-  
+
   """
   try:
     try:
@@ -179,10 +179,10 @@ def _get_xdg_path(filename, data_type, default_directories=None,
 
 def load_preferences(path=None):
   """Load preferences / configuration file.
-  
+
   Keyword arguments:
     path: Path to the configuration file. Default None for the default location.
-  
+
   """
   def set_options():
     """Set the most basic options in the config file."""
@@ -194,15 +194,15 @@ def load_preferences(path=None):
     # REMEMBER: updating these means you need to update the CONFIG readme.
     default_hostid = getpass.getuser() + '@' +  socket.gethostname()
     _youtube = {'max_results': '50'}
-    _contacts = {'list_style': 'name,email'}
-    _calendar = {'list_style': 'title,when'}
+    _contacts = {'list_fields': 'name,email'}
+    _calendar = {'list_fields': 'title,when'}
     _picasa = {'access': 'public'}
     _general = {'regex': 'True',
                'delete_by_default': 'False',
                'delete_prompt': 'True',
                'tags_prompt': 'False',
-               'url_style': 'site',
-               'list_style': 'title,url-site',
+               'url_field': 'site',
+               'list_fields': 'title,url-site',
                'missing_field_value': 'N/A',
                'date_print_format': '%b %d %H:%M',
                'cap_results': 'False',
@@ -230,7 +230,7 @@ def load_preferences(path=None):
       for opt in missing_opts:
         CONFIG.set(section_name, opt, section[opt])
     return made_changes
-  
+
   if not path:
     path = get_config_path(create_missing_dir=True)
     if not path:
@@ -254,15 +254,15 @@ def load_preferences(path=None):
 
 def read_access_token(service, user):
   """Try to read an authorization token from a file.
-  
+
   Keyword arguments:
     service: Service the token is for. E.g. 'picasa', 'docs', 'blogger'.
     user: Username / email the token is associated with.
-  
+
   Returns:
     The access token, if it exists. If there is no access token,
     return NoneType.
-  
+
   """
   import pickle
   token_path = get_data_path(TOKENS_FILENAME_FORMAT % user)
@@ -318,14 +318,14 @@ def remove_access_token(service, user):
 
 def set_missing_default(section, option, value, config_path=None):
   """Set the option for a section if not defined already.
-  
+
   Keyword arguments:
     section: Title of the section to set the option in.
     option: Option to set.
     value: Value to give the option.
     config_path: Path to the configuration file.
                  Default None to use the default path defined in this module.
-  
+
   """
   existing_value = ''
   try:
@@ -346,11 +346,11 @@ def set_missing_default(section, option, value, config_path=None):
 
 def write_access_token(service, user, token):
   """Write an authorization token to a file.
-  
+
   Keyword arguments:
     service: Service the token is for. E.g. 'picasa', 'docs', 'blogger'.
     user: Username / email the token is associated with.
-  
+
   """
   import pickle
   import stat
@@ -367,7 +367,7 @@ def write_access_token(service, user, token):
       except ImportError, err:
         LOG.error(err)
         LOG.info('You probably have been using different versions of gdata.')
-        file_invalid = True 
+        file_invalid = True
       else:
         file_invalid = False
     if file_invalid:

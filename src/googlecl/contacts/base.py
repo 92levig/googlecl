@@ -17,7 +17,7 @@
 
 Some use cases:
 Add contacts:
-  contacts add "Bob Smith, bob@smith.com" "Jim Raynor, jimmy@noreaster.com" 
+  contacts add "Bob Smith, bob@smith.com" "Jim Raynor, jimmy@noreaster.com"
 
 List contacts:
   contacts list title,email
@@ -36,14 +36,13 @@ from googlecl.contacts import SECTION_HEADER
 
 LOG = logging.getLogger(googlecl.contacts.LOGGER_NAME)
 
-
 class ContactsBaseCL(object):
-  
+
   """Class inherited by either ContactsServiceCL or ContactsClientCL. """
 
   def add_contact_string(self, string_or_csv_file):
     """Add contact(s).
-    
+
     Keyword arguments:
       string_or_csv_file: String representing a name/email address to add, or
                           a path to a csv file of such strings. Entries should
@@ -88,18 +87,13 @@ class ContactsEntryToStringWrapper(googlecl.base.BaseEntryToStringWrapper):
           lambda address: getattr(getattr(address, 'formatted_address'), 'text')
       return self._join(self.entry.structured_postal_address,
                         text_extractor=get_address_text)
-      
+  where = address
 
   @property
   def birthday(self):
     """Birthday."""
     return self.entry.birthday.when
-
-  @property
-  def company(self):
-    """Name of company."""
-    return self.entry.organization.org_name.text
-  org_name = company
+  bday=birthday
 
   @property
   def email(self):
@@ -121,6 +115,7 @@ class ContactsEntryToStringWrapper(googlecl.base.BaseEntryToStringWrapper):
       return events + self.intra_property_delimiter + label + self.birthday
   events = event
   dates = event
+  when = event
 
   @property
   def im(self):
@@ -150,7 +145,6 @@ class ContactsEntryToStringWrapper(googlecl.base.BaseEntryToStringWrapper):
     except AttributeError:
       # For v3 of gdata ("client" modules)?
       return self.entry.organization.name.text
-
   company = organization
 
   @property
@@ -163,6 +157,7 @@ class ContactsEntryToStringWrapper(googlecl.base.BaseEntryToStringWrapper):
   def relation(self):
     """Relationships."""
     return self._join(self.entry.relation, text_attribute='text')
+  relations = relation
 
   @property
   # Overrides Base's title. "name" will still give name of contact.
@@ -187,12 +182,12 @@ class ContactsEntryToStringWrapper(googlecl.base.BaseEntryToStringWrapper):
   def website(self):
     """Websites."""
     return self._join(self.entry.website, text_attribute='href')
-
+  links = website
 
 
 #===============================================================================
 # Each of the following _run_* functions execute a particular task.
-#  
+#
 # Keyword arguments:
 #  client: Client to the service being used.
 #  options: Contains all attributes required to perform the task
@@ -204,14 +199,14 @@ def _run_list(client, options, args):
   # but support --title for backward compatibility, as in _run_delete
   entries = client.GetContacts(options.title)
   if args:
-    style_list = args[0].split(',')
+    field_list = args[0].split(',')
   else:
-    style_list = googlecl.get_config_option(SECTION_HEADER,
-                                            'list_style').split(',')
+    field_list = googlecl.get_config_option(SECTION_HEADER,
+                                            'list_fields').split(',')
   for entry in entries:
     print googlecl.base.compile_entry_string(
                                             ContactsEntryToStringWrapper(entry),
-                                            style_list,
+                                            field_list,
                                             delimiter=options.delimiter)
 
 

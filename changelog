@@ -4,6 +4,7 @@ svn HEAD
  * Refactored to include library support of v2 and v3 of the gdata protocol.
  * Allowed --no-convert option to upload arbitrary file types for Apps Premier users (?)
  * Enabled downloads of arbitrary file types.
+ * Added many more list fields (e.g. birthday, company, relation) for Contacts service.
 
  Bugfixes
  * youtube list works without --owner flag again.

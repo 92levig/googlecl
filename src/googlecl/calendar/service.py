@@ -17,7 +17,7 @@
 
 Some use cases:
 Add event:
-  calendar add "Lunch with Tony on Tuesday at 12:00" 
+  calendar add "Lunch with Tony on Tuesday at 12:00"
 
 List events for today:
   calendar today
@@ -49,7 +49,7 @@ class EventsNotFound(CalendarError):
 
 
 class Calendar():
-  
+
   """Wrapper class for some calendar entry data."""
 
   def __init__(self, cal_entry=None, user=None, name=None):
@@ -129,13 +129,13 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
 
   def delete_events(self, events, date, calendar_user):
     """Delete events from a calendar.
-    
+
     Keyword arguments:
       events: List of non-expanded calendar events to delete.
       date: Date string specifying the date range of the events, as the date
             option.
       calendar_user: "User" of the calendar to delete events from.
-    
+
     """
     single_events = [e for e in events if not e.recurrence and
                      e.event_status.value != 'CANCELED']
@@ -146,7 +146,7 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
       raise EventsNotFound
     delete_default = googlecl.CONFIG.getboolean('GENERAL', 'delete_by_default')
     self.DeleteEntryList(single_events, 'event', delete_default)
-    
+
     date = googlecl.calendar.Date(date)
     # option_list is a list of tuples, (prompt_string, deletion_instruction)
     # prompt_string gets displayed to the user,
@@ -171,12 +171,12 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
     option_list.append(('Do not delete', 'NONE'))
     prompt_str = ''
     for i, option in enumerate(option_list):
-      prompt_str += str(i) + ') ' + option[0] + '\n' 
+      prompt_str += str(i) + ') ' + option[0] + '\n'
     for event in recurring_events:
       if self.prompt_for_delete:
         delete_selection = -1
         while delete_selection < 0 or delete_selection > len(option_list)-1:
-          delete_selection = int(raw_input('Delete "%s"?\n%s' % 
+          delete_selection = int(raw_input('Delete "%s"?\n%s' %
                                            (event.title.text, prompt_str)))
         option = option_list[delete_selection]
         if option[1] == 'ALL':
@@ -203,15 +203,15 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
 
   def quick_add_event(self, quick_add_strings, calendar_user):
     """Add an event using the Calendar Quick Add feature.
-    
+
     Keyword arguments:
       quick_add_strings: List of strings to be parsed by the Calendar service,
                          as if it was entered via the "Quick Add" function.
       calendar_user: "User" of the calendar to add to.
-    
+
     Returns:
-      The event that was added, or None if the event was not added. 
-    
+      The event that was added, or None if the event was not added.
+
     """
     import atom
     request_feed = gdata.calendar.CalendarEventFeed()
@@ -228,21 +228,21 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
 
   def get_calendar_user_list(self, cal_name=None):
     """Get "user" name and human-readable name for one or more calendars.
-    
+
     The "user" for a calendar is an awful misnomer for the ID for the calendar.
     To get events for a calendar, you can form a query with
       cal_list = self.get_calendar_user_list('my calendar name')
       if cal_list:
         query = gdata.calendar.CalendarEventQuery(user=cal_list[0].user)
-    
+
     Keyword arguments:
-      cal_name: Name of the calendar to match. Default None to return the 
+      cal_name: Name of the calendar to match. Default None to return the
                 an instance representing only the default / main calendar.
-      
+
     Returns:
       A list of Calendar instances, or None of there were no matches
       for cal_name.
-    
+
     """
     if not cal_name:
       return [Calendar(user='default', name=self.email)]
@@ -259,7 +259,7 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
   def get_events(self, calendar_user, start_date=None, end_date=None,
                  title=None, query=None, expand_recurrence=True):
     """Get events.
-    
+
     Keyword arguments:
       calendar_user: "user" of the calendar to get events for.
                      See get_calendar_user_list.
@@ -273,10 +273,10 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
              titles and content.
       expand_recurrence: If true, expand recurring events per the 'singleevents'
                          query parameter. Otherwise, don't.
-    
+
     Returns:
       List of events from primary calendar that match the given params.
-                  
+
     """
     query = gdata.calendar.service.CalendarEventQuery(user=calendar_user,
                                                       text_query=query)
@@ -382,17 +382,17 @@ def get_date_today(include_hour=False, as_range=False):
 def get_datetimes(cal_entry):
   """Get datetime objects for the start and end of the event specified by a
   calendar entry.
-  
+
   Keyword arguments:
     cal_entry: A CalendarEventEntry.
-  
+
   Returns:
     (start_time, end_time, freq) where
       start_time - datetime object of the start of the event.
       end_time - datetime object of the end of the event.
       freq - string that tells how often the event repeats (NoneType if the
            event does not repeat (does not have a gd:recurrence element)).
-  
+
   """
   if cal_entry.recurrence:
     return parse_recurrence(cal_entry.recurrence.text)
@@ -414,16 +414,16 @@ def get_datetimes(cal_entry):
 
 def parse_recurrence(time_string):
   """Parse recurrence data found in event entry.
-  
+
   Keyword arguments:
     time_string: Value of entry's recurrence.text field.
-  
+
   Returns:
     Tuple of (start_time, end_time, frequency). All values are in the user's
     current timezone (I hope). start_time and end_time are datetime objects,
     and frequency is a dictionary mapping RFC 2445 RRULE parameters to their
     values. (http://www.ietf.org/rfc/rfc2445.txt, section 4.3.10)
-  
+
   """
   # Google calendars uses a pretty limited section of RFC 2445, and I'm
   # abusing that here. This will probably break if Google ever changes how
@@ -431,10 +431,10 @@ def parse_recurrence(time_string):
   data = time_string.split('\n')
   start_time_string = data[0].split(':')[-1]
   start_time = time.strptime(start_time_string,'%Y%m%dT%H%M%S')
-  
+
   end_time_string = data[1].split(':')[-1]
   end_time = time.strptime(end_time_string,'%Y%m%dT%H%M%S')
-  
+
   freq_string = data[2][6:]
   freq_properties = freq_string.split(';')
   freq = {}
@@ -459,20 +459,20 @@ def _list(client, options, args, date):
                                 query=options.query)
 
     if args:
-      style_list = args[0].split(',')
+      field_list = args[0].split(',')
     else:
-      style_list = googlecl.get_config_option(SECTION_HEADER,
-                                              'list_style').split(',')
+      field_list = googlecl.get_config_option(SECTION_HEADER,
+                                              'list_fields').split(',')
     for entry in entries:
       print googlecl.base.compile_entry_string(
                                             CalendarEntryToStringWrapper(entry),
-                                            style_list,
+                                            field_list,
                                             delimiter=options.delimiter)
 
 
 #===============================================================================
 # Each of the following _run_* functions execute a particular task.
-#  
+#
 # Keyword arguments:
 #  client: Client to the service being used.
 #  options: Contains all attributes required to perform the task
@@ -509,7 +509,7 @@ def _run_add(client, options, args):
                   entry.batch_id.text,
                   entry.batch_status.code,
                   entry.batch_status.reason)
-      
+
     if minutes:
       new_results = client.add_reminders(cal.user, results, minutes)
       if LOG.isEnabledFor(logging.DEBUG):

@@ -43,33 +43,33 @@ class BlogNotFound(googlecl.base.Error):
 
 class BloggerServiceCL(gdata.service.GDataService,
                        googlecl.service.BaseServiceCL):
-  
-  """Command-line-friendly service for the Blogger API. 
-  
+
+  """Command-line-friendly service for the Blogger API.
+
   Some of this is based off gdata/samples/blogger/BloggerExampleV1.py
-  
+
   """
-  
+
   def __init__(self):
     """Constructor."""
     gdata.service.GDataService.__init__(self, service='blogger',
                                         server='www.blogger.com',
                                         account_type='GOOGLE')
     googlecl.service.BaseServiceCL.__init__(self, SECTION_HEADER)
-    
+
   def add_post(self, post_title, content, blog_title=None, is_draft=False):
     """Add a post.
-    
+
     Keyword arguments:
       blog_title: Title of the blog to post to.
       title: Title to give the post.
       content: String to get posted. This may be contents from a file, but NOT
                the path itself!
       is_draft: If this content is a draft post or not. (Default False)
-    
+
     Returns:
       Entry of post. (Returns same results as self.Post())
-     
+
     """
     blog_id = self._get_blog_id(blog_title)
     if not blog_id:
@@ -87,41 +87,41 @@ class BloggerServiceCL(gdata.service.GDataService,
 
   def _get_blog_id(self, blog_title=None, user_id='default'):
     """Return the blog ID of the blog that matches blog_title.
-    
+
     Keyword arguments:
       blog_title: Name or title of the blog.
       user_id: Profile ID of blog's owner as seen in the profile view URL.
               Default 'default' for the authenticated user.
-    
+
     Returns:
       Blog ID (blog_entry.GetSelfLink().href.split('/')[-1]) if a blog is
       found matching the user and blog_title. None otherwise.
-    
+
     """
     blog_entry = self.GetSingleEntry('/feeds/' + user_id + '/blogs', blog_title)
     if blog_entry:
       return blog_entry.GetSelfLink().href.split('/')[-1]
     else:
       raise BlogNotFound('No blogs returned matching', blog_title)
-    
+
   def is_token_valid(self, test_uri='/feeds/default/blogs'):
     """Check that the token being used is valid."""
     return googlecl.service.BaseServiceCL.IsTokenValid(self, test_uri)
 
   IsTokenValid = is_token_valid
-    
+
   def get_posts(self, blog_title=None, post_title=None, user_id='default'):
     """Get entries for posts that match a title.
-    
+
     Keyword arguments:
       blog_title: Name or title of the blog the post is in. (Default None)
       post_title: Title that the post should have. (Default None, for all posts)
       user_id: Profile ID of blog's owner as seen in the profile view URL.
               (Default 'default' for authenticated user)
-         
+
     Returns:
       List of posts that match parameters, or [] if none do.
-      
+
     """
     blog_id = self._get_blog_id(blog_title, user_id)
     if blog_id:
@@ -134,13 +134,13 @@ class BloggerServiceCL(gdata.service.GDataService,
 
   def label_posts(self, post_entries, tags):
     """Add or remove labels on a list of posts.
-    
+
     Keyword arguments:
-      post_entries: List of post entry objects. 
+      post_entries: List of post entry objects.
       tags: String representation of tags in a comma separated list.
-            For how tags are generated from the string, 
+            For how tags are generated from the string,
             see googlecl.base.generate_tag_sets().
-    
+
     """
     from atom import Category
     scheme = 'http://www.blogger.com/atom/ns#'
@@ -154,14 +154,14 @@ class BloggerServiceCL(gdata.service.GDataService,
         post.category = [c for c in post.category \
                           if c.scheme != scheme or \
                           (c.scheme == scheme and c.term not in remove_set)]
-      
+
       if replace_tags:
         # Remove categories that match the scheme we are updating.
         post.category = [c for c in post.category if c.scheme != scheme]
-      if add_set: 
+      if add_set:
         new_tags = [Category(term=tag, scheme=scheme) for tag in add_set]
         post.category.extend(new_tags)
- 
+
       self.Put(post, post.GetEditLink().href)
 
   LabelPosts = label_posts
@@ -181,7 +181,7 @@ class BloggerEntryToStringWrapper(googlecl.base.BaseEntryToStringWrapper):
 
 #===============================================================================
 # Each of the following _run_* functions execute a particular task.
-#  
+#
 # Keyword arguments:
 #  client: Client to the service being used.
 #  options: Contains all attributes required to perform the task
@@ -242,14 +242,14 @@ def _run_list(client, options, args):
     LOG.error(err)
     return
   if args:
-    style_list = args[0].split(',')
+    field_list = args[0].split(',')
   else:
-    style_list = googlecl.get_config_option(SECTION_HEADER,
-                                            'list_style').split(',')
+    field_list = googlecl.get_config_option(SECTION_HEADER,
+                                            'list_fields').split(',')
   for entry in entries:
     print googlecl.base.compile_entry_string(
                                              BloggerEntryToStringWrapper(entry),
-                                             style_list,
+                                             field_list,
                                              delimiter=options.delimiter)
 
 

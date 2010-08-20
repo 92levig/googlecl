@@ -53,28 +53,28 @@ DOWNLOAD_VIDEO_TYPES = {'swf': 'application/x-shockwave-flash',
                         'mp4': 'video/mpeg4',}
 
 class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
-  
+
   """Extends gdata.photos.service.PhotosService for the command line.
-  
+
   This class adds some features focused on using Picasa via an installed app
   with a command line interface.
-  
+
   """
-  
+
   def __init__(self):
     """Constructor."""
     PhotosService.__init__(self)
     googlecl.service.BaseServiceCL.__init__(self, SECTION_HEADER)
-  
+
   def build_entry_list(self, user='default', title=None, query=None,
                        force_photos=False):
     """Build a list of entries of either photos or albums.
-    
+
     If no title is specified, entries will be of photos matching the query.
     If no query is specified, entries will be of albums matching the title.
     If both title and query are specified, entries will be of photos matching
       the query that are also in albums matching the title.
-      
+
     Keyword arguments:
       user: Username of the owner of the albums / photos (Default 'default').
       title: Title of the album (Default None).
@@ -82,10 +82,10 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
       force_photos: If true, returns photo entries, even if album entries would
                     typically be returned. The entries will be for all photos
                     in each album.
-      
+
     Returns:
       A list of entries, as specified above.
-      
+
     """
     album_entry = []
     if title or not(title or query):
@@ -104,26 +104,26 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
           entries.extend(photo_feed.entry)
     else:
       entries = album_entry
-      
+
     return entries
 
   def download_album(self, base_path, user, video_format='mp4', title=None):
     """Download an album to the local host.
-    
+
     Keyword arguments:
       base_path: Path on the filesystem to copy albums to. Each album will
                  be stored in base_path/<album title>. If base_path does not
                  exist, it and each non-existent parent directory will be
-                 created. 
+                 created.
       user: User whose albums are being retrieved. (Default 'default')
       title: Title that the album should have. (Default None, for all albums)
-       
+
     """
     def _get_download_info(photo_or_video, video_format):
       """Get download link and extension for photo or video.
-      
+
       video_format must be in DOWNLOAD_VIDEO_TYPES.
-      
+
       Returns:
         (url, extension)
       """
@@ -167,10 +167,10 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
           album_path = base_album_path + '-%i' % album_concat
           album_concat += 1
       os.makedirs(album_path)
-      
+
       photo_feed = self.GetFeed('/data/feed/api/user/%s/albumid/%s?kind=photo' %
                                 (user, album.gphoto_id.text))
-      
+
       for photo_or_video in photo_feed.entry:
         #TODO: Test on Windows (upload from one OS, download from another)
         photo_or_video_name = photo_or_video.title.text.split(os.extsep)[0]
@@ -191,14 +191,14 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
 
   def get_album(self, user='default', title=None):
     """Get albums from a user feed.
-    
+
     Keyword arguments:
       user: The user whose albums are being retrieved. (Default 'default')
       title: Title that the album should have. (Default None, for all albums)
-         
+
     Returns:
       List of albums that match parameters, or [] if none do.
-    
+
     """
     uri = '/data/feed/api/user/' + user + '?kind=album'
     return self.GetEntries(uri, title)
@@ -214,14 +214,14 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
 
   def insert_media_list(self, album, photo_list, tags='', user='default'):
     """Insert photos into an album.
-    
+
     Keyword arguments:
       album: The album entry of the album getting the media.
       photo_list: A list of paths, each path a picture or video on
                   the local host.
       tags: Text of the tags to be added to each item, e.g. 'Islands, Vacation'
             (Default '').
-    
+
     """
     album_url = ('/data/feed/api/user/%s/albumid/%s' %
                  (user, album.gphoto_id.text))
@@ -241,17 +241,17 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
         except KeyError:
           content_type = 'image/' + ext
       try:
-        self.InsertPhotoSimple(album_url, 
-                               title=os.path.split(path)[1], 
+        self.InsertPhotoSimple(album_url,
+                               title=os.path.split(path)[1],
                                summary='',
-                               filename_or_handle=path, 
+                               filename_or_handle=path,
                                keywords=keywords,
                                content_type=content_type)
       except GooglePhotosException, err:
         LOG.error('Failed to upload %s. (%s: %s)', path,
                                                    err.args[0],
-                                                   err.args[1]) 
-        failures.append(file)   
+                                                   err.args[1])
+        failures.append(file)
     return failures
 
   InsertMediaList = insert_media_list
@@ -264,13 +264,13 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
 
   def tag_photos(self, photo_entries, tags):
     """Add or remove tags on a list of photos.
-    
+
     Keyword arguments:
-      photo_entries: List of photo entry objects. 
+      photo_entries: List of photo entry objects.
       tags: String representation of tags in a comma separated list.
-            For how tags are generated from the string, 
+            For how tags are generated from the string,
             see googlecl.base.generate_tag_sets().
-    
+
     """
     from gdata.media import Group, Keywords
     remove_set, add_set, replace_tags = googlecl.base.generate_tag_sets(tags)
@@ -279,19 +279,19 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
         photo.media = Group()
       if not photo.media.keywords:
         photo.media.keywords = Keywords()
-  
+
       # No point removing tags if the photo has no keywords,
       # or we're replacing the keywords.
       if photo.media.keywords.text and remove_set and not replace_tags:
         current_tags = photo.media.keywords.text.replace(', ', ',')
         current_set = set(current_tags.split(','))
         photo.media.keywords.text = ','.join(current_set - remove_set)
-      
+
       if replace_tags or not photo.media.keywords.text:
         photo.media.keywords.text = ','.join(add_set)
-      elif add_set: 
+      elif add_set:
         photo.media.keywords.text += ',' + ','.join(add_set)
- 
+
       self.UpdatePhotoMetadata(photo)
 
   TagPhotos = tag_photos
@@ -302,7 +302,7 @@ SERVICE_CLASS = PhotosServiceCL
 
 #===============================================================================
 # Each of the following _run_* functions execute a particular task.
-#  
+#
 # Keyword arguments:
 #  client: Client to the service being used.
 #  options: Contains all attributes required to perform the task
@@ -322,8 +322,8 @@ def _run_create(client, options, args):
     else:
       # Timestamp needs to be in milliseconds after the epoch
       options.date = '%i' % (timestamp * 1000)
-  
-  album = client.InsertAlbum(title=options.title, summary=options.summary, 
+
+  album = client.InsertAlbum(title=options.title, summary=options.summary,
                              access=googlecl.CONFIG.get(SECTION_HEADER,
                                                         'access'),
                              timestamp=options.date)
@@ -354,14 +354,14 @@ def _run_list(client, options, args):
                                     query=options.encoded_query,
                                     force_photos=True)
   if args:
-    style_list = args[0].split(',')
+    field_list = args[0].split(',')
   else:
-    style_list = googlecl.get_config_option(SECTION_HEADER,
-                                            'list_style').split(',')
+    field_list = googlecl.get_config_option(SECTION_HEADER,
+                                            'list_fields').split(',')
   for entry in entries:
     print googlecl.base.compile_entry_string(
                                googlecl.base.BaseEntryToStringWrapper(entry),
-                               style_list,
+                               field_list,
                                delimiter=options.delimiter)
 
 
@@ -370,14 +370,14 @@ def _run_list_albums(client, options, args):
                                     title=options.title,
                                     force_photos=False)
   if args:
-    style_list = args[0].split(',')
+    field_list = args[0].split(',')
   else:
-    style_list = googlecl.get_config_option(SECTION_HEADER,
-                                            'list_style').split(',')
+    field_list = googlecl.get_config_option(SECTION_HEADER,
+                                            'list_fields').split(',')
   for entry in entries:
     print googlecl.base.compile_entry_string(
                                googlecl.base.BaseEntryToStringWrapper(entry),
-                               style_list,
+                               field_list,
                                delimiter=options.delimiter)
 
 
@@ -420,12 +420,12 @@ TASKS = {'create': googlecl.base.Task('Create an album',
                                          callback=_run_create,
                                          required='title',
                                          optional=['date', 'summary', 'tags'],
-                                         args_desc='PATH_TO_PHOTOS'), 
+                                         args_desc='PATH_TO_PHOTOS'),
          'post': googlecl.base.Task('Post photos to an album',
                                        callback=_run_post,
                                        required='title',
                                        optional=['tags', 'owner'],
-                                       args_desc='PATH_TO_PHOTOS'), 
+                                       args_desc='PATH_TO_PHOTOS'),
          'delete': googlecl.base.Task('Delete photos or albums',
                                          callback=_run_delete,
                                          required=[['title', 'query']]),
@@ -437,7 +437,7 @@ TASKS = {'create': googlecl.base.Task('Create an album',
                                               required=['delimiter'],
                                               optional=['title', 'owner']),
          'get': googlecl.base.Task('Download albums', callback=_run_get,
-                                      optional=['title', 'owner', 'format'], 
+                                      optional=['title', 'owner', 'format'],
                                       args_desc='LOCATION'),
          'tag': googlecl.base.Task('Tag photos', callback=_run_tag,
                                       required=['tags', ['title', 'query']],

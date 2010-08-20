@@ -31,30 +31,30 @@ LOG = logging.getLogger(googlecl.youtube.LOGGER_NAME)
 
 
 class YouTubeServiceCL(YouTubeService, googlecl.service.BaseServiceCL):
-  
+
   """Extends gdata.youtube.service.YouTubeService for the command line.
-  
+
   This class adds some features focused on using YouTube via an installed app
   with a command line interface.
-  
+
   """
-  
+
   def __init__(self):
     """Constructor."""
     YouTubeService.__init__(self)
     googlecl.service.BaseServiceCL.__init__(self, SECTION_HEADER)
-  
+
   def categorize_videos(self, video_entries, category):
     """Change the categories of a list of videos to a single category.
-    
+
     If the update fails with a request error, a message is printed to screen.
     Usually, valid category strings are the first word of the category as seen
     on YouTube (e.g. "Film" for "Film & Animation")
-    
+
     Keyword arguments:
-      video_entries: List of YouTubeVideoEntry objects. 
+      video_entries: List of YouTubeVideoEntry objects.
       category: String representation of category.
-    
+
     """
     for video in video_entries:
       video.media.category = build_category(category)
@@ -71,14 +71,14 @@ class YouTubeServiceCL(YouTubeService, googlecl.service.BaseServiceCL):
 
   def get_videos(self, user='default', title=None):
     """Get entries for videos uploaded by a user.
-    
+
     Keyword arguments:
       user: The user whose videos are being retrieved. (Default 'default')
       title: Title that the videos should have. (Default None, for all videos)
-         
+
     Returns:
       List of videos that match parameters, or [] if none do.
-    
+
     """
     uri = 'http://gdata.youtube.com/feeds/api/users/' + user + '/uploads'
     return self.GetEntries(uri,
@@ -96,7 +96,7 @@ class YouTubeServiceCL(YouTubeService, googlecl.service.BaseServiceCL):
   def post_videos(self, paths, category, title=None, desc=None, tags=None,
                  devtags=None):
     """Post video(s) to YouTube.
-    
+
     Keyword arguments:
       paths: List of paths to videos.
       category: YouTube category for the video.
@@ -104,7 +104,7 @@ class YouTubeServiceCL(YouTubeService, googlecl.service.BaseServiceCL):
       desc: Video summary (Default None).
       tags: Tags of the video as a string, separated by commas (Default None).
       devtags: Developer tags for the video (Default None).
-      
+
     """
     from gdata.media import Group, Title, Description, Keywords
     for path in paths:
@@ -113,7 +113,7 @@ class YouTubeServiceCL(YouTubeService, googlecl.service.BaseServiceCL):
                              description=Description(text=desc or 'A video'),
                              keywords=Keywords(text=tags),
                              category=build_category(category))
-  
+
       video_entry = gdata.youtube.YouTubeVideoEntry(media=my_media_group)
       if devtags:
         taglist = devtags.replace(', ', ',')
@@ -133,12 +133,12 @@ class YouTubeServiceCL(YouTubeService, googlecl.service.BaseServiceCL):
 
   def tag_videos(self, video_entries, tags):
     """Add or remove tags on a list of videos.
-    
+
     Keyword arguments:
-      video_entries: List of YouTubeVideoEntry objects. 
-      tags: String representation of tags in a comma separated list. For how 
+      video_entries: List of YouTubeVideoEntry objects.
+      tags: String representation of tags in a comma separated list. For how
             tags are generated from the string, see googlecl.base.generate_tag_sets().
-    
+
     """
     from gdata.media import Group, Keywords
     remove_set, add_set, replace_tags = googlecl.base.generate_tag_sets(tags)
@@ -147,19 +147,19 @@ class YouTubeServiceCL(YouTubeService, googlecl.service.BaseServiceCL):
         video.media = Group()
       if not video.media.keywords:
         video.media.keywords = Keywords()
-  
+
       # No point removing tags if the video has no keywords,
       # or we're replacing the keywords.
       if video.media.keywords.text and remove_set and not replace_tags:
         current_tags = video.media.keywords.text.replace(', ', ',')
         current_set = set(current_tags.split(','))
         video.media.keywords.text = ','.join(current_set - remove_set)
-      
+
       if replace_tags or not video.media.keywords.text:
         video.media.keywords.text = ','.join(add_set)
-      elif add_set: 
+      elif add_set:
         video.media.keywords.text += ',' + ','.join(add_set)
- 
+
       self.UpdateVideoEntry(video)
 
   TagVideos = tag_videos
@@ -170,17 +170,17 @@ SERVICE_CLASS = YouTubeServiceCL
 
 def build_category(category):
   """Build a single-item list of a YouTube category.
-  
+
   This refers to the Category of a video entry, such as "Film" or "Comedy",
   not the atom/gdata element. This does not check if the category provided
   is valid.
-  
+
   Keyword arguments:
     category: String representing the category.
-  
+
   Returns:
     A single-item list of a YouTube category (type gdata.media.Category).
-    
+
   """
   from gdata.media import Category
   return [Category(
@@ -191,7 +191,7 @@ def build_category(category):
 
 #===============================================================================
 # Each of the following _run_* functions execute a particular task.
-#  
+#
 # Keyword arguments:
 #  client: Client to the service being used.
 #  options: Contains all attributes required to perform the task
@@ -202,14 +202,14 @@ def _run_list(client, options, args):
   entries = client.GetVideos(user=options.owner or 'default',
                              title=options.title)
   if args:
-    style_list = args[0].split(',')
+    field_list = args[0].split(',')
   else:
-    style_list = googlecl.get_config_option(SECTION_HEADER,
-                                            'list_style').split(',')
+    field_list = googlecl.get_config_option(SECTION_HEADER,
+                                            'list_fields').split(',')
   for vid in entries:
     print googlecl.base.compile_entry_string(
                                  googlecl.base.BaseEntryToStringWrapper(vid),
-                                 style_list,
+                                 field_list,
                                  delimiter=options.delimiter)
 
 
