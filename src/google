@@ -18,24 +18,24 @@
 """Main function for the Google command line tool, GoogleCL.
 
 This program provides some functionality for a number of Google services from
-the command line. 
+the command line.
 
 Example usage (omitting the initial "./google.py"):
   # Create a photo album with tags "Vermont" and name "Summer Vacation 2009"
   picasa create -n "Summer Vacation 2009" -t Vermont ~/photos/vacation2009/*
-  
+
   # Post photos to an existing album
   picasa post -n "Summer Vacation 2008" ~/old_photos/*.jpg
-  
+
   # Download another user's albums whose titles match a regular expression
   picasa get --user my.friend.joe --name ".*computer.*" ~/photos/joes_computer
-  
+
   # Delete some posts you accidentally put up
   blogger delete -n "Silly post, number [0-9]*"
-  
+
   # Post your latest film endeavor to YouTube
   youtube post --category Film --tag "Jane Austen, zombies" ~/final_project.mp4
-  
+
 Some terminology in use:
   service: The Google service being accessed (e.g. Picasa, Blogger, YouTube).
   task: What the client wants done by the service (e.g. post, get, delete).
@@ -65,7 +65,7 @@ def authenticate(service_name, client, hostid):
   requesting a new one. It also verifies that the token is given for the
   account specified by the user on the command line, not whatever account
   the user happens to be logged in to.
-  
+
   Keyword arguments:
     service_name: Name of the service, e.g. 'picasa', 'calendar'.
     client: The BaseServiceCL object requesting access to the service.
@@ -74,7 +74,7 @@ def authenticate(service_name, client, hostid):
 
   Returns:
     False if no valid access token was found or obtained, True otherwise.
-  
+
   """
   authenticated = False
   try:
@@ -127,35 +127,35 @@ def authenticate(service_name, client, hostid):
 
 def expand_as_command_line(command_string):
   """Expand a string as if it was entered at the command line.
-  
+
   Mimics the shell expansion of '~', file globbing, and quotation marks.
   For example, 'picasa post -a "My album" ~/photos/*.png' will return
   ['picasa', 'post', '-a', 'My album', '$HOME/photos/myphoto1.png', etc.]
   It will not treat apostrophes specially, or handle environment variables.
-  
+
   Keyword arguments:
     command_string: String to be expanded.
-  
-  Returns: 
+
+  Returns:
     A list of strings that (mostly) matches sys.argv as if command_string
     was entered on the command line.
-  
-  """ 
+
+  """
   def do_globbing(args, final_args_list):
     """Do filename expansion.
-    
+
     Uses glob.glob to expand the default special characters of bash. Note that
     the command line will leave in arguments that do not expand to anything,
     unlike glob.glob. For example, entering 'myprogram.py total_nonsense*.txt'
     will pass through 'total_nonsense*.txt' as sys.argv[1].
-    
+
     Keyword arguments:
       args: String, or list of strings, to be expanded.
       final_args_list: List that expanded arguments should be added to.
-    
+
     Returns:
       Nothing, though final_args_list is modified.
-    
+
     """
     import glob
     if isinstance(args, basestring):
@@ -171,7 +171,7 @@ def expand_as_command_line(command_string):
           final_args_list.extend(expanded_arg)
         else:
           final_args_list.append(arg)
-        
+
   # End of do_globbing(), begin expand_as_command_line()
   if not command_string:
     return []
@@ -189,42 +189,42 @@ def expand_as_command_line(command_string):
     while quote_index != -1:
       start = quote_index
       end = command_string.find('"', start+1)
-      quoted_arg = command_string[start+1:end] 
+      quoted_arg = command_string[start+1:end]
       non_quoted_args = command_string[:start].split()
-      
+
       # Only do filename expansion on non-quoted args!
       # do_globbing will modify final_args_list appropriately
-      do_globbing(non_quoted_args, final_args_list) 
+      do_globbing(non_quoted_args, final_args_list)
       final_args_list.append(quoted_arg)
-      
+
       command_string = command_string[end+1:]
       if command_string:
         quote_index = command_string.find('"')
       else:
         quote_index = -1
-        
+
     if command_string:
       do_globbing(command_string.strip().split(), final_args_list)
-    
+
   return final_args_list
 
 
 def fill_out_options(service_header, task, options):
   """Fill out required options via config file and command line prompts.
-  
+
   If there are any required fields missing for a task, fill them in.
   This is attempted first by checking the OPTION_DEFAULTS section of the
   preferences file, then prompting the user if the prior method fails.
-  
+
   Keyword arguments:
-    service_header: 
+    service_header:
     task: Requirements of the task (see class googlecl.service.Task).
     options: Contains attributes that have been specified already, typically
              through options on the command line (see setup_parser()).
-  
+
   Returns:
     Nothing, though options may be modified to hold the required fields.
-    
+
   """
   # Grab all attributes from options that match two criteria:
   # 1) They contain no underscores at the beginning or end of the name
@@ -305,6 +305,7 @@ def import_service(service):
                      options specific to the service.
 
   """
+  LOG.debug('Your pythonpath: ' + os.environ.get('PYTHONPATH'))
   try:
     # Not sure why the fromlist keyword argument became necessary...
     package = __import__('googlecl.' + service, fromlist=['SECTION_HEADER'])
@@ -334,12 +335,12 @@ def import_service(service):
 
 def print_help(service=None, tasks=None):
   """Print help messages to the screen.
-  
+
   Keyword arguments:
     service: Service to get help on. (Default None, prints general help)
     tasks: Dictionary of tasks that can be done by the given service.
            (Default None)
-    
+
   """
   if not service:
     print 'Welcome to the Google CL tool!'
@@ -351,7 +352,7 @@ def print_help(service=None, tasks=None):
     print '  option is a title of "My Cat Photos", and the argument is the '
     print '  path to the photos.'
     print ''
-    print '  The available services are ' 
+    print '  The available services are '
     print str(AVAILABLE_SERVICES)[1:-1]
     print '  Enter "> help <service>" for more information on a service.'
     print '  Or, just "quit" to quit.'
@@ -361,10 +362,10 @@ def print_help(service=None, tasks=None):
 
 def run_interactive(parser):
   """Run an interactive shell for the google commands.
-  
+
   Keyword arguments:
     parser: Object capable of parsing a list of arguments via parse_args.
-    
+
   """
   history_file = googlecl.get_data_path(googlecl.HISTORY_FILENAME)
   try:
@@ -403,7 +404,7 @@ def run_interactive(parser):
       print ''
       break
     except SystemExit:
-      # optparse.OptParser prints the usage statement and calls 
+      # optparse.OptParser prints the usage statement and calls
       # sys.exit when there are any option errors.
       # Printing usage good, SystemExit bad. So catch it and do nothing.
       pass
@@ -416,11 +417,11 @@ def run_interactive(parser):
 
 def run_once(options, args):
   """Run one command.
-  
+
   Keyword arguments:
     options: Options instance as built and returned by optparse.
     args: Arguments to GoogleCL, also as returned by optparse.
-  
+
   """
   try:
     service = args.pop(0)
@@ -459,12 +460,12 @@ def run_once(options, args):
     LOG.error('Did not recognize task, please use one of ' + \
               str(tasks.keys()))
     return
-  
+
   if task.requires('devkey'):
     # If a devkey is required, and there is none specified via an option
     # BEFORE fill_out_options, insert the key from file or the key given
     # to GoogleCL.
-    # You can get your own key at http://code.google.com/apis/youtube/dashboard 
+    # You can get your own key at http://code.google.com/apis/youtube/dashboard
     if not options.devkey:
       options.devkey = googlecl.read_devkey() or 'AI39si4d9dBo0dX7TnGyfQ68bNiKfEeO7wORCfY3HAgSStFboTgTgAi9nQwJMfMSizdGIs35W9wVGkygEw8ei3_fWGIiGSiqnQ'
   # fill_out_options will read the key from file if necessary, but will not set
@@ -505,13 +506,18 @@ def setup_logger(options):
     level = logging.INFO
   logging.basicConfig(level=level, format=format)
 
+  # XXX: Inappropriate location (style-wise).
+  if options.debug or options.verbose:
+    import gdata
+    LOG.debug('Gdata will be imported from ' + gdata.__file__)
+
 
 def setup_parser():
   """Set up the parser.
-  
+
   Returns:
     optparse.OptionParser with options configured.
-  
+
   """
   available_services = '[' + '|'.join(AVAILABLE_SERVICES) + ']'
   # NOTE: Usage string formatted to work with help2man.  After changing it,
@@ -542,7 +548,7 @@ def setup_parser():
                     help='Calendar only - specify a calendar other than your' +
                     ' primary.')
   parser.add_option('-c', '--category', dest='category',
-                    help='YouTube only - specify video categories' + 
+                    help='YouTube only - specify video categories' +
                     ' as a comma-separated list, e.g. "Film, Travel"')
   parser.add_option('--config', dest='config',
                     help='Specify location of config file.')
@@ -552,7 +558,7 @@ def setup_parser():
   parser.add_option('--devkey', dest='devkey',
                     help='YouTube only - specify a developer key')
   parser.add_option('-d', '--date', dest='date',
-                    help='Date in YYYY-MM-DD format.' + 
+                    help='Date in YYYY-MM-DD format.' +
                     ' Picasa only - sets the date of the album\n' +
                     ' Calendar only - date of the event to add / look for. ' +
                     ' Can also specify a range with a comma:' +
@@ -569,11 +575,11 @@ def setup_parser():
   parser.add_option('--editor', dest='editor',
                     help='Docs only - editor to use on a file.')
   parser.add_option('-f', '--folder', dest='folder',
-                    help='Docs only - specify folder(s) to upload to '+ 
+                    help='Docs only - specify folder(s) to upload to '+
                     '/ search in.')
   parser.add_option('--format', dest='format',
                     help='Docs only - format to download documents as.')
-  parser.add_option('--hostid', dest='hostid', 
+  parser.add_option('--hostid', dest='hostid',
                     help='Label the machine being used.')
   parser.add_option('-n', '--title', dest='title',
                     help='Title of the item')
@@ -588,13 +594,13 @@ def setup_parser():
   parser.add_option('-q', '--query', dest='query',
                     help=('Full text query string for specifying items.'
                           + ' Searches on titles, captions, and tags.'))
-  parser.add_option('--quiet', dest='quiet', 
+  parser.add_option('--quiet', dest='quiet',
                     action='store_true', default=False,
                     help='Print only prompts and error messages')
   parser.add_option('--reminder', dest='reminder',
                     help=("Calendar only - specify time for added event's " +
                           'reminder, e.g. "10m", "3h", "1d"'))
-  parser.add_option('-s', '--summary', dest='summary', 
+  parser.add_option('-s', '--summary', dest='summary',
                     help=('Description of the upload, ' +
                           'or file containing the description.'))
   parser.add_option('-t',  '--tags', dest='tags',
@@ -616,7 +622,7 @@ def verify_email(given_account, authorized_account):
                    assumed to be 'gmail.com'
     authorized_account: Account returned by client.get_email(). Must
                         include domain!
-  
+
   Returns:
     True if given_account and authorized_account match, False otherwise.
 
