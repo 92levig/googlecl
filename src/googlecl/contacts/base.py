@@ -58,10 +58,11 @@ class ContactsBaseCL(object):
             self.add_contact_string(line)
     else:
       contact_entry = self.parse_contact_string(string_or_csv_file)
-      try:
-        self.CreateContact(contact_entry)
-      except self.request_error, err:
-        LOG.error(err)
+      if contact_entry:
+        try:
+          self.CreateContact(contact_entry)
+        except self.request_error, err:
+          LOG.error(err)
 
   AddContactString = add_contact_string
 
