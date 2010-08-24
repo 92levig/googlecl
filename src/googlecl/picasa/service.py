@@ -212,12 +212,12 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
 
   GetSingleAlbum = get_single_album
 
-  def insert_media_list(self, album, photo_list, tags='', user='default'):
-    """Insert photos into an album.
+  def insert_media_list(self, album, media_list, tags='', user='default'):
+    """Insert photos or videos into an album.
 
     Keyword arguments:
       album: The album entry of the album getting the media.
-      photo_list: A list of paths, each path a picture or video on
+      media_list: A list of paths, each path a picture or video on
                   the local host.
       tags: Text of the tags to be added to each item, e.g. 'Islands, Vacation'
             (Default '').
@@ -227,7 +227,7 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
                  (user, album.gphoto_id.text))
     keywords = tags
     failures = []
-    for path in photo_list:
+    for path in media_list:
       if not tags and self.prompt_for_tags:
         keywords = raw_input('Enter tags for photo %s: ' % path)
       LOG.info('Loading file ' + path + ' to album ' + album.title.text)
@@ -236,6 +236,7 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
         LOG.debug('No extension match on path ' + path)
         content_type = 'image/jpeg'
       else:
+        ext = ext.lower()
         try:
           content_type = SUPPORTED_VIDEO_TYPES[ext]
         except KeyError:
@@ -328,7 +329,7 @@ def _run_create(client, options, args):
                                                         'access'),
                              timestamp=options.date)
   if args:
-    client.InsertMediaList(album, photo_list=args, tags=options.tags)
+    client.InsertMediaList(album, media_list=args, tags=options.tags)
 
 
 def _run_delete(client, options, args):
