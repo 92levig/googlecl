@@ -305,7 +305,7 @@ def import_service(service):
                      options specific to the service.
 
   """
-  LOG.debug('Your pythonpath: ' + os.environ.get('PYTHONPATH'))
+  LOG.debug('Your pythonpath: ' + str(os.environ.get('PYTHONPATH')))
   try:
     # Not sure why the fromlist keyword argument became necessary...
     package = __import__('googlecl.' + service, fromlist=['SECTION_HEADER'])
@@ -652,5 +652,13 @@ def main():
       print ''
 
 
+def exit_from_int(*args):
+  """Handler for SIGINT signal."""
+  print ''
+  exit(0)
+
+
 if __name__ == '__main__':
+  import signal
+  signal.signal(signal.SIGINT, exit_from_int)
   main()
