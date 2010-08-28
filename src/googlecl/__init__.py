@@ -158,7 +158,7 @@ def _get_xdg_path(filename, data_type, default_directories=None,
     dir_list += default_directories
   for directory in dir_list:
     config_path = os.path.join(directory, filename)
-    if os.path.exists(config_path):
+    if os.path.isfile(config_path):
       return config_path
   LOG.debug('Could not find ' + filename + ' in any of ' + str(dir_list))
 
