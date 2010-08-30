@@ -39,7 +39,7 @@ For help with the configuration file, see README.config
 
 1.1 README style
 Wiki markup is used occasionally in this document:
-  * The '`' character is marks example commands.
+  * The '`' character marks example commands.
   * '*' denotes an entry in a list (such as this one).
 
 2. Commands
@@ -99,9 +99,11 @@ Tasks:
   * list: List documents. `list title,url-direct --delimiter ": "`
   * upload: Upload documents. `upload the_bobs.csv ~/work/docs_to_share`
 
+Note: Uploading arbitrary files is only possible for Apps Premier customers, using the --no-convert option. See the FAQ.
+
 2.1.5 Picasa
 Common options:
-  * owner: Owner of the albums you want to deal with. For example, to download bob's album, add --owner bob to the "get" task. To post to your friend's album that she shared with you, add --owner your_friend to the "post" task.
+  * owner: Owner of the albums you want to deal with. For example, to download bob's album, add `--owner bob` to the "get" task. To post to your friend's album that she shared with you, add `--owner your_friend` to the "post" task.
 
 Tasks:
   * create: Create an album. `create --title "Summer Vacation 2009" --tags Vermont ~/photos/vacation2009/*`

@@ -2,8 +2,8 @@ svn HEAD
  Enhancements
  * Follow XDG Base Directory Specification.
  * Refactored to include library support of v2 and v3 of the gdata protocol.
- * Allowed --no-convert option to upload arbitrary file types for Apps Premier users (?)
- * Enabled downloads of arbitrary file types.
+ * Allowed --no-convert option to upload arbitrary file types to Docs for Apps Premier users (?)
+ * Enabled downloads of arbitrary file types from Docs.
  * Added many more list fields (e.g. birthday, company, relation) for Contacts service.
 
  Bugfixes
