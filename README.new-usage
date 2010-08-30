@@ -1,0 +1,5 @@
+svn HEAD
+	* List "styles" have been renamed to list "fields". If you have a custom list_style entry in your config file, rename it to list_fields to make it work again.
+	* v2 and v3 support for gdata for the average user means that you can now see and download non-converted files that you've uploaded through the web interface, and list more details about your contacts. See the README section on the list task.
+  * Config file option force_gdata_v1 lets you use the older versions in the library written for Docs and Contacts. The primary purpose of this option is to avoid copying and pasting a verification code from the browser into GoogleCL. It means that you won't benefit from any v2 / v3 upgrades to GoogleCL like the ones mentioned before.
+  * Started following the XDG Base Directory Specification (http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html). GoogleCL will still look for config files and access tokens in the old directory (~/.googlecl), but may not in the future. 

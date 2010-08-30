@@ -3,7 +3,7 @@ Steps that we take when doing releases (so we don't forget)
 ===Tarball===
 All instructions assume a current working directory of trunk
 1) Be sure changelog is up to date. Check the commit messages for important bug fixes, enhancements, features, etc.
-2) Increment version number in changelog (change "svn HEAD" to "version x.x.x")
+2) Increment version number in changelog and README.new-usage (change "svn HEAD" to "version x.x.x")
 3) Be sure man pages are up to date.
 4) Update VERSION variable in src/google
 5) Update version keyword argument in setup.py

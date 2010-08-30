@@ -16,7 +16,8 @@
 Contents:
 ---------
 1. Introduction
-  1.1 README style
+  1.1 Other files
+  1.2 README style
 2. Commands
   2.1 Services
     2.1.1 Blogger
@@ -31,13 +32,18 @@ Contents:
   3.2 Date
 
 1. Introduction
-Welcome to the README. If you're reading this after unzipping it from a tarball, you may want to check the project homepage at http://code.google.com/p/googlecl/ for the most up-to-date information. If you're reading this after checking out the svn repository, this should have the most up-to-date information on the capabilities and usage of the code in svn HEAD.
+Welcome to the README. If you're reading this after checking out the svn repository, this should have the most up-to-date information on the capabilities and usage of the code in svn HEAD. Otherwise, it should more or less match the Manual on the GoogleCL project wiki (http://code.google.com/p/googlecl/wiki/Manual)
 
+If you have no idea what this project is or is about, poke around on our home page at http://code.google.com/p/googlecl.
+
+1.1 Other files
 For installation instructions, see INSTALL.txt
 
 For help with the configuration file, see README.config
 
-1.1 README style
+README.new-usage contains a crash-course in the usage changes from the previous version.
+
+1.2 README style
 Wiki markup is used occasionally in this document:
   * The '`' character marks example commands.
   * '*' denotes an entry in a list (such as this one).
