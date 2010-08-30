@@ -583,7 +583,7 @@ def compile_entry_string(wrapped_entry, attribute_list, delimiter,
     try:
       # Get the value, replacing NoneTypes and empty strings
       # with the missing field value.
-      val = getattr(wrapped_entry, attr.replace('-','_') or missing_field_value
+      val = getattr(wrapped_entry, attr.replace('-','_')) or missing_field_value
     except ValueError, err:
       LOG.debug(err.args[0] + ' (Did not add value for field ' + attr + ')')
     except AttributeError, err:
