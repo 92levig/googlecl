@@ -31,7 +31,7 @@ blog, uploading files to Picasa, or editing a Google Docs file."""
 
 
 setup(name="googlecl",
-      version="0.9.9",
+      version="0.9.10",
       description="Use (some) Google services from the command line",
       author="Tom H. Miller",
       author_email="tom.h.miller@gmail.com",

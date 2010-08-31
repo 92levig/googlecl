@@ -1,4 +1,4 @@
-svn HEAD
+version 0.9.10
  Enhancements
  * Follow XDG Base Directory Specification.
  * Refactored to include library support of v2 and v3 of the gdata protocol.
