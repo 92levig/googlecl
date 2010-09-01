@@ -537,6 +537,10 @@ class BaseEntryToStringWrapper(object):
                     '"text_attribute" must be defined!')
       text_extractor = lambda entry: getattr(entry, text_attribute)
 
+    # It should be impossible to get a non-string from text_extractor.
+    if len(entry_list) == 1:
+      return text_extractor(entry_list[0])
+
     if self.label_delimiter is None:
       return self.intra_property_delimiter.join([text_extractor(e)
                                                  for e in entry_list
