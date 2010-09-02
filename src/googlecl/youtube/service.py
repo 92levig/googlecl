@@ -128,6 +128,11 @@ class YouTubeServiceCL(YouTubeService, googlecl.service.BaseServiceCL):
         else:
           err_str = str(err)
         LOG.error('Failed to upload video: ' + err_str)
+      except gdata.youtube.service.YouTubeError, err:
+        err_str = str(err)
+        if err_str.find('path name or a file-like object') != -1:
+          err_str = 'Could not find file ' + path
+        LOG.error(err_str)
 
   PostVideos = post_videos
 
