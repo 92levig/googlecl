@@ -38,6 +38,16 @@ class BaseClientCL(googlecl.base.BaseCL):
                                        *args, **kwargs)
     LOG.debug('Initialized googlecl.client.BaseClientCL')
 
+  def is_token_valid(self, test_uri):
+    try:
+      return super(BaseClientCL, self).is_token_valid(test_uri)
+    # If access has been revoked through account settings, get weird Unauthorized
+    # error complaining about AuthSub.
+    except gdata.client.Unauthorized:
+      return False
+
+  IsTokenValid = is_token_valid
+
   def request_access(self, domain, hostid, scopes=None):
     """Do all the steps involved with getting an OAuth access token.
     

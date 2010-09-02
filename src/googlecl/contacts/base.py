@@ -66,14 +66,6 @@ class ContactsBaseCL(object):
 
   AddContactString = add_contact_string
 
-  def is_token_valid(self, test_uri=None):
-    """Check that the token being used is valid."""
-    if not test_uri:
-      test_uri = self.GetFeedUri()
-    return googlecl.base.BaseCL.IsTokenValid(self, test_uri)
-
-  IsTokenValid = is_token_valid
-
 
 class ContactsEntryToStringWrapper(googlecl.base.BaseEntryToStringWrapper):
   @property

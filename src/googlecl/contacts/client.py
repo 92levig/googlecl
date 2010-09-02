@@ -102,6 +102,14 @@ class ContactsClientCL(gdata.contacts.client.ContactsClient,
 
   GetGroups = get_groups
 
+  def is_token_valid(self, test_uri=None):
+    """Check that the token being used is valid."""
+    if not test_uri:
+      test_uri = self.GetFeedUri()
+    return googlecl.client.BaseClientCL.is_token_valid(self, test_uri)
+
+  IsTokenValid = is_token_valid
+
 
 SERVICE_CLASS = ContactsClientCL
 
