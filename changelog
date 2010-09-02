@@ -9,6 +9,7 @@ version 0.9.10
  Bugfixes
  * youtube list works without --owner flag again.
  * Picasa uploads are case-insensitive for file extensions.
+ * (Probably) enabled unicode support.
 
 version 0.9.9
  Enhancements

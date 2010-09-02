@@ -468,9 +468,21 @@ def run_once(options, args):
     # You can get your own key at http://code.google.com/apis/youtube/dashboard
     if not options.devkey:
       options.devkey = googlecl.read_devkey() or 'AI39si4d9dBo0dX7TnGyfQ68bNiKfEeO7wORCfY3HAgSStFboTgTgAi9nQwJMfMSizdGIs35W9wVGkygEw8ei3_fWGIiGSiqnQ'
+
   # fill_out_options will read the key from file if necessary, but will not set
   # it since it will always get a non-empty value beforehand.
   fill_out_options(section_header, task, options)
+
+  # XXX: Determining the encoding this way is a guess. Seems like we should
+  # favor stdin over stdout, but not sure if stdin is always defined.
+  encoding = sys.stdin.encoding or sys.stdout.encoding
+  if encoding:
+    for attr_name in dir(options):
+      attr = getattr(options, attr_name)
+      if not attr_name.startswith('_') and isinstance(attr, str):
+        setattr(options, attr_name, attr.decode(encoding))
+    if args:
+      args = [string.decode(encoding) for string in args]
   client.email = options.user
 
   success = authenticate(service, client, options.hostid)

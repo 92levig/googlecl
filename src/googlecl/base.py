@@ -573,6 +573,7 @@ def compile_entry_string(wrapped_entry, attribute_list, delimiter,
                       NoneType to leave newlines in place.
   
   """
+  import sys
 
   return_string = ''
   missing_field_value = missing_field_value or googlecl.CONFIG.get('GENERAL',
@@ -606,8 +607,14 @@ def compile_entry_string(wrapped_entry, attribute_list, delimiter,
     if attr != 'xml':
       return_string = return_string.replace('\n', newline_replacer)
   
-  return return_string.rstrip(delimiter)
-
+  return_string = return_string.rstrip(delimiter)
+  # XXX: Determining the encoding this way is a guess. Seems like we should
+  # favor stdout over stdin, but it's not always defined. So maybe stdin.encoding
+  # is undefined in certain cases?
+  encoding = sys.stdout.encoding or sys.stdin.encoding
+  if encoding:
+    return_string = return_string.encode(encoding)
+  return return_string
 
 def generate_tag_sets(tags):
   """Generate sets of tags based on a string.
