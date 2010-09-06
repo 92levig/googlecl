@@ -70,6 +70,8 @@ Tasks:
   * post: Upload posts. `post --tags "GoogleCL, awesome" "Here's a really short post. The next posts will be much longer!" ~/blog/2010/may/*`
   * tag: Label posts `tag --title "Dev post" --tags "Python, software"`
 
+Note: You can use `--owner` to specify another user's blog when listing posts, but you have to provide a Blogger ID (the number in http://www.blogger.com/profile/NUMBER), not the Google account name.
+
 2.1.2 Calendar
 Common options:
   * cal: Specify the name of the calendar. This can be a regular expression. If this option is not given, the primary calendar is used.
@@ -77,7 +79,7 @@ Common options:
   * reminder: (for add task only) Add a reminder to the events being added, one per default reminder type in your calendar settings. Default is in minutes, though you can say something like "2h" for one hour, "1d" for one day, etc.
 
 Tasks:
-  * add: Add event to calendar. `add "Dinner party with George tomorrow at 6pm"`
+  * add: Add event to calendar. `add "Dinner party with George tomorrow at 6pm" --reminder 1h`
   * delete: Delete an event. `delete --cal "GoogleCL dev cal" --title "Release.*"`
   * list: List events. `list --date 2010-06-01,2010-06-30`
   * today: List events for today only. `today`
@@ -109,17 +111,36 @@ Note: Uploading arbitrary files is only possible for Apps Premier customers, usi
 
 2.1.5 Picasa
 Common options:
-  * owner: Owner of the albums you want to deal with. For example, to download bob's album, add `--owner bob` to the "get" task. To post to your friend's album that she shared with you, add `--owner your_friend` to the "post" task.
+  * owner: Owner of the albums you want to deal with. This will work with all tasks but create and delete. For example, to download bob's album, add `--owner bob` to the "get" task. To post to your friend's album that she shared with you, add `--owner your_friend` to the "post" task.
 
 Tasks:
   * create: Create an album. `create --title "Summer Vacation 2009" --tags Vermont ~/photos/vacation2009/*`
   * delete: Delete photos or albums. `delete --title "Stupid album"`
   * get: Download photos. `get --title "My Album" /path/to/download/folder`
   * list: List photos or albums. `list title,url-direct --query "A tag"`
-  * post: Add photos to an album. `post --title Summer Vacation 2008" ~/old_photos/*.jpg`
+  * post: Add photos to an album. `post --title "Summer Vacation 2008" ~/old_photos/*.jpg`
   * tag: Tag photos. `tag --title "Album I forgot to tag" --tags oops`
 
 2.1.6 YouTube
+Common options:
+  * category: YouTube category to assign to the video. This is required, and a little tricky. Here's the mapping for YouTube categories to `--category` values (and capitalization counts!)
+|| *YouTube category* || *Value for* `--category` ||
+|| Autos & Vehicles || Autos ||
+|| Comedy || Comedy ||
+|| Education || Education ||
+|| Entertainment || Entertainment ||
+|| Film & Animation || Film ||
+|| Gaming || Games ||
+|| Howto & Style || Howto ||
+|| Music || Music ||
+|| News & Politics || News ||
+|| Nonprofits & Activism || Nonprofit ||
+|| People & Blogs || People ||
+|| Pets & Animals || Animals ||
+|| Science & Technology || Tech ||
+|| Sports || Sports ||
+|| Travel & Events || Travel ||
+
 Tasks:
   * delete: Delete videos. `delete --title ".*"`
   * list: List your videos. `list`
@@ -182,4 +203,4 @@ The behavior given here is applicable to the calendar service.
   * '2010-06-01,2010-06-25': Between June 1st and June 25th, inclusive
   * ',2010-06-15': On or before June 15th
 
-Note that the delete task will still interpret 'date,' and ',date' indentically.
+Note that the delete task will still interpret 'date,' and ',date' identically.
