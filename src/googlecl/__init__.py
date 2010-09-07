@@ -136,11 +136,12 @@ def _get_xdg_path(filename, data_type, default_directories=None,
     raise Exception('Invalid value for data_type: ' + data_type)
   xdg_home_dir = os.environ.get('XDG_' + data_type + '_HOME')
   if not xdg_home_dir:
+    home_dir = os.path.expanduser('~')
     if data_type == 'DATA':
-      xdg_home_dir = os.path.join(os.environ.get('HOME'), '.local', 'share')
+      xdg_home_dir = os.path.join(home_dir, '.local', 'share')
     elif data_type == 'CONFIG':
       # No variable defined, using $HOME/.config
-      xdg_home_dir = os.path.join(os.environ.get('HOME'), '.config')
+      xdg_home_dir = os.path.join(home_dir, '.config')
   xdg_home_dir = os.path.join(xdg_home_dir, SUBDIR_NAME)
 
   xdg_dir_list = os.environ.get('XDG_' + data_type + '_DIRS')
