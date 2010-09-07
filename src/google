@@ -396,7 +396,11 @@ def run_interactive(parser):
         args_list = expand_as_command_line(command_string)
         (options, args) = parser.parse_args(args_list)
         run_once(options, args)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ValueError), err:
+      # It would be nice if we could simply unregister or reset the
+      # signal handler defined in the initial if __name__ block.
+      if str(err).find('I/O operation on closed file') == -1:
+        raise err
       print ''
       print 'Quit via keyboard interrupt'
       break
