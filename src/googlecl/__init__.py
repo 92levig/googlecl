@@ -171,7 +171,7 @@ def _get_xdg_path(filename, data_type, default_directories=None,
     mode = 0777
   if not os.path.isdir(default_dir) and create_missing_dir:
     try:
-      os.mkdir(default_dir, mode)
+      os.makedirs(default_dir, mode)
     except OSError, err:
       LOG.error(err)
       return ''
@@ -402,10 +402,13 @@ def write_access_token(service, user, token):
   else:
     token_dict = {}
   token_dict[service] = token
-  with open(token_path, 'wb') as token_file:
-    # Ensure only the owner of the file has read/write permission
-    os.chmod(token_path, stat.S_IRUSR | stat.S_IWUSR)
-    pickle.dump(token_dict, token_file)
+  if token_path:
+    with open(token_path, 'wb') as token_file:
+      # Ensure only the owner of the file has read/write permission
+      os.chmod(token_path, stat.S_IRUSR | stat.S_IWUSR)
+      pickle.dump(token_dict, token_file)
+  else:
+    LOG.debug('Cannot save access token!')
 
 
 def write_devkey(devkey):
