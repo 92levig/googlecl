@@ -253,6 +253,21 @@ def load_preferences(path=None):
   return True
 
 
+def _move_failed_token_file(token_path):
+  new_path = token_path + '.failed'
+  LOG.debug('Moving ' + token_path + ' to ' + new_path)
+  if os.path.isfile(new_path):
+    LOG.debug(new_path + ' already exists. Deleting it.')
+    try:
+      os.remove(new_path)
+    except IOError, err:
+      LOG.debug('Cannot remove old failed token file: ' + str(err))
+  try:
+    os.rename(token_path, new_path)
+  except IOError, err:
+    LOG.debug('Cannot rename token file to ' + new_path + ': ' + str(err))
+
+
 def read_access_token(service, user):
   """Try to read an authorization token from a file.
 
@@ -298,6 +313,7 @@ def remove_access_token(service, user):
   import pickle
   token_path = get_data_path(TOKENS_FILENAME_FORMAT % user)
   success = False
+  file_invalid = False
   if os.path.exists(token_path):
     with open(token_path, 'r+') as token_file:
       try:
@@ -305,15 +321,24 @@ def remove_access_token(service, user):
       except ImportError, err:
         LOG.error(err)
         LOG.info('You probably have been using different versions of gdata.')
-        LOG.info('Backup or delete ' + token_path + ' and try again')
-        return False
+        failed_file = True
       try:
         del token_dict[service.lower()]
       except KeyError:
         print 'No token for ' + service
       else:
-        pickle.dump(token_dict, token_file)
-        success = True
+        try:
+          pickle.dump(token_dict, token_file)
+        except IOError, err:
+          # IOError shouldn't happen, but I've seen Errno 0 pop up
+          # on Windows XP with Python 2.5.
+          LOG.error(err)
+          if err.errno == 0:
+            file_invalid = True
+        else:
+          success = True
+    if file_invalid:
+      _move_failed_token_file(token_path)
   return success
 
 
@@ -372,9 +397,7 @@ def write_access_token(service, user, token):
       else:
         file_invalid = False
     if file_invalid:
-      new_path = token_path + '.failed'
-      os.rename(token_path, new_path)
-      print 'Moved ' + token_path + ' to ' + new_path
+      _move_failed_token_file(token_path)
       token_dict = {}
   else:
     token_dict = {}
