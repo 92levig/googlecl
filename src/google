@@ -487,6 +487,8 @@ def run_once(options, args):
         setattr(options, attr_name, attr.decode(encoding))
     if args:
       args = [string.decode(encoding) for string in args]
+  else:
+    LOG.debug('No encoding defined!')
   client.email = options.user
 
   success = authenticate(service, client, options.hostid)

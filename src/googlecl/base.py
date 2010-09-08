@@ -597,6 +597,10 @@ def compile_entry_string(wrapped_entry, attribute_list, delimiter,
         val = getattr(wrapped_entry.entry, attr).text or missing_field_value
       except AttributeError:
         val = missing_field_value
+    # Apparently, atom(?) doesn't always return a Unicode type when there are
+    # non-latin characters, so force everything to Unicode.
+    if type(val) != unicode:
+      val = val.decode('utf-8')
     # Ensure the delimiter won't appear in a non-delineation role,
     # but let it slide if the raw xml is being dumped
     if attr != 'xml':
@@ -609,8 +613,8 @@ def compile_entry_string(wrapped_entry, attribute_list, delimiter,
   
   return_string = return_string.rstrip(delimiter)
   # XXX: Determining the encoding this way is a guess. Seems like we should
-  # favor stdout over stdin, but it's not always defined. So maybe stdin.encoding
-  # is undefined in certain cases?
+  # favor stdout over stdin, but it's not always defined.
+  # So maybe stdin.encoding is undefined in certain cases?
   encoding = sys.stdout.encoding or sys.stdin.encoding
   if encoding:
     return_string = return_string.encode(encoding)
