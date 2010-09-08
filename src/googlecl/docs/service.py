@@ -292,25 +292,29 @@ class DocsServiceCL(gdata.docs.service.DocsService,
     if file_ext:
       extension = file_ext
     else:
-      try:
-        extension = filename.split('.')[1]
-      except IndexError:
+      extension = googlecl.get_extension_from_path(filename)
+      if not extension:
         default_ext = 'txt'
         LOG.info('No extension on filename! Treating as ' + default_ext)
         extension = default_ext
+
     try:
       content_type = SUPPORTED_FILETYPES[extension.upper()]
     except KeyError:
       LOG.info('No supported filetype found for extension ' + extension)
       content_type = 'text/plain'
       LOG.info('Uploading as ' + content_type)
+      title_from_filename = lambda fname: fname
+    else:
+      title_from_filename = lambda fname: fname.rstrip('.' + extension)
+
     LOG.info('Loading ' + path)
     try:
       media = gdata.MediaSource(file_path=path, content_type=content_type)
     except IOError, err:
       LOG.error(err)
       return None
-    entry_title = title or filename.split('.')[0]
+    entry_title = title or title_from_filename(filename)
     try:
       try:
         # Upload() wasn't added until later versions of DocsService, so

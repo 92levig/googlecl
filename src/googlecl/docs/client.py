@@ -294,6 +294,8 @@ class DocsClientCL(gdata.docs.client.DocsClient,
       except KeyError:
         LOG.info('No supported filetype found for extension ' + file_ext +
                  ', letting mimetypes module guess mime type')
+      else:
+        title_from_filename = lambda fname: fname.rstrip('.' + file_ext)
     if not content_type:
       content_type = mimetypes.guess_type(path)[0]
       if not content_type:
@@ -303,9 +305,13 @@ class DocsClientCL(gdata.docs.client.DocsClient,
           content_type = 'application/octet-stream'
         LOG.debug('mimetypes could not figure out type for ' + path +
                   ', setting to ' + content_type)
+        title_from_filename = lambda fname: fname
+      else:
+        title_from_filename = lambda fname: fname.rstrip('.' +
+                                        googlecl.get_extension_from_path(fname))
     LOG.debug('Uploading with MIME type: ' + content_type)
     LOG.info('Loading ' + path)
-    entry_title = title or filename.split('.')[0]
+    entry_title = title or title_from_filename(filename)
 
     if not folder_entry:
       post_uri = gdata.docs.client.DOCLIST_FEED_URI
