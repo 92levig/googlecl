@@ -58,71 +58,36 @@ AVAILABLE_SERVICES = ['picasa', 'blogger', 'youtube', 'docs', 'contacts',
 LOG = logging.getLogger(googlecl.LOGGER_NAME)
 
 
-def authenticate(service_name, client, hostid):
-  """Get a valid access token to a single service for a Google account.
+def check_access_token(service_name, client):
+  """Check that the set access token is valid, remove it if not.
 
-  This function will look for a stored token and check its validity before
-  requesting a new one. It also verifies that the token is given for the
-  account specified by the user on the command line, not whatever account
-  the user happens to be logged in to.
-
-  Keyword arguments:
-    service_name: Name of the service, e.g. 'picasa', 'calendar'.
-    client: The BaseServiceCL object requesting access to the service.
-    hostid: Identifier for the machine where the access token is stored.
-            Typically username@host, but can be any string.
+  Args:
+    service_name: str Name of the Google service being accessed.
+    client: BaseCL instance doing the accessing.
 
   Returns:
-    False if no valid access token was found or obtained, True otherwise.
+    True if the token is valid, False otherwise. False will be returned
+    whether or not the token was successfully removed with
+    googlecl.remove_access_token().
 
   """
-  authenticated = False
   try:
-    token = googlecl.read_access_token(service_name, client.email)
-  except (KeyError, IndexError):
-    LOG.warning('Token file appears to be corrupted. Not using.')
-    token = None
-  if token:
-    LOG.debug('Loaded token from file')
-    client.SetOAuthToken(token)
-    try:
-      token_valid = client.IsTokenValid()
-    except AttributeError, err:
-      # Attribute errors crop up when using different gdata libraries
-      # but the same token.
-      token_valid = False
-      LOG.debug('Caught AttributeError: ' + str(err))
-    if token_valid:
-      LOG.debug('Token valid!')
-      authenticated = True
+    token_valid = client.IsTokenValid()
+  except AttributeError, err:
+    # Attribute errors crop up when using different gdata libraries
+    # but the same token.
+    token_valid = False
+    LOG.debug('Caught AttributeError: ' + str(err))
+  if token_valid:
+    LOG.debug('Token valid!')
+    return True
+  else:
+    removed = googlecl.remove_access_token(service_name, client.email)
+    if removed:
+      LOG.debug('Removed invalid token')
     else:
-      removed = googlecl.remove_access_token(service_name, client.email)
-      if removed:
-        LOG.debug('Removed invalid token')
-      else:
-        LOG.debug('Failed to remove invalid token')
-
-  if not authenticated:
-    domain = get_hd_domain(client.email)
-    if client.RequestAccess(domain, hostid):
-      authorized_account = client.get_email()
-      if verify_email(client.email, authorized_account):
-        # Only write the token if it's for the right user
-        # token is client.auth_token for GDClient,
-        # client.current_token for GDataService.
-        googlecl.write_access_token(service_name,
-                                    client.email,
-                                    client.auth_token or client.current_token)
-      else:
-        LOG.error('You specified account ' + client.email +
-                  ' but granted access for ' + authorized_account + '.' +
-                  ' Please log out of ' + authorized_account +
-                  ' and grant access with ' + client.email + '.')
-        return False
-    else:
-      LOG.error('Failed to get valid access token!')
-      return False
-  return True
+      LOG.debug('Failed to remove invalid token')
+    return False
 
 
 def expand_as_command_line(command_string):
@@ -360,6 +325,43 @@ def print_help(service=None, tasks=None):
     print get_task_help(service, tasks)
 
 
+def retrieve_and_set_access_token(service_name, client, hostid):
+  """Request a new access token from Google, set it upon retrieval.
+
+  The token will not be written to file if it was granted for an account
+  other than the one specified by client.email. Instead, a False value will
+  be returned.
+
+  Args:
+    service_name: str Name of the Google service being accessed.
+    client: BaseCL instance doing the accessing.
+    hostid: str Identifier for the host machine. Used for token request.
+
+  Returns:
+    True if the token was retrieved and written to file. False otherwise.
+
+  """
+  domain = get_hd_domain(client.email)
+  if client.RequestAccess(domain, hostid):
+    authorized_account = client.get_email()
+    if verify_email(client.email, authorized_account):
+      # Only write the token if it's for the right user
+      # token is client.auth_token for GDClient,
+      # client.current_token for GDataService.
+      googlecl.write_access_token(service_name,
+                                  client.email,
+                                  client.auth_token or client.current_token)
+      return True
+    else:
+      LOG.error('You specified account ' + client.email +
+                ' but granted access for ' + authorized_account + '.' +
+                ' Please log out of ' + authorized_account +
+                ' and grant access with ' + client.email + '.')
+  else:
+    LOG.error('Failed to get valid access token!')
+  return False
+
+
 def run_interactive(parser):
   """Run an interactive shell for the google commands.
 
@@ -491,11 +493,23 @@ def run_once(options, args):
     LOG.debug('No encoding defined!')
   client.email = options.user
 
-  success = authenticate(service, client, options.hostid)
-
-  if not success:
-    return
-
+  set_token = set_access_token(service, client)
+  skip_auth = options.skip_auth or googlecl.get_config_option(section_header,
+                                                              'skip_auth',
+                                                              default=False,
+                                                              type=bool)
+  if options.force_auth or not set_token or not skip_auth:
+    LOG.debug('options.force_auth: ' + str(options.force_auth))
+    LOG.debug('set_token: ' + str(set_token))
+    LOG.debug('skip_auth: ' + str(skip_auth))
+    valid_token = check_access_token(service, client)
+    if not valid_token:
+      valid_token = retrieve_and_set_access_token(service,
+                                                  client,
+                                                  options.hostid)
+    if valid_token:
+      googlecl.set_missing_default(section_header, 'skip_auth',
+                                   True, options.config)
   googlecl.set_missing_default(section_header, 'user',
                                client.email, options.config)
   if options.blog:
@@ -508,6 +522,28 @@ def run_once(options, args):
     # TODO: It would be nice to make this more efficient.
     googlecl.write_devkey(options.devkey)
   task.run(client, options, args)
+
+
+def set_access_token(service_name, client):
+  """Read an access token from file and set it to be used by the client.
+  
+  Args:
+    service_name: str Name of the Google service being accessed.
+    client: BaseCL instance doing the accessing.
+
+  Returns:
+    True if the token was read and set, False otherwise.
+  
+  """
+  try:
+    token = googlecl.read_access_token(service_name, client.email)
+  except (KeyError, IndexError):
+    LOG.warning('Token file appears to be corrupted. Not using.')
+  else: 
+    LOG.debug('Loaded token from file')
+    client.SetOAuthToken(token)
+    return True
+  return False
 
 
 def setup_logger(options):
@@ -595,6 +631,10 @@ def setup_parser():
   parser.add_option('-f', '--folder', dest='folder',
                     help='Docs only - specify folder(s) to upload to '+
                     '/ search in.')
+  parser.add_option('--force-auth', dest='force_auth',
+                    action='store_true', default=False,
+                    help='Force validation step for re-used access tokens' +
+                         ' (Overrides --skip-auth).')
   parser.add_option('--format', dest='format',
                     help='Docs only - format to download documents as.')
   parser.add_option('--hostid', dest='hostid',
@@ -618,6 +658,9 @@ def setup_parser():
   parser.add_option('--reminder', dest='reminder',
                     help=("Calendar only - specify time for added event's " +
                           'reminder, e.g. "10m", "3h", "1d"'))
+  parser.add_option('--skip-auth', dest='skip_auth',
+                    action='store_true', default=False,
+                    help='Skip validation step for re-used access tokens.')
   parser.add_option('-s', '--summary', dest='summary',
                     help=('Description of the upload, ' +
                           'or file containing the description.'))

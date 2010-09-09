@@ -1,3 +1,9 @@
+version 0.9.11
+ Bugfixes
+ * (more certainly) enabled unicode support
+ * Create missing intermediate folders when saving config file and/or data files.
+ * Uploads to Docs correctly parse filenames with multiple '.' characters.
+
 version 0.9.10
  Enhancements
  * Follow XDG Base Directory Specification.

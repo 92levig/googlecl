@@ -1,3 +1,6 @@
+version 0.9.11
+  * --force-auth and --skip-auth will let you specify if GoogleCL should verify the oauth access token it has on file for the service being used. After the first valid access token retrieved, --skip-auth is set in your config file as True. You can set this value to False to force a validation step on every run. The validation step is an authenticated request to Google to retrieve a small amount of data -- removing this step can yield a significant decrease in execution time for slow connections.
+
 version 0.9.10
 	* List "styles" have been renamed to list "fields". If you have a custom list_style entry in your config file, rename it to list_fields to make it work again.
 	* v2 and v3 support for gdata for the average user means that you can now see and download non-converted files that you've uploaded through the web interface, and list more details about your contacts. See the README section on the list task.
