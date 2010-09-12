@@ -34,7 +34,7 @@ LOGGER_NAME = 'googlecl'
 LOG = logging.getLogger(LOGGER_NAME)
 
 
-def get_config_option(section, option, default=None, type=None):
+def get_config_option(section, option, default=None, option_type=None):
   """Return option from config file.
 
   Tries to retrieve <option> from the given section. If that fails, tries to
@@ -45,9 +45,9 @@ def get_config_option(section, option, default=None, type=None):
     section: Name of the section to initially try to retrieve the option from.
     option: Name of the option to retrieve.
     default: Value to return if the option does not exist in a searched section.
-    type: Conversion function to use on the string, or None to leave as string.
-          For example, if you want an integer value returned, this should be
-          set to int. This is not applied to the "default" parameter.
+    option_type: Conversion function to use on the string, or None to leave as
+          string. For example, if you want an integer value returned, this
+          should be set to int. This is not applied to the "default" parameter.
 
   Returns:
     Value of the option if it exists in the prefs file, or value of "default"
@@ -61,13 +61,13 @@ def get_config_option(section, option, default=None, type=None):
       value = CONFIG.get('GENERAL', option)
     except ConfigParser.NoOptionError:
       value = CONFIG.get('GENERAL', option)
-    if type:
+    if option_type:
       # bool() function doesn't actually do what we wanted, so intercept it and
       # replace with comparison
-      if type == bool:
+      if option_type == bool:
         return value.lower() == 'true'
       else:
-        return type(value)
+        return option_type(value)
     else:
       return value
   except ConfigParser.NoOptionError:

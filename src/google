@@ -282,7 +282,7 @@ def import_service(service):
   use_v1 = googlecl.get_config_option(package.SECTION_HEADER,
                                       'force_gdata_v1',
                                       default=False,
-                                      type=bool)
+                                      option_type=bool)
   if use_v1:
     service_module = __import__('googlecl.' + service + '.service',
                                 globals(), locals(), -1)
@@ -455,7 +455,7 @@ def run_once(options, args):
   client.debug = googlecl.get_config_option(section_header,
                                             'debug',
                                             default=options.debug,
-                                            type=bool)
+                                            option_type=bool)
   # XXX: Not the best place for this.
   if hasattr(client, 'http_client'):
     client.http_client.debug = client.debug
@@ -497,7 +497,7 @@ def run_once(options, args):
   skip_auth = options.skip_auth or googlecl.get_config_option(section_header,
                                                               'skip_auth',
                                                               default=False,
-                                                              type=bool)
+                                                              option_type=bool)
   if options.force_auth or not set_token or not skip_auth:
     LOG.debug('options.force_auth: ' + str(options.force_auth))
     LOG.debug('set_token: ' + str(set_token))

@@ -33,21 +33,22 @@ class BaseCL(object):
     
     # Some new attributes, not inherited.
     self.use_regex = googlecl.get_config_option(section, 'regex',
-                                                default=True, type=bool)
+                                                default=True, option_type=bool)
     self.prompt_for_tags = googlecl.get_config_option(section, 'tags_prompt',
-                                                      default=False, type=bool)
+                                                      default=False,
+                                                      option_type=bool)
     self.prompt_for_delete = googlecl.get_config_option(section,
                                                         'delete_prompt',
                                                         default=True,
-                                                        type=bool)
+                                                        option_type=bool)
     self.cap_results = googlecl.get_config_option(section,
                                                   'cap_results',
                                                   default=False,
-                                                  type=bool)
+                                                  option_type=bool)
     self.max_results = googlecl.get_config_option(section,
                                                   'max_results',
                                                   default=large_max_results,
-                                                  type=int)
+                                                  option_type=int)
     try:
       service_name = self.auth_service
     except AttributeError:

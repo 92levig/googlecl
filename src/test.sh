@@ -112,8 +112,8 @@ do
 	fi
   # Make note of which tasks have been run, for cleanup later
 	eval touch "$TOUCH_PREFIX$task"
-#	for index in ${!commands[*]}; do
-#		echo -e "\n===${commands[$index]}"
-#		eval $GOOGLE_SH ${commands[$index]}
-#	done
+	for index in ${!commands[*]}; do
+		echo -e "\n===${commands[$index]}"
+		eval $GOOGLE_SH ${commands[$index]}
+	done
 done
