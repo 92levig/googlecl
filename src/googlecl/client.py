@@ -119,8 +119,8 @@ class BaseClientCL(googlecl.base.BaseCL):
     # message away from raw_input call.
     time.sleep(2)
     print ''
-    request_token.verifier = raw_input('Please enter the verification code on' +
-                                       ' the success page: ')
+    request_token.verifier = raw_input('Please enter the verification code on'
+                                       ' the success page: ').strip()
     # This upgrades the token, and if successful, sets the access token
     try:
       access_token = self.get_access_token(request_token)
