@@ -277,7 +277,7 @@ class BaseCL(object):
       # Try to limit the number of results we get.
       self.Get(test_uri)
     except self.request_error, err:
-      LOG.error('Token invalid! ' + str(err))
+      LOG.debug('Token invalid! ' + str(err))
       return False
     else:
       return True
