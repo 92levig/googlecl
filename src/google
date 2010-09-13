@@ -494,11 +494,14 @@ def run_once(options, args):
   client.email = options.user
 
   set_token = set_access_token(service, client)
-  skip_auth = options.skip_auth or googlecl.get_config_option(section_header,
-                                                              'skip_auth',
-                                                              default=False,
-                                                              option_type=bool)
-  if options.force_auth or not set_token or not skip_auth:
+  if set_token:
+    skip_auth = options.skip_auth or googlecl.get_config_option(section_header,
+                                                               'skip_auth',
+                                                               default=False,
+                                                               option_type=bool)
+  else:
+    skip_auth = False
+  if options.force_auth or not skip_auth:
     LOG.debug('options.force_auth: ' + str(options.force_auth))
     LOG.debug('set_token: ' + str(set_token))
     LOG.debug('skip_auth: ' + str(skip_auth))
@@ -540,9 +543,12 @@ def set_access_token(service_name, client):
   except (KeyError, IndexError):
     LOG.warning('Token file appears to be corrupted. Not using.')
   else: 
-    LOG.debug('Loaded token from file')
-    client.SetOAuthToken(token)
-    return True
+    if token:
+      LOG.debug('Loaded token from file')
+      client.SetOAuthToken(token)
+      return True
+    else:
+      LOG.debug('read_access_token evaluated to False')
   return False
 
 
