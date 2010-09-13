@@ -354,6 +354,8 @@ def set_missing_default(section, option, value, config_path=None):
 
   """
   existing_value = ''
+  if type(value) not in [unicode, str]:
+    value = str(value)
   try:
     existing_value = CONFIG.get(section, option)
   except ConfigParser.NoSectionError:

@@ -92,7 +92,7 @@ class BaseServiceCL(googlecl.base.BaseCL):
       else:
         browser = webbrowser.get(browser_str)
       browser.open(auth_url)
-    except webbrowser.Error, err:
+    except (webbrowser.Error, OSError), err:
       LOG.info('Failed to launch web browser: ' + str(err))
     message = 'Please log in and/or grant access via your browser at ' +\
               auth_url + ' then hit enter.'

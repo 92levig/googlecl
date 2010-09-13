@@ -112,7 +112,7 @@ class BaseClientCL(googlecl.base.BaseCL):
       else:
         browser = webbrowser.get(browser_str)
       browser.open(str(auth_url))
-    except webbrowser.Error, err:
+    except (webbrowser.Error, OSError), err:
       LOG.info('Failed to launch web browser: ' + str(err))
     print 'Please log in and/or grant access at ' + str(auth_url)
     # Try to keep that damn "Created new window in existing browser session."
