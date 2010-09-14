@@ -354,15 +354,10 @@ def _run_list(client, options, args):
                                     title=options.title,
                                     query=options.encoded_query,
                                     force_photos=True)
-  if args:
-    field_list = args[0].split(',')
-  else:
-    field_list = googlecl.get_config_option(SECTION_HEADER,
-                                            'list_fields').split(',')
   for entry in entries:
     print googlecl.base.compile_entry_string(
                                googlecl.base.BaseEntryToStringWrapper(entry),
-                               field_list,
+                               options.fields.split(','),
                                delimiter=options.delimiter)
 
 
@@ -370,15 +365,10 @@ def _run_list_albums(client, options, args):
   entries = client.build_entry_list(user=options.owner or options.user,
                                     title=options.title,
                                     force_photos=False)
-  if args:
-    field_list = args[0].split(',')
-  else:
-    field_list = googlecl.get_config_option(SECTION_HEADER,
-                                            'list_fields').split(',')
   for entry in entries:
     print googlecl.base.compile_entry_string(
                                googlecl.base.BaseEntryToStringWrapper(entry),
-                               field_list,
+                               options.fields.split(','),
                                delimiter=options.delimiter)
 
 
@@ -431,12 +421,12 @@ TASKS = {'create': googlecl.base.Task('Create an album',
                                          callback=_run_delete,
                                          required=[['title', 'query']]),
          'list': googlecl.base.Task('List photos', callback=_run_list,
-                                       required=['delimiter'],
+                                       required=['fields', 'delimiter'],
                                        optional=['title', 'query', 'owner']),
          'list-albums': googlecl.base.Task('List albums',
-                                              callback=_run_list_albums,
-                                              required=['delimiter'],
-                                              optional=['title', 'owner']),
+                                           callback=_run_list_albums,
+                                           required=['fields', 'delimiter'],
+                                           optional=['title', 'owner']),
          'get': googlecl.base.Task('Download albums', callback=_run_get,
                                       optional=['title', 'owner', 'format'],
                                       args_desc='LOCATION'),

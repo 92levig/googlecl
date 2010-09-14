@@ -1,5 +1,8 @@
+This document is a quick-guide on getting up to speed with the new version of GoogleCL. 
+
 version 0.9.11
   * --force-auth and --skip-auth will let you specify if GoogleCL should verify the oauth access token it has on file for the service being used. After the first valid access token retrieved, --skip-auth is set in your config file as True. You can set this value to False to force a validation step on every run. The validation step is an authenticated request to Google to retrieve a small amount of data -- removing this step can yield a significant decrease in execution time for slow connections.
+  * 'list_fields' has been shortened to 'fields' in the config file, and the --fields option is introduced. Thanks to the "read required options from the argument list" ability also introduced in this version, your old scripts should be alright without specifying --fields. You can also change the XXX_fields entries in the config file to just fields.
 
 version 0.9.10
 	* List "styles" have been renamed to list "fields". If you have a custom list_style entry in your config file, rename it to list_fields to make it work again.

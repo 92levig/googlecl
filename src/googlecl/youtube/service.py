@@ -206,15 +206,10 @@ def build_category(category):
 def _run_list(client, options, args):
   entries = client.GetVideos(user=options.owner or 'default',
                              title=options.title)
-  if args:
-    field_list = args[0].split(',')
-  else:
-    field_list = googlecl.get_config_option(SECTION_HEADER,
-                                            'list_fields').split(',')
   for vid in entries:
     print googlecl.base.compile_entry_string(
                                  googlecl.base.BaseEntryToStringWrapper(vid),
-                                 field_list,
+                                 options.fields.split(','),
                                  delimiter=options.delimiter)
 
 
@@ -241,17 +236,17 @@ def _run_delete(client, options, args):
 
 
 TASKS = {'post': googlecl.base.Task('Post a video.', callback=_run_post,
-                                     required=['category', 'devkey'],
-                                     optional=['title', 'summary', 'tags'],
-                                     args_desc='PATH_TO_VIDEO'),
+                                    required=['category', 'devkey'],
+                                    optional=['title', 'summary', 'tags'],
+                                    args_desc='PATH_TO_VIDEO'),
          'list': googlecl.base.Task('List videos by user.',
-                                     callback=_run_list,
-                                     required='delimiter',
-                                     optional=['title', 'owner']),
+                                    callback=_run_list,
+                                    required=['fields', 'delimiter'],
+                                    optional=['title', 'owner']),
          'tag': googlecl.base.Task('Add tags to a video and/or ' +\
-                                    'change its category.',
-                                    callback=_run_tag,
-                                    required=['devkey', 'title',
-                                                ['category', 'tags']]),
+                                   'change its category.',
+                                   callback=_run_tag,
+                                   required=['devkey', 'title',
+                                              ['category', 'tags']]),
          'delete': googlecl.base.Task('Delete videos.', callback=_run_delete,
-                                       required='devkey', optional='title')}
+                                      required='devkey', optional='title')}

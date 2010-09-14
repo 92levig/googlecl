@@ -191,15 +191,10 @@ def _run_list(client, options, args):
   # XXX: see issue 89, use --fields instead of args, use args instead of --title
   # but support --title for backward compatibility, as in _run_delete
   entries = client.GetContacts(options.title)
-  if args:
-    field_list = args[0].split(',')
-  else:
-    field_list = googlecl.get_config_option(SECTION_HEADER,
-                                            'list_fields').split(',')
   for entry in entries:
     print googlecl.base.compile_entry_string(
                                             ContactsEntryToStringWrapper(entry),
-                                            field_list,
+                                            options.fields.split(','),
                                             delimiter=options.delimiter)
 
 
@@ -251,7 +246,8 @@ def _run_list_groups(client, options, args):
 
 
 TASKS = {'list': googlecl.base.Task('List contacts', callback=_run_list,
-                              args_desc='Fields to show (example: name,email)'),
+                                    required=['fields', 'delimiter'],
+                                    optional=['title']),
          'add': googlecl.base.Task('Add contacts', callback=_run_add,
                               args_desc='"name,email" pair or CSV filename'),
          'delete': googlecl.base.Task('Delete contacts', callback=_run_delete,

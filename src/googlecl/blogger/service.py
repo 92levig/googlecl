@@ -241,15 +241,10 @@ def _run_list(client, options, args):
   except BlogNotFound, err:
     LOG.error(err)
     return
-  if args:
-    field_list = args[0].split(',')
-  else:
-    field_list = googlecl.get_config_option(SECTION_HEADER,
-                                            'list_fields').split(',')
   for entry in entries:
     print googlecl.base.compile_entry_string(
                                              BloggerEntryToStringWrapper(entry),
-                                             field_list,
+                                             options.fields.split(','),
                                              delimiter=options.delimiter)
 
 
@@ -265,15 +260,15 @@ def _run_tag(client, options, args):
 
 
 TASKS = {'delete': googlecl.base.Task('Delete a post.', callback=_run_delete,
-                                         required=['title'],
-                                         optional='blog'),
+                                      required=['title'],
+                                      optional='blog'),
          'post': googlecl.base.Task('Post content.', callback=_run_post,
-                                       optional=['blog', 'title', 'tags'],
-                                       args_desc='PATH_TO_CONTENT or CONTENT'),
+                                    optional=['blog', 'title', 'tags'],
+                                    args_desc='PATH_TO_CONTENT or CONTENT'),
          'list': googlecl.base.Task('List posts in a blog',
-                                       callback=_run_list,
-                                       required=['delimiter'],
-                                       optional=['blog', 'title', 'owner']),
+                                    callback=_run_list,
+                                    required=['fields', 'delimiter'],
+                                    optional=['blog', 'title', 'owner']),
          'tag': googlecl.base.Task('Label posts', callback=_run_tag,
-                                      required=['tags', 'title'],
-                                      optional=['blog'])}
+                                   required=['title', 'tags'],
+                                   optional=['blog'])}

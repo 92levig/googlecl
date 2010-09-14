@@ -195,15 +195,15 @@ def load_preferences(path=None):
     # REMEMBER: updating these means you need to update the CONFIG readme.
     default_hostid = getpass.getuser() + '@' +  socket.gethostname()
     _youtube = {'max_results': '50'}
-    _contacts = {'list_fields': 'name,email'}
-    _calendar = {'list_fields': 'title,when'}
+    _contacts = {'fields': 'name,email'}
+    _calendar = {'fields': 'title,when'}
     _picasa = {'access': 'public'}
     _general = {'regex': 'True',
                'delete_by_default': 'False',
                'delete_prompt': 'True',
                'tags_prompt': 'False',
                'url_field': 'site',
-               'list_fields': 'title,url-site',
+               'fields': 'title,url-site',
                'missing_field_value': 'N/A',
                'date_print_format': '%b %d %H:%M',
                'cap_results': 'False',

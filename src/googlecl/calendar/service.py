@@ -458,15 +458,10 @@ def _list(client, options, args, date):
                                 title=options.title,
                                 query=options.query)
 
-    if args:
-      field_list = args[0].split(',')
-    else:
-      field_list = googlecl.get_config_option(SECTION_HEADER,
-                                              'list_fields').split(',')
     for entry in entries:
       print googlecl.base.compile_entry_string(
                                             CalendarEntryToStringWrapper(entry),
-                                            field_list,
+                                            options.fields.split(','),
                                             delimiter=options.delimiter)
 
 
@@ -542,7 +537,7 @@ def _run_delete(client, options, args):
 
 TASKS = {'list': googlecl.base.Task('List events on a calendar',
                                        callback=_run_list,
-                                       required=['delimiter'],
+                                       required=['fields', 'delimiter'],
                                        optional=['title', 'query',
                                                  'date', 'cal']),
          'today': googlecl.base.Task('List events for the next 24 hours',

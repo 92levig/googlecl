@@ -473,15 +473,10 @@ def _run_get(client, options, args):
 def _run_list(client, options, args):
   folder_entries = client.get_folder(options.folder)
   entries = client.get_doclist(options.title, folder_entries)
-  if args:
-    field_list = args[0].split(',')
-  else:
-    field_list = googlecl.get_config_option(SECTION_HEADER,
-                                            'list_fields').split(',')
   for entry in entries:
     print googlecl.base.compile_entry_string(
                                googlecl.base.BaseEntryToStringWrapper(entry),
-                               field_list,
+                               options.fields.split(','),
                                delimiter=options.delimiter)
 
 
@@ -549,7 +544,7 @@ TASKS = {'upload': googlecl.base.Task('Upload a document',
                                     optional='format',
                                     args_desc='LOCATION'),
          'list': googlecl.base.Task('List documents', callback=_run_list,
-                                     required='delimiter',
+                                     required=['fields', 'delimiter'],
                                      optional=['title', 'folder']),
          'delete': googlecl.base.Task('Delete documents',
                                        callback=_run_delete,

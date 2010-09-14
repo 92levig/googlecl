@@ -645,6 +645,8 @@ def setup_parser():
                     help='Blogger only - post as a draft')
   parser.add_option('--editor', dest='editor',
                     help='Docs only - editor to use on a file.')
+  parser.add_option('--fields', dest='fields',
+                    help='Fields to list with list task.')
   parser.add_option('-f', '--folder', dest='folder',
                     help='Docs only - specify folder(s) to upload to '+
                     '/ search in.')
