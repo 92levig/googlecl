@@ -9,9 +9,9 @@ All instructions assume a current working directory of trunk
 5) Update version keyword argument in setup.py
 6) Regenerate man page per instructions in src/google
 7) Commit all these changes with a message like "Change to x.x.x" or "Committing updated version numbers x.x.x"
-8) Use svn export . ../googlecl-x.x.x to make a clean copy without .svn files
-9) DON'T FORGET: chmod 755 ../googlecl-x.x.x/src/google
-10) cd .. ; tar zcvf googlecl-x.x.x.tar.gz googlecl-x.x.x
+8) cp src/google.py src/google ; chmod 755 src/google
+9) Use setup.py sdist to make the source distribution
+10) cd dist ; tar xf googlecl-x.x.x.tar.gz
 11) When you're convinced it's correct, use svn copy to tag the release:
  $ svn copy https://googlecl.googlecode.com/svn/trunk https://googlecl.googlecode.com/svn/tags/release-x.x.x -m "x.x.x release"
 12) Update release at pypi: http://pypi.python.org/pypi/googlecl/

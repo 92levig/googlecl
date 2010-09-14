@@ -1,7 +1,7 @@
 #!/bin/bash
 
 TOUCH_PREFIX="tested_"
-GOOGLE_SH=./google
+GOOGLE_SH=./google.py
 
 # List of commands to set by each function
 declare -a commands
