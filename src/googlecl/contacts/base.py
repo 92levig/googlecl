@@ -204,12 +204,9 @@ def _run_add(client, options, args):
 
 
 def _run_delete(client, options, args):
-  # Supporting --title for backward compatibility
-  if options.title is not None:
-    args.append(options.title)
-  if len(args) == 0:
-    LOG.error('No contacts specified. Try: google contacts delete "John Doe"')
-    return
+  # 'title' is a required option, so append it to the rest of the
+  # arguments (which potentially holds other titles to operate on)
+  args.append(options.title)
   for name in args:
     entries = client.GetContacts(name)
     client.DeleteEntryList(entries, 'contact',
@@ -217,15 +214,17 @@ def _run_delete(client, options, args):
 
 
 def _run_add_groups(client, options, args):
+  # 'title' is a required option, so append it to the rest of the
+  # arguments (which potentially holds other titles to operate on)
+  args.append(options.title)
   for group in args:
     client.AddGroup(group)
 
 
 def _run_delete_groups(client, options, args):
-  if len(args) == 0:
-    LOG.error('No groups specified. Try: ' +
-              'google contacts delete-groups "In-laws"')
-    return
+  # 'title' is a required option, so append it to the rest of the
+  # arguments (which potentially holds other titles to operate on)
+  args.append(options.title)
   for group in args:
     entries = client.GetGroups(group)
     client.DeleteEntryList(entries, 'group',
@@ -234,7 +233,7 @@ def _run_delete_groups(client, options, args):
 
 def _run_list_groups(client, options, args):
   if len(args) == 0:
-    args.append(None)
+    args.append(options.title)
 
   for group in args:
     entries = client.GetGroups(group)
@@ -249,15 +248,19 @@ TASKS = {'list': googlecl.base.Task('List contacts', callback=_run_list,
                                     required=['fields', 'delimiter'],
                                     optional=['title']),
          'add': googlecl.base.Task('Add contacts', callback=_run_add,
-                              args_desc='"name,email" pair or CSV filename'),
+                                 args_desc='"name,email" pair or CSV filename'),
          'delete': googlecl.base.Task('Delete contacts', callback=_run_delete,
-        args_desc='names of contact(s) to delete (e.g. "John Doe" "Jane Doe")'),
+                                      required='title',
+                          args_desc='Additional names of contact(s) to delete'),
          'add-groups': googlecl.base.Task('Add contact group(s)',
                                           callback=_run_add_groups,
-                                          args_desc='Group name(s)'),
+                                          required='title',
+                                          args_desc='Additional group name(s)'),
          'delete-groups': googlecl.base.Task('Delete contact group(s)',
                                              callback=_run_delete_groups,
-                                             args_desc='Group name(s)'),
+                                             required='title',
+                            args_desc='Additional names of group(s) to delete'),
          'list-groups': googlecl.base.Task('List contact groups',
                                            callback=_run_list_groups,
-                                  args_desc='Specific groups to list (if any)')}
+                                           optional='title',
+                               args_desc='Additional titles of groups to list')}

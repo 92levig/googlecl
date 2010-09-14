@@ -20,7 +20,7 @@
 This program provides some functionality for a number of Google services from
 the command line.
 
-Example usage (omitting the initial "./google.py"):
+Example usage (omitting the initial "./google"):
   # Create a photo album with tags "Vermont" and name "Summer Vacation 2009"
   picasa create -n "Summer Vacation 2009" -t Vermont ~/photos/vacation2009/*
 

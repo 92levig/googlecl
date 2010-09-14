@@ -246,7 +246,7 @@ TASKS = {'post': googlecl.base.Task('Post a video.', callback=_run_post,
          'tag': googlecl.base.Task('Add tags to a video and/or ' +\
                                    'change its category.',
                                    callback=_run_tag,
-                                   required=['devkey', 'title',
-                                              ['category', 'tags']]),
+                                   required=['title', ['tags', 'category'],
+                                             'devkey']),
          'delete': googlecl.base.Task('Delete videos.', callback=_run_delete,
-                                      required='devkey', optional='title')}
+                                      required=['title', 'devkey'])}

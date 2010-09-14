@@ -21,15 +21,15 @@ Requires: title Optional: date, summary, tags Arguments: PATH_TO_PHOTOS
 .IP
 list: List photos
 .IP
-Requires: delimiter Optional: title, query, owner
+Requires: fields AND delimiter Optional: title, query, owner
 .IP
 list\-albums: List albums
 .IP
-Requires: delimiter Optional: title, owner
+Requires: fields AND delimiter Optional: title, owner
 .IP
 tag: Tag photos
 .IP
-Requires: tags AND (title OR query) Optional: owner
+Requires: (title OR query) AND tags Optional: owner
 .IP
 post: Post photos to an album
 .IP
@@ -43,15 +43,15 @@ Available tasks for service blogger: 'post', 'tag', 'list', 'delete'
 .IP
 post: Post content.
 .IP
-Requires: none Optional: blog, title, tags Arguments: PATH_TO_CONTENT or CONTENT
+Requires: none Optional: blog, title, tags, draft Arguments: PATH_TO_CONTENT or CONTENT
 .IP
 tag: Label posts
 .IP
-Requires: tags AND title Optional: blog
+Requires: title AND tags Optional: blog
 .IP
 list: List posts in a blog
 .IP
-Requires: delimiter Optional: blog, title, owner
+Requires: fields AND delimiter Optional: blog, title, owner
 .IP
 delete: Delete a post.
 .IP
@@ -65,15 +65,15 @@ Requires: category AND devkey Optional: title, summary, tags Arguments: PATH_TO_
 .IP
 tag: Add tags to a video and/or change its category.
 .IP
-Requires: devkey AND title AND (category OR tags)
+Requires: title AND (tags OR category) AND devkey
 .IP
 list: List videos by user.
 .IP
-Requires: delimiter Optional: title, owner
+Requires: fields AND delimiter Optional: title, owner
 .IP
 delete: Delete videos.
 .IP
-Requires: devkey Optional: title
+Requires: title AND devkey
 .PP
 Available tasks for service docs: 'edit', 'delete', 'list', 'upload', 'get'
 .IP
@@ -83,11 +83,11 @@ Requires: title Optional: format, editor, folder
 .IP
 delete: Delete documents
 .IP
-Requires: none Optional: title
+Requires: title
 .IP
 list: List documents
 .IP
-Requires: delimiter Optional: title, folder
+Requires: fields AND delimiter Optional: title, folder
 .IP
 upload: Upload a document
 .IP
@@ -101,11 +101,11 @@ Available tasks for service contacts: 'list', 'list\-groups', 'add', 'add\-group
 .IP
 list: List contacts
 .IP
-Requires: none Arguments: Fields to show (example: name,email)
+Requires: fields AND delimiter Optional: title
 .IP
 list\-groups: List contact groups
 .IP
-Requires: none Arguments: Specific groups to list (if any)
+Requires: none Optional: title Arguments: Additional titles of groups to list
 .IP
 add: Add contacts
 .IP
@@ -113,15 +113,15 @@ Requires: none Arguments: "name,email" pair or CSV filename
 .IP
 add\-groups: Add contact group(s)
 .IP
-Requires: none Arguments: Group name(s)
+Requires: title Arguments: Additional group name(s)
 .IP
 delete\-groups: Delete contact group(s)
 .IP
-Requires: none Arguments: Group name(s)
+Requires: title Arguments: Additional names of group(s) to delete
 .IP
 delete: Delete contacts
 .IP
-Requires: none Arguments: names of contact(s) to delete (e.g. "John Doe" "Jane Doe")
+Requires: title Arguments: Additional names of contact(s) to delete
 .PP
 Available tasks for service calendar: 'add', 'list', 'today', 'delete'
 .IP
@@ -131,7 +131,7 @@ Requires: none Optional: cal Arguments: QUICK_ADD_TEXT
 .IP
 list: List events on a calendar
 .IP
-Requires: delimiter Optional: title, query, date, cal
+Requires: fields AND delimiter Optional: title, query, date, cal
 .IP
 today: List events for the next 24 hours
 .IP
@@ -184,6 +184,9 @@ Blogger only \- post as a draft
 .TP
 \fB\-\-editor\fR=\fIEDITOR\fR
 Docs only \- editor to use on a file.
+.TP
+\fB\-\-fields\fR=\fIFIELDS\fR
+Fields to list with list task.
 .TP
 \fB\-f\fR FOLDER, \fB\-\-folder\fR=\fIFOLDER\fR
 Docs only \- specify folder(s) to upload to / search
@@ -247,6 +250,6 @@ google contacts list name,email >contacts.csv
 
 google docs edit \-\-title 'Shopping list'
 
-google.py picasa create \-\-title 'Cat Photos' ~/photos/cats/*.jpg
+google picasa create \-\-title 'Cat Photos' ~/photos/cats/*.jpg
 
 google youtube post \-\-category Education killer_robots.avi
