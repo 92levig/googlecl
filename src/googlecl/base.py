@@ -357,6 +357,41 @@ class Task(object):
     if args_desc:
       args_desc = ' Arguments: ' + args_desc
     self.usage = 'Requires: ' + req_str + opt_str + args_desc
+
+  def get_outstanding_requirements(self, options):
+    """Return a list of required options that are missing.
+
+    The requirements that have been specified in <options> are removed
+    from self.required, and any sublists in self.required have been replaced
+    by the first item in that sublist if none of the requirements in the
+    sublist were given.
+
+    Args:
+      options: instance Has attributes with names corresponding to the
+               requirements specified by self.required and self.optional
+
+    Returns:
+      A subset of self.required containing only strings representing unmet
+      requirements.
+
+    """
+    missing_options_set = set(attr for attr in dir(options)
+                              if not attr.startswith('_') and
+                              getattr(options, attr) is None)
+    missing_requirements = []
+    for requirement in self.required:
+      if isinstance(requirement, list):
+        sub_req_set = set(requirement)
+        # If every element in sub_req_set is in missing_options_set,
+        # add the first element of the requirements list to the missing
+        # requirements.
+        if sub_req_set <= missing_options_set:
+          missing_requirements.append(requirement[0])
+        # Otherwise, the user specified one of the elements of the list, so
+        # we can use that one.
+      elif requirement in missing_options_set:
+        missing_requirements.append(requirement)
+    return missing_requirements
     
   def is_optional(self, attribute):
     """See if an attribute is optional"""
@@ -365,40 +400,6 @@ class Task(object):
       return True
     return False
   
-  def requires(self, attribute, options=None):
-    """See if a attribute is required.
-    
-    Keyword arguments:
-      attribute: Attribute in question.
-      options: Object with attributes to check for. If provided, intelligently
-               checks if the attribute is necessary, given the attributes
-               already in options. (Default None)
-    Returns:
-      True if the attribute is always required.
-      False or [] if the attribute is never required
-      If options is provided, a list of lists, where each sublist contains the
-        name of the attribute that is required. For example, if either 'title'
-        or 'query' is required, will return [['title','query']] 
-    
-    """
-    # Get a list of all the sublists that contain attribute
-    choices = [sublist for sublist in self.required
-               if isinstance(sublist, list) and attribute in sublist]
-    if options:
-      if attribute in self.required:
-        return not bool(getattr(options, attribute))
-      if choices:
-        for sublist in choices:
-          for item in sublist:
-            if getattr(options, item):
-              return False
-        return True
-    else:
-      if attribute in self.required:
-        return True
-      else:
-        return choices
-
   def _not_impl(self, *args):
     """Just use this as a place-holder for Task callbacks."""
     LOG.error('Sorry, this task is not yet implemented!')

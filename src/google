@@ -174,15 +174,19 @@ def expand_as_command_line(command_string):
   return final_args_list
 
 
-def fill_out_options(service_header, task, options):
+def fill_out_options(args, service_header, task, options):
   """Fill out required options via config file and command line prompts.
 
   If there are any required fields missing for a task, fill them in.
-  This is attempted first by checking the OPTION_DEFAULTS section of the
-  preferences file, then prompting the user if the prior method fails.
+  This is attempted by checking the following sources, in order:
+  1) The arguments list given to this function.
+  2) The service_header section of the preferences file.
+  3) Prompting the user.
 
   Keyword arguments:
-    service_header:
+    args: list Arguments that may be options.
+    service_header: str Name of the section in the config file for the
+                    active service.
     task: Requirements of the task (see class googlecl.service.Task).
     options: Contains attributes that have been specified already, typically
              through options on the command line (see setup_parser()).
@@ -191,20 +195,27 @@ def fill_out_options(service_header, task, options):
     Nothing, though options may be modified to hold the required fields.
 
   """
-  # Grab all attributes from options that match two criteria:
-  # 1) They contain no underscores at the beginning or end of the name
-  # 2) They evaluate to False (NoneType or '')
-  missing_attributes = [attr for attr in dir(options)
-                        if attr.strip('_') == attr and
-                        not getattr(options, attr)]
-  for attr in missing_attributes:
-    # "user" and "hostid" are always required options.
-    if task.requires(attr, options) or attr == 'user' or attr == 'hostid':
-      value = googlecl.get_config_option(service_header, attr)
-      if value:
-        setattr(options, attr, value)
-      else:
-        setattr(options, attr, raw_input('Please specify ' + attr + ': '))
+  def _retrieve_value(attr, service_header):
+    """Retrieve value from config file or user prompt."""
+    value = googlecl.get_config_option(service_header, attr)
+    if value:
+      return value
+    else:
+      return raw_input('Please specify ' + attr + ': ')
+
+  if options.user is None:
+    options.user = _retrieve_value('user', service_header)
+  if options.hostid is None:
+    options.hostid = _retrieve_value('hostid', service_header)
+  missing_reqs = task.get_outstanding_requirements(options)
+  LOG.debug('missing_reqs: ' + str(missing_reqs))
+
+  for attr in missing_reqs:
+    if args:
+      setattr(options, attr, args.pop(0))
+    else:
+      setattr(options, attr, _retrieve_value(attr, service_header))
+   
   # Expand those options that might be a filename in disguise.
   max_file_size = 500000    # Value picked arbitrarily - no idea what the max
                             # size in bytes of a summary is.
@@ -467,7 +478,7 @@ def run_once(options, args):
               str(tasks.keys()))
     return
 
-  if task.requires('devkey'):
+  if 'devkey' in task.required:
     # If a devkey is required, and there is none specified via an option
     # BEFORE fill_out_options, insert the key from file or the key given
     # to GoogleCL.
@@ -477,7 +488,7 @@ def run_once(options, args):
 
   # fill_out_options will read the key from file if necessary, but will not set
   # it since it will always get a non-empty value beforehand.
-  fill_out_options(section_header, task, options)
+  fill_out_options(args, section_header, task, options)
 
   # XXX: Determining the encoding this way is a guess. Seems like we should
   # favor stdin over stdout, but not sure if stdin is always defined.
@@ -625,11 +636,11 @@ def setup_parser():
                     ' "YYYY-MM-DD", events between date and future.' +
                     ' "YYYY-MM-DD,YYYY-MM-DD" events between two dates.')
   parser.add_option('--debug', dest='debug',
-                    action='store_true', default=False,
+                    action='store_true',
                     help=('Enable all debugging output, including HTTP data'))
   parser.add_option('--delimiter', dest='delimiter', default=',',
                     help='Specify a delimiter for the output of the list task.')
-  parser.add_option('--draft', dest='draft', default=False,
+  parser.add_option('--draft', dest='draft',
                     action='store_true',
                     help='Blogger only - post as a draft')
   parser.add_option('--editor', dest='editor',
@@ -638,7 +649,7 @@ def setup_parser():
                     help='Docs only - specify folder(s) to upload to '+
                     '/ search in.')
   parser.add_option('--force-auth', dest='force_auth',
-                    action='store_true', default=False,
+                    action='store_true',
                     help='Force validation step for re-used access tokens' +
                          ' (Overrides --skip-auth).')
   parser.add_option('--format', dest='format',
@@ -659,13 +670,13 @@ def setup_parser():
                     help=('Full text query string for specifying items.'
                           + ' Searches on titles, captions, and tags.'))
   parser.add_option('--quiet', dest='quiet',
-                    action='store_true', default=False,
+                    action='store_true',
                     help='Print only prompts and error messages')
   parser.add_option('--reminder', dest='reminder',
                     help=("Calendar only - specify time for added event's " +
                           'reminder, e.g. "10m", "3h", "1d"'))
   parser.add_option('--skip-auth', dest='skip_auth',
-                    action='store_true', default=False,
+                    action='store_true',
                     help='Skip validation step for re-used access tokens.')
   parser.add_option('-s', '--summary', dest='summary',
                     help=('Description of the upload, ' +
@@ -675,7 +686,7 @@ def setup_parser():
   parser.add_option('-u', '--user', dest='user',
                     help='Username to log in with for the service.')
   parser.add_option('-v', '--verbose', dest='verbose',
-                    default=False, action='store_true',
+                    action='store_true',
                     help='Print all messages.')
   return parser
 
