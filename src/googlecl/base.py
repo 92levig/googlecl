@@ -199,14 +199,16 @@ class BaseCL(object):
       return all_entries
     if self.use_regex:
       try:
-        entries = [entry for entry in all_entries 
-                   if entry.title.text and re.match(title,entry.title.text)]
+        entries = [entry for entry in all_entries
+                   if entry.title.text and
+                   re.match(title,entry.title.text.decode('utf-8'))]
       except re.error, err:
         LOG.error('Regular expression error: ' + str(err) + '!')
         LOG.debug('regex provided: ' + title)
         return []
     else:
-      entries = [entry for entry in all_entries if title == entry.title.text]
+      entries = [entry for entry in all_entries if title ==
+                 entry.title.text.decode('utf-8')]
     LOG.debug('Retrieved ' + str(len(all_entries)) +
               ' entries, returning ' + str(len(entries)) + ' of them')
     return entries
@@ -658,4 +660,3 @@ def generate_tag_sets(tags):
       elif tag[0] != '-':
         add_set.add(tag) 
   return (remove_set, add_set, replace_tags)
-
