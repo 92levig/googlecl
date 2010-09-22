@@ -17,7 +17,7 @@
 
 Some use cases:
 Add contacts:
-  contacts add "Bob Smith, bob@smith.com" "Jim Raynor, jimmy@noreaster.com" 
+  contacts add "Bob Smith, bob@smith.com" "Jim Raynor, jimmy@noreaster.com"
 
 List contacts:
   contacts list title,email
@@ -41,7 +41,7 @@ LOG = logging.getLogger(googlecl.contacts.LOGGER_NAME + '.client')
 class ContactsClientCL(gdata.contacts.client.ContactsClient,
                        googlecl.contacts.base.ContactsBaseCL,
                        googlecl.client.BaseClientCL):
-  
+
   """Extends gdata.contacts.service.ContactsService for the command line.
 
   This class adds some features focused on using Contacts via an installed
@@ -56,12 +56,12 @@ class ContactsClientCL(gdata.contacts.client.ContactsClient,
 
   def parse_contact_string(self, contact_string):
     """Add contact(s).
-    
+
     Keyword arguments:
       contact_string: String representing a name/email address to add
                       Entries should be of the form "name,email@server.com"
                       (whitespace before/after the comma is ignored).
-    
+
     Returns:
       ContactEntry with at least name and email filled in.
 

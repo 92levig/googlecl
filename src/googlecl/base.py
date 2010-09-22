@@ -30,7 +30,7 @@ class BaseCL(object):
     # superclass's __init__ function, don't define one here.
     self.source = 'GoogleCL'
     self.client_id = 'GoogleCL'
-    
+
     # Some new attributes, not inherited.
     self.use_regex = googlecl.get_config_option(section, 'regex',
                                                 default=True, option_type=bool)
@@ -60,12 +60,12 @@ class BaseCL(object):
 
   def delete_entry_list(self, entries, entry_type, delete_default):
     """Extends Delete to handle a list of entries.
-    
+
     Keyword arguments:
       entries: List of entries to delete.
       entry_type: String describing the thing being deleted (e.g. album, post).
       delete_default: Whether or not the default action should be deletion.
-      
+
     """
     if delete_default and self.prompt_for_delete:
       prompt_str = '(Y/n)'
@@ -146,7 +146,7 @@ class BaseCL(object):
 
   def get_entries(self, uri, title=None, converter=None, desired_class=None):
     """Get a list of entries from a feed uri.
-    
+
     Keyword arguments:
       uri: URI to get the feed from.
       title: String to use when looking for entries to return. Will be compared
@@ -164,7 +164,7 @@ class BaseCL(object):
                      arguments.
     Returns:
       List of entries.
-    
+
     """
     uri = set_max_results(uri, self.max_results)
     feed = None
@@ -194,7 +194,7 @@ class BaseCL(object):
           if feed:
             all_entries.extend(feed.entry)
     if not title:
-      LOG.debug('Retrieved ' + str(len(all_entries)) + 
+      LOG.debug('Retrieved ' + str(len(all_entries)) +
                 ' entries, returning them all')
       return all_entries
     if self.use_regex:
@@ -218,10 +218,10 @@ class BaseCL(object):
   def get_single_entry(self, uri_or_entry_list, title=None, converter=None,
                        desired_class=None):
     """Return exactly one entry.
-    
+
     Uses GetEntries to retrieve the entries, then asks the user to select one of
     them by entering a number.
-    
+
     Keyword arguments:
       uri_or_entry_list: URI to get feed from (See get_entries) or list of
                          entries to select from.
@@ -229,10 +229,10 @@ class BaseCL(object):
       converter: Conversion function to apply to feed. See get_entries.
       desired_class: class to which a successful response should be converted.
                      See get_entries.
-    
+
     Returns:
       None if there were no matches, or one entry matching the given title.
-    
+
     """
     if not uri_or_entry_list:
       return None
@@ -254,7 +254,7 @@ class BaseCL(object):
       for num, entry in enumerate(entries):
         print '%i) %s' % (num, entry.title.text)
       selection = -1
-      while selection < 0 or selection > len(entries)-1: 
+      while selection < 0 or selection > len(entries)-1:
         selection = int(raw_input('Please select one of the items by number: '))
       return entries[selection]
 
@@ -262,19 +262,19 @@ class BaseCL(object):
 
   def is_token_valid(self, test_uri=None):
     """Check that the token being used is valid.
-    
+
     Keyword arguments:
       test_uri: URI to pass to self.Get(). Default None (raises error).
-      
+
     Returns:
       True if Get was successful, False if Get raised an exception with the
       string 'Token invalid' in its body, and raises any other exceptions.
-    
+
     """
     if not test_uri:
       raise Error('No uri to test token with!' +
                   '(was is_token_valid extended?)')
-    test_uri = set_max_results(test_uri, 1) 
+    test_uri = set_max_results(test_uri, 1)
     try:
       # Try to limit the number of results we get.
       self.Get(test_uri)
@@ -307,20 +307,20 @@ def set_max_results(uri, max):
 # logging in, and google.py does not check whether or not a task
 # says otherwise.
 class Task(object):
-  
+
   """A container of requirements.
-  
+
   Each requirement matches up with one of the attributes of the option parser
   used to parse command line arguments. Requirements are given as lists.
   For example, if a task needs to have attr1 and attr2 and either attr3 or 4,
   the list would look like ['attr1', 'attr2', ['attr3', 'attr4']]
-  
+
   """
-  
+
   def __init__(self, description, callback=None, required=[], optional=[],
                login_required=True, args_desc=''):
     """Constructor.
-    
+
     Keyword arguments:
       description: Description of what the task does.
       callback: Function to use to execute task.
@@ -328,11 +328,11 @@ class Task(object):
       required: Required options for the task. (Default None)
       optional: Optional options for the task. (Default None)
       login_required: If logging in with a username is required to do this task.
-                If True, can typically ignore 'user' as a required attribute. 
+                If True, can typically ignore 'user' as a required attribute.
                 (Default True)
-      args_desc: Description of what the arguments should be. 
+      args_desc: Description of what the arguments should be.
                  (Default '', for no arguments necessary for this task)
-      
+
     """
     if isinstance(required, basestring):
       required = [required]
@@ -394,14 +394,14 @@ class Task(object):
       elif requirement in missing_options_set:
         missing_requirements.append(requirement)
     return missing_requirements
-    
+
   def is_optional(self, attribute):
     """See if an attribute is optional"""
     # No list of lists in the optional fields
     if attribute in self.optional:
       return True
     return False
-  
+
   def _not_impl(self, *args):
     """Just use this as a place-holder for Task callbacks."""
     LOG.error('Sorry, this task is not yet implemented!')
@@ -564,7 +564,7 @@ class BaseEntryToStringWrapper(object):
 def compile_entry_string(wrapped_entry, attribute_list, delimiter,
                          missing_field_value=None, newline_replacer=' '):
   """Return a useful string describing a gdata.data.GDEntry.
-  
+
   Keyword arguments:
     wrapped_entry: BaseEntryToStringWrapper or subclass to display.
     attribute_list: List of attributes to access
@@ -575,7 +575,7 @@ def compile_entry_string(wrapped_entry, attribute_list, delimiter,
                          option).
     newline_replacer: String to replace newlines with. Default ' '. Set to
                       NoneType to leave newlines in place.
-  
+
   """
   import sys
 
@@ -614,7 +614,7 @@ def compile_entry_string(wrapped_entry, attribute_list, delimiter,
     # Don't do processing if attribute is xml
     if attr != 'xml':
       return_string = return_string.replace('\n', newline_replacer)
-  
+
   return_string = return_string.rstrip(delimiter)
   # XXX: Determining the encoding this way is a guess. Seems like we should
   # favor stdout over stdin, but it's not always defined.
@@ -626,7 +626,7 @@ def compile_entry_string(wrapped_entry, attribute_list, delimiter,
 
 def generate_tag_sets(tags):
   """Generate sets of tags based on a string.
-  
+
   Keyword arguments:
     tags: Comma-separated list of tags. Tags with a '-' in front will be
           removed from each photo. A tag of '--' will delete all tags.
@@ -640,7 +640,7 @@ def generate_tag_sets(tags):
       remove_set: set object of the tags to remove
       add_set: set object of the tags to add
       replace_tags: boolean indicating if all the old tags are removed
-      
+
   """
   tags = tags.replace(', ', ',')
   tagset = set(tags.split(','))
@@ -658,5 +658,5 @@ def generate_tag_sets(tags):
         add_set.add(tag[1:])
       # Don't add the tags that are being removed
       elif tag[0] != '-':
-        add_set.add(tag) 
+        add_set.add(tag)
   return (remove_set, add_set, replace_tags)

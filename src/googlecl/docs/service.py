@@ -14,14 +14,14 @@
 
 
 """Service details and instances for the Docs service.
- 
+
 Some use cases:
 Upload a document:
   docs upload --folder "Some folder" path_to_doc
-  
+
 Edit a document in your word editor:
   docs edit --title "Grocery List" --editor vim (editor also set in prefs)
-  
+
 Download docs:
   docs get --folder "Some folder"
 
@@ -46,16 +46,16 @@ LOG = logging.getLogger(googlecl.docs.LOGGER_NAME + '.service')
 class DocsServiceCL(gdata.docs.service.DocsService,
                     googlecl.docs.base.DocsBaseCL,
                     googlecl.service.BaseServiceCL):
-  
+
   """Extends gdata.docs.service.DocsClient for the command line.
-  
+
   This class adds some features focused on using Google Docs via an installed
   app with a command line interface.
-  
+
   """
 
   def __init__(self):
-    """Constructor.""" 
+    """Constructor."""
     gdata.docs.service.DocsService.__init__(self, source='GoogleCL')
     googlecl.service.BaseServiceCL.__init__(self, SECTION_HEADER)
     # 302 Moved Temporarily errors began cropping up for new style docs
@@ -118,10 +118,10 @@ class DocsServiceCL(gdata.docs.service.DocsService,
 
   def export(self, entry_or_id_or_url, file_path, gid=None, extra_params=None):
     """Export old and new version docs.
-    
+
     Ripped from gdata.docs.DocsService, adds 'format' parameter to make
     new version documents happy.
-    
+
     """
     ext = googlecl.get_extension_from_path(file_path)
     if ext:
@@ -136,7 +136,7 @@ class DocsServiceCL(gdata.docs.service.DocsService,
 
   def get_doclist(self, title=None, folder_entry_list=None):
     """Get a list of document entries from a feed.
-    
+
     Keyword arguments:
       title: String to use when looking for entries to return. Will be compared
              to entry.title.text, using regular expressions if self.use_regex.
@@ -144,10 +144,10 @@ class DocsServiceCL(gdata.docs.service.DocsService,
       folder_entry_list: List of GDataEntry's of folders to get from.
              Only files found in these folders will be returned.
              Default None for all folders.
-                 
+
     Returns:
       List of entries.
-      
+
     """
     if folder_entry_list:
       entries = []
@@ -165,15 +165,15 @@ class DocsServiceCL(gdata.docs.service.DocsService,
 
   def get_single_doc(self, title=None, folder_entry_list=None):
     """Return exactly one doc_entry.
-    
+
     Keyword arguments:
       title: Title to match on for document. Default None for any title.
       folder_entry_list: GDataEntry of folders to look in.
                          Default None for any folder.
-    
+
     Returns:
       None if there were no matches, or one entry matching the given title.
-    
+
     """
     if folder_entry_list:
       if len(folder_entry_list) == 1:
@@ -242,7 +242,7 @@ class DocsServiceCL(gdata.docs.service.DocsService,
       print 'Could not find mimetype for ' + file_ext
       while file_ext not in SUPPORTED_FILETYPES.keys():
         file_ext = raw_input('Please enter one of ' +
-                                SUPPORTED_FILETYPES.keys() + 
+                                SUPPORTED_FILETYPES.keys() +
                                 ' for a content type to upload as.')
       content_type = SUPPORTED_FILETYPES[file_ext.upper()]
     mediasource = gdata.MediaSource(file_path=path_to_new_content,
@@ -267,7 +267,7 @@ class DocsServiceCL(gdata.docs.service.DocsService,
     """Upload one file to Google Docs.
 
     kwargs is ignored -- it contains parameters for v3 of the API.
-    
+
     Args:
       path: str Path to file to upload.
       title: str (optional) Title to give the upload. Defaults to the filename.
@@ -317,7 +317,7 @@ class DocsServiceCL(gdata.docs.service.DocsService,
     try:
       try:
         # Upload() wasn't added until later versions of DocsService, so
-        # we may not have it. 
+        # we may not have it.
         new_entry = self.Upload(media, entry_title, post_uri)
       except AttributeError:
         entry = gdata.docs.DocumentListEntry()

@@ -215,7 +215,7 @@ def fill_out_options(args, service_header, task, options):
       setattr(options, attr, args.pop(0))
     else:
       setattr(options, attr, _retrieve_value(attr, service_header))
-   
+
   # Expand those options that might be a filename in disguise.
   max_file_size = 500000    # Value picked arbitrarily - no idea what the max
                             # size in bytes of a summary is.
@@ -540,20 +540,20 @@ def run_once(options, args):
 
 def set_access_token(service_name, client):
   """Read an access token from file and set it to be used by the client.
-  
+
   Args:
     service_name: str Name of the Google service being accessed.
     client: BaseCL instance doing the accessing.
 
   Returns:
     True if the token was read and set, False otherwise.
-  
+
   """
   try:
     token = googlecl.read_access_token(service_name, client.email)
   except (KeyError, IndexError):
     LOG.warning('Token file appears to be corrupted. Not using.')
-  else: 
+  else:
     if token:
       LOG.debug('Loaded token from file')
       client.SetOAuthToken(token)

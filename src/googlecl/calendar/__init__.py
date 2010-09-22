@@ -30,7 +30,7 @@ class Date(object):
     """Constructor.
 
     Keyword arguments:
-      date: String representation of a date in RFC 3339 
+      date: String representation of a date in RFC 3339
             ('YYYY-MM-DD' or 'YYYY-MM-DD' + 'T' + 'HH:MM:SS')
     """
     if date and date != ',':

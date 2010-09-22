@@ -14,14 +14,14 @@
 
 
 """Service details and instances for the Docs service using GData 3.0.
- 
+
 Some use cases:
 Upload a document:
   docs upload --folder "Some folder" path_to_doc
-  
+
 Edit a document in your word editor:
   docs edit --title "Grocery List" --editor vim (editor also set in prefs)
-  
+
 Download docs:
   docs get --folder "Some folder"
 
@@ -45,16 +45,16 @@ LOG = logging.getLogger(googlecl.docs.LOGGER_NAME + '.client')
 class DocsClientCL(gdata.docs.client.DocsClient,
                    googlecl.docs.base.DocsBaseCL,
                    googlecl.client.BaseClientCL):
-  
+
   """Extends gdata.docs.client.DocsClient for the command line.
-  
+
   This class adds some features focused on using Google Docs via an installed
   app with a command line interface.
-  
+
   """
 
   def __init__(self):
-    """Constructor.""" 
+    """Constructor."""
     gdata.docs.client.DocsClient.__init__(self, source='GoogleCL')
     googlecl.client.BaseClientCL.__init__(self, section=SECTION_HEADER)
 
@@ -137,7 +137,7 @@ class DocsClientCL(gdata.docs.client.DocsClient,
 
   def get_doclist(self, title=None, folder_entry_list=None):
     """Get a list of document entries from a feed.
-    
+
     Keyword arguments:
       title: String to use when looking for entries to return. Will be compared
              to entry.title.text, using regular expressions if self.use_regex.
@@ -145,10 +145,10 @@ class DocsClientCL(gdata.docs.client.DocsClient,
       folder_entry_list: List of GDataEntry's of folders to get from.
              Only files found in these folders will be returned.
              Default None for all folders.
-                 
+
     Returns:
       List of entries.
-      
+
     """
     if folder_entry_list:
       entries = []
@@ -165,15 +165,15 @@ class DocsClientCL(gdata.docs.client.DocsClient,
 
   def get_single_doc(self, title=None, folder_entry_list=None):
     """Return exactly one doc_entry.
-    
+
     Keyword arguments:
       title: Title to match on for document. Default None for any title.
       folder_entry_list: GDataEntry of folders to look in.
                          Default None for any folder.
-    
+
     Returns:
       None if there were no matches, or one entry matching the given title.
-    
+
     """
     if folder_entry_list:
       if len(folder_entry_list) == 1:
@@ -241,7 +241,7 @@ class DocsClientCL(gdata.docs.client.DocsClient,
       print 'Could not find mimetype for ' + file_ext
       while file_ext not in MIMETYPES.keys():
         file_ext = raw_input('Please enter one of ' +
-                                MIMETYPES.keys() + 
+                                MIMETYPES.keys() +
                                 ' to determine the content type to upload as.')
       content_type = MIMETYPES[file_ext.upper()]
     mediasource = gdata.data.MediaSource(file_path=path_to_new_content,
@@ -263,7 +263,7 @@ class DocsClientCL(gdata.docs.client.DocsClient,
   def upload_single_doc(self, path, title=None, folder_entry=None,
                         file_ext=None, **kwargs):
     """Upload one file to Google Docs.
-    
+
     Args:
       path: str Path to file to upload.
       title: str (optional) Title to give the upload. Defaults to the filename.
