@@ -621,8 +621,15 @@ def compile_entry_string(wrapped_entry, attribute_list, delimiter,
   # So maybe stdin.encoding is undefined in certain cases?
   encoding = sys.stdout.encoding or sys.stdin.encoding
   if encoding:
-    return_string = return_string.encode(encoding)
+    try:
+      return_string = return_string.encode(encoding)
+    except UnicodeEncodeError, err:
+      LOG.debug(err)
+      LOG.warning(encoding + ' cannot decode part of the result! Escaping '
+                  'unicode')
+      return_string = return_string.encode(encoding, 'backslashreplace')
   return return_string
+
 
 def generate_tag_sets(tags):
   """Generate sets of tags based on a string.
