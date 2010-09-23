@@ -41,7 +41,7 @@ class BaseServiceCL(googlecl.base.BaseCL):
 
   def request_access(self, domain, hostid, scopes=None):
     """Do all the steps involved with getting an OAuth access token.
-    
+
     Keyword arguments:
       domain: Domain to request access for.
               (Sets the hd query parameter for the authorization step).
@@ -49,7 +49,7 @@ class BaseServiceCL(googlecl.base.BaseCL):
               access to. Default None for default scope of service.
     Returns:
       True if access token was succesfully retrieved and set, otherwise False.
-    
+
     """
     import ConfigParser
     import webbrowser

@@ -238,8 +238,8 @@ def load_preferences(path=None):
       LOG.error('Could not create config directory!')
       return False
   if not os.path.exists(path):
-    print 'Did not find config / preferences file at ' + path
-    print '... making new one.'
+    LOG.debug('Did not find config / preferences file at ' + path +
+              '... making new one.')
   else:
     try:
       CONFIG.read(path)
@@ -325,7 +325,7 @@ def remove_access_token(service, user):
       try:
         del token_dict[service.lower()]
       except KeyError:
-        print 'No token for ' + service
+        LOG.debug('No token for ' + service)
       else:
         try:
           pickle.dump(token_dict, token_file)
