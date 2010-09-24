@@ -78,8 +78,9 @@ class BaseServiceCL(googlecl.base.BaseCL):
     except gdata.service.FetchingOAuthRequestTokenFailed, err:
       LOG.error(err[0]['body'].strip() + '; Request token retrieval failed!')
       if str(err).find('Timestamp') != -1:
-        LOG.info('Is your system clock up to date? See the FAQ on our ' +
-                 'wiki: http://code.google.com/p/googlecl/w/list')
+        LOG.info('Is your system clock up to date? See the FAQ on our wiki: '
+                 'http://code.google.com/p/googlecl/wiki/FAQ'
+                 '#Timestamp_too_far_from_current_time')
       return False
     auth_params = {'hd': domain}
     auth_url = self.GenerateOAuthAuthorizationURL(request_token=request_token,
