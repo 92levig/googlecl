@@ -99,8 +99,9 @@ class BaseClientCL(googlecl.base.BaseCL):
     except self.request_error, err:
       LOG.error(err[0]['body'].strip() + '; Request token retrieval failed!')
       if str(err).find('Timestamp') != -1:
-        LOG.info('Is your system clock up to date? See the FAQ on our ' +
-                 'wiki: http://code.google.com/p/googlecl/w/list')
+        LOG.info('Is your system clock up to date? See the FAQ on our wiki: '
+                 'http://code.google.com/p/googlecl/wiki/FAQ'
+                 '#Timestamp_too_far_from_current_time')
       return False
     auth_url = request_token.generate_authorization_url(
                                                       google_apps_domain=domain)
