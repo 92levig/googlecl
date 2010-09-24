@@ -384,6 +384,7 @@ def write_access_token(service, user, token):
   import stat
   token_path = get_data_path(TOKENS_FILENAME_FORMAT % user,
                              create_missing_dir=True)
+  LOG.debug('Writing access token to ' + token_path)
   if os.path.exists(token_path):
     with open(token_path, 'rb') as token_file:
       try:

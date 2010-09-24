@@ -58,6 +58,46 @@ AVAILABLE_SERVICES = ['picasa', 'blogger', 'youtube', 'docs', 'contacts',
 LOG = logging.getLogger(googlecl.LOGGER_NAME)
 
 
+def authenticate(service, client, section_header, options):
+  """Set a (presumably valid) OAuth token for the client to use.
+
+  The OAuth access token is retrieved by doing the following:
+  1) Try to read an access token from file.
+  2) If the token was read, and options."""
+
+  # Only try to set the access token if we're not forced to authenticate.
+  if not options.force_auth:
+    set_token = set_access_token(service, client)
+    if set_token:
+      LOG.debug('Successfully set token')
+      skip_auth = options.skip_auth or \
+                  googlecl.get_config_option(section_header, 'skip_auth',
+                                             default=False, option_type=bool)
+    else:
+      LOG.debug('Failed to set token!')
+      skip_auth = False
+  else:
+    LOG.debug('Forcing retrieval of new token')
+    skip_auth = False
+
+  if options.force_auth or not skip_auth:
+    valid_token = check_access_token(service, client)
+    if not valid_token:
+      valid_token = retrieve_and_set_access_token(service,
+                                                  client,
+                                                  options.hostid)
+    if valid_token:
+      googlecl.set_missing_default(section_header, 'skip_auth',
+                                   True, options.config)
+      return True
+    else:
+      LOG.debug('valid_token evaulates to false,')
+      return False
+  else:
+    # Already set an access token and we're not being forced to authenticate
+    return True
+
+
 def check_access_token(service_name, client):
   """Check that the set access token is valid, remove it if not.
 
@@ -355,9 +395,9 @@ def retrieve_and_set_access_token(service_name, client, hostid):
   domain = get_hd_domain(client.email)
   if client.RequestAccess(domain, hostid):
     authorized_account = client.get_email()
+    # Only write the token if it's for the right user.
     if verify_email(client.email, authorized_account):
-      # Only write the token if it's for the right user
-      # token is client.auth_token for GDClient,
+      # token is saved in client.auth_token for GDClient,
       # client.current_token for GDataService.
       googlecl.write_access_token(service_name,
                                   client.email,
@@ -489,6 +529,20 @@ def run_once(options, args):
   # fill_out_options will read the key from file if necessary, but will not set
   # it since it will always get a non-empty value beforehand.
   fill_out_options(args, section_header, task, options)
+  client.email = options.user
+
+  # Set missing defaults, even if the authentication step later on fails.
+  googlecl.set_missing_default(section_header, 'user',
+                               client.email, options.config)
+  if options.blog:
+    googlecl.set_missing_default(section_header, 'blog',
+                                 options.blog, options.config)
+  if options.devkey:
+    client.developer_key = options.devkey
+    # This may save an invalid dev key -- it's up to the user to specify a
+    # valid dev key eventually.
+    # TODO: It would be nice to make this more efficient.
+    googlecl.write_devkey(options.devkey)
 
   # XXX: Determining the encoding this way is a guess. Seems like we should
   # favor stdin over stdout, but not sure if stdin is always defined.
@@ -502,40 +556,13 @@ def run_once(options, args):
       args = [string.decode(encoding) for string in args]
   else:
     LOG.debug('No encoding defined!')
-  client.email = options.user
 
-  set_token = set_access_token(service, client)
-  if set_token:
-    skip_auth = options.skip_auth or googlecl.get_config_option(section_header,
-                                                               'skip_auth',
-                                                               default=False,
-                                                               option_type=bool)
+  authenticated = authenticate(service, client, section_header, options)
+
+  if authenticated:
+    task.run(client, options, args)
   else:
-    skip_auth = False
-  if options.force_auth or not skip_auth:
-    LOG.debug('options.force_auth: ' + str(options.force_auth))
-    LOG.debug('set_token: ' + str(set_token))
-    LOG.debug('skip_auth: ' + str(skip_auth))
-    valid_token = check_access_token(service, client)
-    if not valid_token:
-      valid_token = retrieve_and_set_access_token(service,
-                                                  client,
-                                                  options.hostid)
-    if valid_token:
-      googlecl.set_missing_default(section_header, 'skip_auth',
-                                   True, options.config)
-  googlecl.set_missing_default(section_header, 'user',
-                               client.email, options.config)
-  if options.blog:
-    googlecl.set_missing_default(section_header, 'blog',
-                                 options.blog, options.config)
-  if options.devkey:
-    client.developer_key = options.devkey
-    # This may save an invalid dev key -- it's up to the user to specify a
-    # valid dev key eventually.
-    # TODO: It would be nice to make this more efficient.
-    googlecl.write_devkey(options.devkey)
-  task.run(client, options, args)
+    LOG.debug('Authentication failed, exiting run_once')
 
 
 def set_access_token(service_name, client):
