@@ -97,7 +97,7 @@ class BaseClientCL(googlecl.base.BaseCL):
                                            consumer_secret='anonymous',
                                            url=url)
     except self.request_error, err:
-      LOG.error(err[0]['body'].strip() + '; Request token retrieval failed!')
+      LOG.error(err)
       if str(err).find('Timestamp') != -1:
         LOG.info('Is your system clock up to date? See the FAQ on our wiki: '
                  'http://code.google.com/p/googlecl/wiki/FAQ'
