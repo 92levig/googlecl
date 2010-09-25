@@ -190,12 +190,12 @@ class BloggerEntryToStringWrapper(googlecl.base.BaseEntryToStringWrapper):
 #===============================================================================
 def _run_post(client, options, args):
   max_size = 500000
-  if not args:
+  if not options.src:
     LOG.error('Must provide paths to files and/or string content to post')
     return
   if not options.blog:
     options.blog = googlecl.get_config_option(SECTION_HEADER, 'blog')
-  for content_string in args:
+  for content_string in options.src:
     if os.path.exists(content_string):
       with open(content_string, 'r') as content_file:
         content = content_file.read(max_size)
@@ -263,8 +263,9 @@ TASKS = {'delete': googlecl.base.Task('Delete a post.', callback=_run_delete,
                                       required=['title'],
                                       optional='blog'),
          'post': googlecl.base.Task('Post content.', callback=_run_post,
-                                    optional=['blog', 'title', 'tags', 'draft'],
-                                    args_desc='PATH_TO_CONTENT or CONTENT'),
+                                    required='src',
+                                    optional=['blog', 'title', 'tags',
+                                              'draft']),
          'list': googlecl.base.Task('List posts in a blog',
                                     callback=_run_list,
                                     required=['fields', 'delimiter'],

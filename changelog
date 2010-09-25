@@ -1,4 +1,8 @@
 version 0.9.11
+ Enhancements
+ * Added --src and --dest options to allow specifying data sources and download destinations respectively.
+ * Enabled fully positional command line arguments (e.g. "google docs get my_doc .")
+
  Bugfixes
  * (more certainly) enabled unicode support
  * Create missing intermediate folders when saving config file and/or data files.

@@ -444,7 +444,7 @@ def parse_recurrence(time_string):
   return (start_time, end_time, freq)
 
 
-def _list(client, options, args, date):
+def _list(client, options, date):
   cal_user_list = client.get_calendar_user_list(options.cal)
   if not cal_user_list:
     LOG.error('No calendar matches "' + options.cal + '"')
@@ -482,12 +482,12 @@ def _run_list(client, options, args):
                                                  as_range=True))
   else:
     date = googlecl.calendar.Date(options.date)
-  _list(client, options, args, date)
+  _list(client, options,  date)
 
 
 def _run_list_today(client, options, args):
   date = googlecl.calendar.Date(get_date_today(include_hour=False))
-  _list(client, options, args, date)
+  _list(client, options, date)
 
 
 def _run_add(client, options, args):
@@ -497,7 +497,7 @@ def _run_add(client, options, args):
     return
   minutes = convert_reminder_string(options.reminder)
   for cal in cal_user_list:
-    results = client.quick_add_event(args, cal.user)
+    results = client.quick_add_event(options.src, cal.user)
     if LOG.isEnabledFor(logging.DEBUG):
       for entry in results:
         LOG.debug('ID: %s, status: %s, reason: %s',
@@ -546,8 +546,8 @@ TASKS = {'list': googlecl.base.Task('List events on a calendar',
                                      optional=['title', 'query', 'cal']),
          'add': googlecl.base.Task('Add event to a calendar',
                                    callback=_run_add,
-                                   optional='cal',
-                                   args_desc='QUICK_ADD_TEXT'),
+                                   required='src',
+                                   optional='cal'),
          'delete': googlecl.base.Task('Delete event from a calendar',
                                       callback=_run_delete,
                                       required=[['title', 'query']],

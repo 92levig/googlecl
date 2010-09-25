@@ -107,6 +107,8 @@ class YouTubeServiceCL(YouTubeService, googlecl.service.BaseServiceCL):
 
     """
     from gdata.media import Group, Title, Description, Keywords
+    if isinstance(paths, basestring):
+      paths = [paths]
     for path in paths:
       filename = os.path.basename(path).split('.')[0]
       my_media_group = Group(title=Title(text=title or filename),
@@ -214,10 +216,7 @@ def _run_list(client, options, args):
 
 
 def _run_post(client, options, args):
-  if not args:
-    LOG.error('Must provide path to video to post!')
-    return
-  client.PostVideos(args, title=options.title, desc=options.summary,
+  client.PostVideos(options.src, title=options.title, desc=options.summary,
                     tags=options.tags, category=options.category)
 
 
@@ -236,9 +235,8 @@ def _run_delete(client, options, args):
 
 
 TASKS = {'post': googlecl.base.Task('Post a video.', callback=_run_post,
-                                    required=['category', 'devkey'],
-                                    optional=['title', 'summary', 'tags'],
-                                    args_desc='PATH_TO_VIDEO'),
+                                    required=['src', 'category', 'devkey'],
+                                    optional=['title', 'summary', 'tags']),
          'list': googlecl.base.Task('List videos by user.',
                                     callback=_run_list,
                                     required=['fields', 'delimiter'],

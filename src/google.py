@@ -219,9 +219,13 @@ def fill_out_options(args, service_header, task, options):
 
   If there are any required fields missing for a task, fill them in.
   This is attempted by checking the following sources, in order:
-  1) The arguments list given to this function.
-  2) The service_header section of the preferences file.
+  1) The service_header section of the preferences file.
+  2) The arguments list given to this function.
   3) Prompting the user.
+
+  Note that 'user' and 'hostid' are special options -- they are always
+  required, and they will skip step (2) when checking sources as mentioned
+  above.
 
   Keyword arguments:
     args: list Arguments that may be options.
@@ -251,10 +255,13 @@ def fill_out_options(args, service_header, task, options):
   LOG.debug('missing_reqs: ' + str(missing_reqs))
 
   for attr in missing_reqs:
-    if args:
-      setattr(options, attr, args.pop(0))
-    else:
-      setattr(options, attr, _retrieve_value(attr, service_header))
+    value = googlecl.get_config_option(service_header, attr)
+    if not value:
+      if args:
+        value = args.pop(0)
+      else:
+        value = raw_input('Please specify ' + attr + ': ')
+    setattr(options, attr, value)
 
   # Expand those options that might be a filename in disguise.
   max_file_size = 500000    # Value picked arbitrarily - no idea what the max
@@ -557,9 +564,25 @@ def run_once(options, args):
   else:
     LOG.debug('No encoding defined!')
 
+  # Take a gander at the options filled in.
+  if LOG.getEffectiveLevel() == logging.DEBUG:
+    import inspect
+    for attr_name in dir(options):
+      if not attr_name.startswith('_'):
+        attr = getattr(options, attr_name)
+        if attr is not None and not inspect.ismethod(attr):
+          LOG.debug('Option ' + attr_name + ': ' + str(attr))
+
   authenticated = authenticate(service, client, section_header, options)
 
   if authenticated:
+    LOG.warning('Just implemented options.src and options.out, which CANNOT'
+                ' take globbed expressions or multiple strings! Bear with me.')
+    LOG.warning('(That is what you get for being so bleeding edge.)')
+    if options.src:
+      options.src = [options.src]
+    else:
+      options.src = []
     task.run(client, options, args)
   else:
     LOG.debug('Authentication failed, exiting run_once')
@@ -624,11 +647,30 @@ def setup_parser():
   #  -i ../man/examples.help2man  ./google > google.1'
   # then 'man ./google.1' and make sure the generated manpage still looks
   # reasonable.  Then save it to man/google.1
-  usage = 'Usage: %prog ' + available_services + ' TASK [options]\n' +\
-          '\n' +\
-          'This program provides command-line access to (some) google ' +\
-          'services via their gdata APIs.\n' +\
-          'Called without a service name, it starts an interactive session.\n\n'
+  usage = ('Usage: %prog ' + available_services + ' TASK [options]\n'
+           '\n'
+           'This program provides command-line access to\n'
+           '(some) google services via their gdata APIs.\n'
+           'Called without a service name, it starts an interactive session.\n'
+           '\n'
+           'NOTE: GoogleCL will interpret arguments as required options in the\n'
+           'order they appear in the descriptions below, excluding options\n'
+           'set in the configuration file and non-primary terms in '
+           'parenthesized\n'
+           'OR groups. For example:\n'
+           '\n'
+           '\t$ google picasa get my_album .\n'
+           'is interpreted as "google picasa get --title=my_album --dest=.\n'
+           '\n'
+           '\t$ google contacts list john\n'
+           'is interpreted as "$ google contacts list '
+           '--fields=<config file def> --title=john --delimiter=,"\n'
+           '(only true if you have not removed the default definition in the '
+           'config file!)\n'
+           '\n'
+           '\t$ google docs get my_doc .\n'
+           'is interpreted as "$ google docs get --title=my_doc --dest=.\n'
+           '(folder is NOT set, since the title option is satisfied first.)\n\n')
 
   # XXX: If we're going to bother doing an __import__ of all the modules, we
   # might as well reuse the one the user actually wants to use.
@@ -667,6 +709,9 @@ def setup_parser():
                     help=('Enable all debugging output, including HTTP data'))
   parser.add_option('--delimiter', dest='delimiter', default=',',
                     help='Specify a delimiter for the output of the list task.')
+  parser.add_option('--dest', dest='dest',
+                    help=('Destination. Typically, where to save data being'
+                          ' downloaded.'))
   parser.add_option('--draft', dest='draft',
                     action='store_true',
                     help='Blogger only - post as a draft')
@@ -707,6 +752,8 @@ def setup_parser():
   parser.add_option('--skip-auth', dest='skip_auth',
                     action='store_true',
                     help='Skip validation step for re-used access tokens.')
+  parser.add_option('--src', dest='src',
+                    help='Source. Typically files to upload.')
   parser.add_option('-s', '--summary', dest='summary',
                     help=('Description of the upload, ' +
                           'or file containing the description.'))

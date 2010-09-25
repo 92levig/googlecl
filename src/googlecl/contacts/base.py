@@ -188,8 +188,6 @@ class ContactsEntryToStringWrapper(googlecl.base.BaseEntryToStringWrapper):
 #        required
 #===============================================================================
 def _run_list(client, options, args):
-  # XXX: see issue 89, use --fields instead of args, use args instead of --title
-  # but support --title for backward compatibility, as in _run_delete
   entries = client.GetContacts(options.title)
   for entry in entries:
     print googlecl.base.compile_entry_string(
@@ -199,43 +197,37 @@ def _run_list(client, options, args):
 
 
 def _run_add(client, options, args):
-  for contact in args:
+  for contact in options.src:
     client.add_contact_string(contact)
 
 
 def _run_delete(client, options, args):
-  # 'title' is a required option, so append it to the rest of the
-  # arguments (which potentially holds other titles to operate on)
-  args.append(options.title)
-  for name in args:
+  # XXX: This will change soon, but for right now, only accept the title
+  # (of which there can only be one. That's the part that will change)
+  for name in [options.title]:
     entries = client.GetContacts(name)
     client.DeleteEntryList(entries, 'contact',
                   googlecl.CONFIG.getboolean('GENERAL', 'delete_by_default'))
 
 
 def _run_add_groups(client, options, args):
-  # 'title' is a required option, so append it to the rest of the
-  # arguments (which potentially holds other titles to operate on)
-  args.append(options.title)
-  for group in args:
+  # XXX: This will change soon, but for right now, only accept the title
+  # (of which there can only be one. That's the part that will change)
+  for group in [options.title]:
     client.AddGroup(group)
 
 
 def _run_delete_groups(client, options, args):
-  # 'title' is a required option, so append it to the rest of the
-  # arguments (which potentially holds other titles to operate on)
-  args.append(options.title)
-  for group in args:
+  # XXX: This will change soon, but for right now, only accept the title
+  # (of which there can only be one. That's the part that will change)
+  for group in [options.title]:
     entries = client.GetGroups(group)
     client.DeleteEntryList(entries, 'group',
                   googlecl.CONFIG.getboolean('GENERAL', 'delete_by_default'))
 
 
 def _run_list_groups(client, options, args):
-  if len(args) == 0:
-    args.append(options.title)
-
-  for group in args:
+  for group in [options.title]:
     entries = client.GetGroups(group)
     for entry in entries:
       print googlecl.base.compile_entry_string(
@@ -245,22 +237,17 @@ def _run_list_groups(client, options, args):
 
 
 TASKS = {'list': googlecl.base.Task('List contacts', callback=_run_list,
-                                    required=['fields', 'delimiter'],
-                                    optional=['title']),
+                                    required=['fields', 'title', 'delimiter']),
          'add': googlecl.base.Task('Add contacts', callback=_run_add,
-                                 args_desc='"name,email" pair or CSV filename'),
+                                   required='src'),
          'delete': googlecl.base.Task('Delete contacts', callback=_run_delete,
-                                      required='title',
-                          args_desc='Additional names of contact(s) to delete'),
+                                      required='title'),
          'add-groups': googlecl.base.Task('Add contact group(s)',
                                           callback=_run_add_groups,
-                                          required='title',
-                                          args_desc='Additional group name(s)'),
+                                          required='title'),
          'delete-groups': googlecl.base.Task('Delete contact group(s)',
                                              callback=_run_delete_groups,
-                                             required='title',
-                            args_desc='Additional names of group(s) to delete'),
+                                             required='title'),
          'list-groups': googlecl.base.Task('List contact groups',
                                            callback=_run_list_groups,
-                                           optional='title',
-                               args_desc='Additional titles of groups to list')}
+                                           required='title')}

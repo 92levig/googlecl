@@ -324,12 +324,14 @@ def _run_create(client, options, args):
       # Timestamp needs to be in milliseconds after the epoch
       options.date = '%i' % (timestamp * 1000)
 
+  # XXX: Allow/implement --access flag (stupid easy, do it!)
   album = client.InsertAlbum(title=options.title, summary=options.summary,
                              access=googlecl.CONFIG.get(SECTION_HEADER,
                                                         'access'),
                              timestamp=options.date)
-  if args:
-    client.InsertMediaList(album, media_list=args, tags=options.tags)
+  if options.src or args:
+    client.InsertMediaList(album, media_list=options.src or args,
+                           tags=options.tags)
 
 
 def _run_delete(client, options, args):
@@ -373,24 +375,22 @@ def _run_list_albums(client, options, args):
 
 
 def _run_post(client, options, args):
-  if not args:
+  if not options.src:
     LOG.error('Must provide photos to post!')
-    return
   album = client.GetSingleAlbum(user=options.owner or options.user,
                                 title=options.title)
   if album:
-    client.InsertMediaList(album, args, tags=options.tags,
+    client.InsertMediaList(album, options.src, tags=options.tags,
                            user=options.owner or options.user)
   else:
     LOG.error('No albums found that match ' + options.title)
 
 
 def _run_get(client, options, args):
-  if not args:
+  if not options.dest:
     LOG.error('Must provide destination of album(s)!')
     return
-  base_path = args[0]
-  client.DownloadAlbum(base_path,
+  client.DownloadAlbum(options.dest,
                        user=options.owner or options.user,
                        video_format=options.format or 'mp4',
                        title=options.title)
@@ -410,13 +410,12 @@ def _run_tag(client, options, args):
 TASKS = {'create': googlecl.base.Task('Create an album',
                                       callback=_run_create,
                                       required='title',
-                                      optional=['date', 'summary', 'tags'],
-                                      args_desc='PATH_TO_PHOTOS'),
+                                      optional=['src', 'date',
+                                                'summary', 'tags']),
          'post': googlecl.base.Task('Post photos to an album',
                                     callback=_run_post,
-                                    required='title',
-                                    optional=['tags', 'owner'],
-                                    args_desc='PATH_TO_PHOTOS'),
+                                    required=['title', 'src'],
+                                    optional=['tags', 'owner']),
          'delete': googlecl.base.Task('Delete photos or albums',
                                       callback=_run_delete,
                                       required=[['title', 'query']]),
@@ -428,8 +427,8 @@ TASKS = {'create': googlecl.base.Task('Create an album',
                                            required=['fields', 'delimiter'],
                                            optional=['title', 'owner']),
          'get': googlecl.base.Task('Download albums', callback=_run_get,
-                                   optional=['title', 'owner', 'format'],
-                                   args_desc='LOCATION'),
+                                   required=['title', 'dest'],
+                                   optional=['owner', 'format']),
          'tag': googlecl.base.Task('Tag photos', callback=_run_tag,
                                    required=[['title', 'query'], 'tags'],
                                    optional='owner')}

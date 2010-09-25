@@ -1,11 +1,13 @@
-This document is a quick-guide on getting up to speed with the new version of GoogleCL. 
+This document is a quick-guide on getting up to speed with the new version of GoogleCL.
 
 version 0.9.11
   * --force-auth and --skip-auth will let you specify if GoogleCL should verify the oauth access token it has on file for the service being used. After the first valid access token retrieved, --skip-auth is set in your config file as True. You can set this value to False to force a validation step on every run. The validation step is an authenticated request to Google to retrieve a small amount of data -- removing this step can yield a significant decrease in execution time for slow connections.
   * 'list_fields' has been shortened to 'fields' in the config file, and the --fields option is introduced. Thanks to the "read required options from the argument list" ability also introduced in this version, your old scripts should be alright without specifying --fields. You can also change the XXX_fields entries in the config file to just fields.
+  * --src and --dest options were added. Conceptually, --src indicates data being transmitted to Google and --dest is where you want to put data received from Google. They mostly replaced command line arguments that were flapping in the wind (i.e. not associated with a command line option, and had an "arguments description" in the --help output).This seems like a pain in the neck, but read the next point where we introduce...
+  * Positional autofill for command line arguments! Read the --help output or man page, but in a nutshell, GoogleCL will figure out what argument corresponds to which option based on the order of the arguments and what the configuration file has specified. You should notice significantly less wear and tear on your hyphen key.
 
 version 0.9.10
-	* List "styles" have been renamed to list "fields". If you have a custom list_style entry in your config file, rename it to list_fields to make it work again.
-	* v2 and v3 support for gdata for the average user means that you can now see and download non-converted files that you've uploaded through the web interface, and list more details about your contacts. See the README section on the list task.
+  * List "styles" have been renamed to list "fields". If you have a custom list_style entry in your config file, rename it to list_fields to make it work again.
+  * v2 and v3 support for gdata for the average user means that you can now see and download non-converted files that you've uploaded through the web interface, and list more details about your contacts. See the README section on the list task.
   * Config file option force_gdata_v1 lets you use the older versions in the library written for Docs and Contacts. The primary purpose of this option is to avoid copying and pasting a verification code from the browser into GoogleCL. It means that you won't benefit from any v2 / v3 upgrades to GoogleCL like the ones mentioned before.
-  * Started following the XDG Base Directory Specification (http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html). GoogleCL will still look for config files and access tokens in the old directory (~/.googlecl), but may not in the future. 
+  * Started following the XDG Base Directory Specification (http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html). GoogleCL will still look for config files and access tokens in the old directory (~/.googlecl), but may not in the future.

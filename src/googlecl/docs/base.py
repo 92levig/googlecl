@@ -182,7 +182,8 @@ class DocsBaseCL(object):
     """
     if not os.path.isdir(base_path):
       if len(entries) > 1:
-        raise DocsError('Target "' + base_path + '" is not a directory')
+        raise DocsError('Specified multiple source files, but destination "' +
+                        base_path + '" is not a directory')
       format_from_filename = googlecl.get_extension_from_path(base_path)
       if format_from_filename:
         # Strip the extension off here if it exists. Don't want to double up
@@ -458,14 +459,10 @@ def _run_get(client, options, args):
     LOG.error('Downloading documents is not supported for' +
               ' gdata-python-client < 2.0')
     return
-  if not args:
-    path = os.getcwd()
-  else:
-    path = args[0]
   folder_entries = client.get_folder(options.folder)
   entries = client.get_doclist(options.title, folder_entries)
   try:
-    client.get_docs(path, entries, file_ext=options.format)
+    client.get_docs(options.dest, entries, file_ext=options.format)
   except DocsError, err:
     LOG.error(err)
 
@@ -481,12 +478,10 @@ def _run_list(client, options, args):
 
 
 def _run_upload(client, options, args):
-  if not args:
-    LOG.error('Need to tell me what to upload!')
-    return
   folder_entries = client.get_folder(options.folder)
   folder_entry = client.get_single_entry(folder_entries)
-  client.upload_docs(args, title=options.title, folder_entry=folder_entry,
+  client.upload_docs(options.src, title=options.title,
+                     folder_entry=folder_entry,
                      file_ext=options.format, convert=options.convert)
 
 
@@ -534,15 +529,14 @@ def _run_delete(client, options, args):
 
 TASKS = {'upload': googlecl.base.Task('Upload a document',
                                       callback=_run_upload,
-                                      optional=['title', 'folder', 'format'],
-                                      args_desc='PATH_TO_FILE'),
+                                      required='src',
+                                      optional=['title', 'folder', 'format']),
          'edit': googlecl.base.Task('Edit a document', callback=_run_edit,
                                     required=['title'],
                                     optional=['format', 'editor', 'folder']),
          'get': googlecl.base.Task('Download a document', callback=_run_get,
-                                   required=[['title', 'folder']],
-                                   optional='format',
-                                   args_desc='LOCATION'),
+                                   required=[['title', 'folder'], 'dest'],
+                                   optional='format'),
          'list': googlecl.base.Task('List documents', callback=_run_list,
                                     required=['fields', 'delimiter'],
                                     optional=['title', 'folder']),
