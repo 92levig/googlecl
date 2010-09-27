@@ -321,7 +321,9 @@ def remove_access_token(service, user):
       except ImportError, err:
         LOG.error(err)
         LOG.info('You probably have been using different versions of gdata.')
-        failed_file = True
+        _move_failed_token_file(token_path)
+        return False
+
       try:
         del token_dict[service.lower()]
       except KeyError:
@@ -334,11 +336,9 @@ def remove_access_token(service, user):
           # on Windows XP with Python 2.5.
           LOG.error(err)
           if err.errno == 0:
-            file_invalid = True
+            _move_failed_token_file(token_path)
         else:
           success = True
-    if file_invalid:
-      _move_failed_token_file(token_path)
   return success
 
 
