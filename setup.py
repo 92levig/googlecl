@@ -16,6 +16,8 @@ try:
   from setuptools import setup
 except ImportError:
   from distutils.core import setup
+import os
+import shutil
 packages =['googlecl',
            'googlecl.blogger',
            'googlecl.calendar',
@@ -23,12 +25,43 @@ packages =['googlecl',
            'googlecl.docs',
            'googlecl.picasa',
            'googlecl.youtube']
- 
+SCRIPT_TO_INSTALL = 'src/google'
+SCRIPT_TO_RENAME = 'src/google.py'
+
+
+# Following two if blocks safely move src/google.py to src/google
+if not os.path.exists(SCRIPT_TO_RENAME):
+  print SCRIPT_TO_RENAME + ' does not exist!'
+  exit(-1)
+
+if os.path.exists(SCRIPT_TO_INSTALL):
+  # Read size is 128*20 for no good reason.
+  # Just want to avoid reading in the whole file, and read in a multiple of 128.
+  # Shamelessly stole this function from googlecl/docs/base.py
+  def _md5_hash_file(path, read_size=2560):
+    """Return a binary md5 checksum of file at path."""
+    import hashlib
+    hash_function = hashlib.md5()
+    with open(path, 'r') as my_file:
+      data = my_file.read(read_size)
+      while data:
+        hash_function.update(data)
+        data = my_file.read(read_size)
+    return hash_function.digest()
+  if not _md5_hash_file(SCRIPT_TO_INSTALL) == _md5_hash_file(SCRIPT_TO_RENAME):
+    print SCRIPT_TO_INSTALL + ' exists and is not the same as ' +\
+          SCRIPT_TO_RENAME
+    print 'Not trusting ' + SCRIPT_TO_INSTALL
+    print 'Please update it or remove it.'
+    exit(-1)
+else:
+  shutil.copy(SCRIPT_TO_RENAME, SCRIPT_TO_INSTALL)
+
+
 long_desc = """The Google Data APIs allow programmatic access to
 various Google services.  This package wraps a subset of those APIs into a
 command-line tool that makes it easy to do things like posting to a Blogger
 blog, uploading files to Picasa, or editing a Google Docs file."""
-
 
 setup(name="googlecl",
       version="0.9.10",
@@ -39,7 +72,7 @@ setup(name="googlecl",
       license="Apache Software License",
       packages=packages,
       package_dir={'googlecl':'src/googlecl'},
-      scripts=["src/google"],
+      scripts=[SCRIPT_TO_INSTALL],
       install_requires=['gdata >=1.2.4'],
       long_description=long_desc,
       classifiers=[
