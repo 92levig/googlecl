@@ -51,6 +51,11 @@ import urllib
 import sys
 import googlecl
 
+# Renamed here to reduce verbosity in other sections
+safe_encode = googlecl.safe_encode
+safe_decode = googlecl.safe_decode
+
+
 VERSION = '0.9.10'
 
 AVAILABLE_SERVICES = ['picasa', 'blogger', 'youtube', 'docs', 'contacts',
@@ -551,18 +556,12 @@ def run_once(options, args):
     # TODO: It would be nice to make this more efficient.
     googlecl.write_devkey(options.devkey)
 
-  # XXX: Determining the encoding this way is a guess. Seems like we should
-  # favor stdin over stdout, but not sure if stdin is always defined.
-  encoding = sys.stdin.encoding or sys.stdout.encoding
-  if encoding:
-    for attr_name in dir(options):
-      attr = getattr(options, attr_name)
-      if not attr_name.startswith('_') and isinstance(attr, str):
-        setattr(options, attr_name, attr.decode(encoding))
-    if args:
-      args = [string.decode(encoding) for string in args]
-  else:
-    LOG.debug('No encoding defined!')
+  for attr_name in dir(options):
+    attr = getattr(options, attr_name)
+    if not attr_name.startswith('_') and isinstance(attr, str):
+      setattr(options, attr_name, safe_decode(attr, googlecl.TERMINAL_ENCODING))
+  if args:
+    args = [safe_decode(string, googlecl.TERMINAL_ENCODING) for string in args]
 
   # Take a gander at the options filled in.
   if LOG.getEffectiveLevel() == logging.DEBUG:
@@ -571,7 +570,7 @@ def run_once(options, args):
       if not attr_name.startswith('_'):
         attr = getattr(options, attr_name)
         if attr is not None and not inspect.ismethod(attr):
-          LOG.debug('Option ' + attr_name + ': ' + str(attr))
+          LOG.debug(safe_encode('Option ' + attr_name + ': ' + unicode(attr)))
 
   authenticated = authenticate(service, client, section_header, options)
 

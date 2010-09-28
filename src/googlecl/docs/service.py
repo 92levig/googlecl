@@ -39,6 +39,10 @@ import googlecl.service
 from googlecl.docs import SECTION_HEADER
 import googlecl.docs.base
 
+# Renamed here to reduce verbosity in other sections
+safe_encode = googlecl.safe_encode
+safe_decode = googlecl.safe_decode
+
 
 LOG = logging.getLogger(googlecl.docs.LOGGER_NAME + '.service')
 
@@ -307,7 +311,7 @@ class DocsServiceCL(gdata.docs.service.DocsService,
     else:
       title_from_filename = lambda fname: fname.rstrip('.' + extension)
 
-    LOG.info('Loading ' + path)
+    LOG.info(safe_encode('Loading ' + safe_decode(path)))
     try:
       media = gdata.MediaSource(file_path=path, content_type=content_type)
     except IOError, err:

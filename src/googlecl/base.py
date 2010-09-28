@@ -1,6 +1,26 @@
+# Copyright (C) 2010 Google Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+"""Basic abilities that all GoogleCL clients have."""
 import googlecl
 import logging
 import re
+
+# Renamed here to reduce verbosity in other sections
+safe_encode = googlecl.safe_encode
+safe_decode = googlecl.safe_decode
 
 DATE_FORMAT = '%Y-%m-%d'
 LOG = logging.getLogger(googlecl.LOGGER_NAME)
@@ -74,7 +94,7 @@ class BaseCL(object):
     for item in entries:
       if self.prompt_for_delete:
         delete_str = raw_input('Are you SURE you want to delete %s "%s"? %s: ' %
-                               (entry_type, item.title.text, prompt_str))
+                      (entry_type, safe_decode(item.title.text), prompt_str))
         if not delete_str:
           delete = delete_default
         else:
@@ -197,18 +217,19 @@ class BaseCL(object):
       LOG.debug('Retrieved ' + str(len(all_entries)) +
                 ' entries, returning them all')
       return all_entries
+
     if self.use_regex:
       try:
         entries = [entry for entry in all_entries
                    if entry.title.text and
-                   re.match(title,entry.title.text.decode('utf-8'))]
+                   re.match(title,safe_decode(entry.title.text))]
       except re.error, err:
         LOG.error('Regular expression error: ' + str(err) + '!')
         LOG.debug('regex provided: ' + title)
-        return []
+        entries = []
     else:
       entries = [entry for entry in all_entries if title ==
-                 entry.title.text.decode('utf-8')]
+                 safe_decode(entry.title.text)]
     LOG.debug('Retrieved ' + str(len(all_entries)) +
               ' entries, returning ' + str(len(entries)) + ' of them')
     return entries
@@ -252,7 +273,7 @@ class BaseCL(object):
     elif len(entries) > 1:
       print 'More than one match for title ' + (title or '')
       for num, entry in enumerate(entries):
-        print '%i) %s' % (num, entry.title.text)
+        print '%i) %s' % (num, safe_decode(entry.title.text))
       selection = -1
       while selection < 0 or selection > len(entries)-1:
         selection = int(raw_input('Please select one of the items by number: '))
@@ -603,8 +624,7 @@ def compile_entry_string(wrapped_entry, attribute_list, delimiter,
         val = missing_field_value
     # Apparently, atom(?) doesn't always return a Unicode type when there are
     # non-latin characters, so force everything to Unicode.
-    if type(val) != unicode:
-      val = val.decode('utf-8')
+    val = safe_decode(val)
     # Ensure the delimiter won't appear in a non-delineation role,
     # but let it slide if the raw xml is being dumped
     if attr != 'xml':
@@ -616,18 +636,8 @@ def compile_entry_string(wrapped_entry, attribute_list, delimiter,
       return_string = return_string.replace('\n', newline_replacer)
 
   return_string = return_string.rstrip(delimiter)
-  # XXX: Determining the encoding this way is a guess. Seems like we should
-  # favor stdout over stdin, but it's not always defined.
-  # So maybe stdin.encoding is undefined in certain cases?
-  encoding = sys.stdout.encoding or sys.stdin.encoding
-  if encoding:
-    try:
-      return_string = return_string.encode(encoding)
-    except UnicodeEncodeError, err:
-      LOG.debug(err)
-      LOG.warning(encoding + ' cannot decode part of the result! Escaping '
-                  'unicode')
-      return_string = return_string.encode(encoding, 'backslashreplace')
+  return_string = return_string.encode(googlecl.TERMINAL_ENCODING,
+                                       'backslashreplace')
   return return_string
 
 

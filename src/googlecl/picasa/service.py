@@ -29,6 +29,10 @@ from googlecl.picasa import SECTION_HEADER
 from gdata.photos.service import PhotosService, GooglePhotosException
 import gdata.photos
 
+# Shortening the names of these guys.
+safe_encode = googlecl.safe_encode
+safe_decode = googlecl.safe_decode
+
 LOG = logging.getLogger(googlecl.picasa.LOGGER_NAME)
 SUPPORTED_VIDEO_TYPES = {'wmv': 'video/x-ms-wmv',
                          'avi': 'video/avi',
@@ -159,7 +163,7 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
       LOG.info('Downloading videos as ' + video_format)
 
     for album in entries:
-      album_path = os.path.join(base_path, album.title.text)
+      album_path = os.path.join(base_path, safe_decode(album.title.text))
       album_concat = 1
       if os.path.exists(album_path):
         base_album_path = album_path
@@ -173,7 +177,8 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
 
       for photo_or_video in photo_feed.entry:
         #TODO: Test on Windows (upload from one OS, download from another)
-        photo_or_video_name = photo_or_video.title.text.split(os.extsep)[0]
+        photo_or_video_name = safe_decode(photo_or_video.title.text)
+        photo_or_video_name = photo_or_video_name.split(os.extsep)[0]
         url, extension = _get_download_info(photo_or_video, video_format)
         path = os.path.join(album_path,
                             photo_or_video_name + os.extsep + extension)
@@ -184,7 +189,8 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
           while os.path.exists(path):
             path = base_path + '-%i' % photo_concat
             photo_concat += 1
-        LOG.info('Downloading %s to %s' % (photo_or_video.title.text, path))
+        LOG.info(safe_encode('Downloading %s to %s' %
+                             (safe_decode(photo_or_video.title.text), path)))
         urllib.urlretrieve(url, path)
 
   DownloadAlbum = download_album
@@ -230,7 +236,9 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
     for path in media_list:
       if not tags and self.prompt_for_tags:
         keywords = raw_input('Enter tags for photo %s: ' % path)
-      LOG.info('Loading file ' + path + ' to album ' + album.title.text)
+      LOG.info(safe_encode('Loading file ' + path + ' to album ' +
+                           safe_decode(album.title.text)))
+
       ext = googlecl.get_extension_from_path(path)
       if not ext:
         LOG.debug('No extension match on path ' + path)

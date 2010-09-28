@@ -36,6 +36,10 @@ import shutil
 import googlecl
 from googlecl.docs import SECTION_HEADER
 
+# Renamed here to reduce verbosity in other sections
+safe_encode = googlecl.safe_encode
+safe_decode = googlecl.safe_decode
+
 
 LOG = logging.getLogger(googlecl.docs.LOGGER_NAME + '.base')
 
@@ -105,7 +109,7 @@ class DocsBaseCL(object):
     import tempfile
 
     try:
-      doc_title = doc_entry_or_title.title.text
+      doc_title = safe_decode(doc_entry_or_title.title.text)
       new_doc = False
     except AttributeError:
       doc_title = doc_entry_or_title
@@ -156,7 +160,8 @@ class DocsBaseCL(object):
       except self.request_error, err:
         LOG.error(err)
         new_path = safe_move(path, '.')
-        LOG.info('Moved edited document to ' + new_path)
+        LOG.info(safe_encode('Moved edited document to ' +
+                             safe_decode(new_path)))
 
     try:
       # Good faith effort to keep the temp directory clean.
@@ -214,18 +219,20 @@ class DocsBaseCL(object):
           # in their name / title.
           extension = ''
 
+      entry_title = safe_decode(entry.title.text)
       if os.path.isdir(base_path):
-        path = os.path.join(base_path, entry.title.text + extension)
+        path = os.path.join(base_path, entry_title + extension)
       else:
         path = base_path + extension
-      LOG.info('Downloading ' + entry.title.text + ' to ' + path)
+      LOG.info(safe_encode('Downloading ' + entry_title + ' to ' + path))
       try:
         if can_export(entry):
           self.Export(entry, path)
         else:
           self.Download(entry, path)
       except self.request_error, err:
-        LOG.error('Download of ' + entry.title.text + ' failed: ' + str(err))
+        LOG.error(safe_encode('Download of ' + entry_title + ' failed: ' + 
+                              unicode(err)))
       except IOError, err:
         LOG.error(err)
         LOG.info('Does your destination filename contain invalid characters?')

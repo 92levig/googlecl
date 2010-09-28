@@ -34,6 +34,46 @@ LOGGER_NAME = 'googlecl'
 LOG = logging.getLogger(LOGGER_NAME)
 
 
+def determine_terminal_encoding():
+  import sys
+  in_enc = ''
+  out_enc = ''
+  if sys.stdin.encoding:
+    in_enc = sys.stdin.encoding
+  if sys.stdout.encoding:
+    out_enc = sys.stdout.encoding
+
+  # Sometimes these are both defined, and hopefully they are both equal.
+  # I'm not sure if they are guaranteed to be equal.
+  if in_enc.lower() == out_enc.lower():
+    # If they're not defined, return the python system-wide default encoding
+    if not in_enc:
+      return_enc = sys.getdefaultencoding()
+    else:
+      return_enc = in_enc
+  # If they are not equal, at least one of them must be defined.
+  else:
+    # Both defined, but are not the same
+    if in_enc and out_enc:
+      LOG.warning('HEY! You have a different encoding for input and output')
+      LOG.warning('Input: ' + in_enc)
+      LOG.warning('Output: ' + in_enc)
+    return_enc = out_enc or in_enc
+  LOG.debug('determine_terminal_encoding(): ' + return_enc)
+  return return_enc
+
+
+TERMINAL_ENCODING = determine_terminal_encoding()
+
+
+class SafeEncodeError(Exception):
+  pass
+
+
+class SafeDecodeError(Exception):
+  pass
+
+
 def get_config_option(section, option, default=None, option_type=None):
   """Return option from config file.
 
@@ -340,6 +380,69 @@ def remove_access_token(service, user):
         else:
           success = True
   return success
+
+
+def safe_encode(string, target_encoding=TERMINAL_ENCODING,
+                errors='backslashreplace'):
+  """Encode a unicode string to target_encoding.
+
+  If given a str type, check to see that target_encoding can decode it
+  without an error. Raises a SafeEncodeError if it can't.
+  Given any other type, returns str() version of it.
+
+  Args:
+    string: unicode String to encode.
+    target_encoding: str Encoding to encode to. Default TERMINAL_ENCODING.
+    errors: str Name of the error handler to call if something goes wrong.
+            See docs on the codecs module. Default 'backslashreplace'.
+
+  Returns:
+    A string encoded with target_encoding, or raises an error.
+
+  """
+  if isinstance(string, unicode):
+    return string.encode(target_encoding, errors)
+  elif isinstance(string, str):
+    try:
+      string.decode(target_encoding)
+    except UnicodeDecodeError:
+      raise SafeEncodeError('Passed a non-unicode string to safe_encode!')
+    else:
+      return string
+  else:
+    # Got something else, probably an int or bool or the like.
+    return str(string)
+
+
+def safe_decode(string, current_encoding='utf-8', errors='strict'):
+  """Decode a byte string.
+
+  Raises a SafeDecodeError if current_encoding cannot decode the string and
+  the value of errors causes an exception to be raised.
+  If given a unicde type, returns it immediately.
+  Given any other type, returns unicode() version of it.
+
+  Args:
+    string: str String to decode.
+    target_encoding: str Encoding to decode with. Default 'utf-8'.
+    errors: str Name of the error handler to call if something goes wrong.
+            See docs on the codecs module. Default 'strict'.
+
+  Returns:
+    A unicode string, or raises an error.
+
+  """
+  if isinstance(string, str):
+    try:
+      return string.decode(current_encoding, errors)
+    except UnicodeDecodeError:
+      raise SafeDecodeError(current_encoding + ' could not decode ' +
+                            repr(string))
+  elif isinstance(string, unicode):
+    return string
+  else:
+    # Got something elese, probably an int or bool or the like.
+    return unicode(string)
 
 
 def set_missing_default(section, option, value, config_path=None):

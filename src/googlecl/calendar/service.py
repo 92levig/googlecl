@@ -34,6 +34,10 @@ import time
 import urllib
 from googlecl.calendar import SECTION_HEADER
 
+# Renamed here to reduce verbosity in other sections
+safe_encode = googlecl.safe_encode
+safe_decode = googlecl.safe_decode
+
 
 LOG = logging.getLogger(googlecl.calendar.LOGGER_NAME)
 USER_BATCH_URL_FORMAT = \
@@ -60,7 +64,7 @@ class Calendar():
       # http:blah/.../feeds/JUNK%40group.calendar.google.com/private/full
       # So grab the part after /feeds/ and unquote it.
       self.user = urllib.unquote(cal_entry.content.src.split('/')[-3])
-      self.name = cal_entry.title.text
+      self.name = safe_decode(cal_entry.title.text)
     else:
       self.user = user
       self.name = name
@@ -88,6 +92,8 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
                           start_date=None, end_date=None):
     """Delete a subset of instances of recurring events."""
     request_feed = gdata.calendar.CalendarEventFeed()
+    # Don't need to decode event.title.text here because it's not being
+    # displayed to the user. Totally internal.
     single_events = self.get_events(cal_user, start_date=start_date,
                                     end_date=end_date,
                                     title=event.title.text,
@@ -176,8 +182,9 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
       if self.prompt_for_delete:
         delete_selection = -1
         while delete_selection < 0 or delete_selection > len(option_list)-1:
-          delete_selection = int(raw_input('Delete "%s"?\n%s' %
-                                           (event.title.text, prompt_str)))
+          msg = 'Delete "%s"?\n%s' %\
+                (safe_decode(event.title.text), prompt_str)
+          delete_selection = int(raw_input(safe_encode(msg)))
         option = option_list[delete_selection]
         if option[1] == 'ALL':
           gdata.service.GDataService.Delete(self, event.GetEditLink().href)
@@ -451,7 +458,7 @@ def _list(client, options, date):
     return
   for cal in cal_user_list:
     print ''
-    print '[' + str(cal) + ']'
+    print safe_encode('[' + str(cal) + ']')
     entries = client.get_events(cal.user,
                                 start_date=date.utc_start,
                                 end_date=date.utc_end,
@@ -522,7 +529,7 @@ def _run_delete(client, options, args):
     return
   date = googlecl.calendar.Date(options.date)
   for cal in cal_user_list:
-    LOG.info('For calendar ' + str(cal))
+    LOG.info(safe_encode('For calendar ' + str(cal)))
     events = client.get_events(cal.user,
                                start_date=date.utc_start,
                                end_date=date.utc_end,
