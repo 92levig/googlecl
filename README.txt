@@ -188,7 +188,29 @@ Contacts:
 The difference between 'url-site' and 'url-direct' is best exemplified by a picasa photo: 'url-site' gives a link to the photo in the user's album, 'url-direct' gives a link to the image url. If 'url-direct' is specified but is not applicable, 'url-site' is placed in its stead, and vice-versa.
 
 3. Options
-Some more details on the trickier options you can specify.
+GoogleCL will fill in options in what it hopes is a natural way. If you do not specify any options explicitly with `-<letter>` or `--<option>`, the program will suck in values from the command line to replace the missing required options. For example,
+`$ google help contacts`
+...
+`list: List contacts`
+`   Requires: fields AND title AND delimiter`
+
+says that `--fields --title --delimiter` are all required. If you haven't changed your basic configuration, there should be a line under the config header `[CONTACTS]` that says `fields = name,email`, so that required option is fulfilled. (Note that there is a `fields` entry under `[GENERAL]` so you never need to supply a value for `fields`, and shouldn't, unless you specify it with `--fields=<my new fields>`)
+
+Next up is `title`, so if you issue the contacts list command with any free-floating arguments, the first one will be set to `title`.
+
+Finally, `delimiter` is always set to "," by default, so that's satisfied as well.
+
+This means that
+
+`$ google contacts list Huey Dewey Louie`
+`$ google contacts list Huey Dewey Louie --fields name,email`
+`$ google contacts list --fields name,email --title Huey Dewey Louie`
+
+all give the same output.
+
+Some tasks have a conditional requirement, such as (title OR query). In this case, `title` is filled first, and GoogleCL assumes you do not want to specify a query. Of course, if you filled `query` explicitly and not `title`, `title` is not filled in with any command line arguments.
+
+Here are some more details on the trickier options you can specify.
 
 3.1 Tags
 The tags option will let you both add and remove tags / labels. Here are some examples:

@@ -135,11 +135,11 @@ class DocsClientCL(gdata.docs.client.DocsClient,
 
   Export = export
 
-  def get_doclist(self, title=None, folder_entry_list=None):
+  def get_doclist(self, titles=None, folder_entry_list=None):
     """Get a list of document entries from a feed.
 
     Keyword arguments:
-      title: String to use when looking for entries to return. Will be compared
+      titles: list or string Title(s) of entries to return. Will be compared
              to entry.title.text, using regular expressions if self.use_regex.
              Default None for all entries from feed.
       folder_entry_list: List of GDataEntry's of folders to get from.
@@ -155,11 +155,11 @@ class DocsClientCL(gdata.docs.client.DocsClient,
       for folder in folder_entry_list:
         # folder.content.src is the uri to query for documents in that folder.
         entries.extend(self.GetEntries(folder.content.src,
-                                       title,
+                                       titles,
                                        desired_class=gdata.docs.data.DocList))
     else:
       entries = self.GetEntries(gdata.docs.client.DOCLIST_FEED_URI,
-                                title,
+                                titles,
                                 desired_class=gdata.docs.data.DocList)
     return entries
 
@@ -204,7 +204,7 @@ class DocsClientCL(gdata.docs.client.DocsClient,
     """
     if title:
       uri = gdata.docs.client.DOCLIST_FEED_URI + '-/folder'
-      folder_entries = self.GetEntries(uri, title=title)
+      folder_entries = self.GetEntries(uri, title)
       if not folder_entries:
         LOG.warning('No folder found that matches ' + title)
       return folder_entries

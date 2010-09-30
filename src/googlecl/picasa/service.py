@@ -70,7 +70,7 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
     PhotosService.__init__(self)
     googlecl.service.BaseServiceCL.__init__(self, SECTION_HEADER)
 
-  def build_entry_list(self, user='default', title=None, query=None,
+  def build_entry_list(self, user='default', titles=None, query=None,
                        force_photos=False):
     """Build a list of entries of either photos or albums.
 
@@ -92,8 +92,8 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
 
     """
     album_entry = []
-    if title or not(title or query):
-      album_entry = self.GetAlbum(user=user, title=title)
+    if titles or not(titles or query):
+      album_entry = self.GetAlbum(user=user, titles=titles)
     if query or force_photos:
       uri = '/data/feed/api/user/' + user
       if query and not album_entry:
@@ -111,7 +111,7 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
 
     return entries
 
-  def download_album(self, base_path, user, video_format='mp4', title=None):
+  def download_album(self, base_path, user, video_format='mp4', titles=None):
     """Download an album to the local host.
 
     Keyword arguments:
@@ -120,7 +120,8 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
                  exist, it and each non-existent parent directory will be
                  created.
       user: User whose albums are being retrieved. (Default 'default')
-      title: Title that the album should have. (Default None, for all albums)
+      titles: list or string Title(s) that the album(s) should have.
+              Default None, for all albums.
 
     """
     def _get_download_info(photo_or_video, video_format):
@@ -154,7 +155,7 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
 
     if not user:
       user = 'default'
-    entries = self.GetAlbum(user=user, title=title)
+    entries = self.GetAlbum(user=user, titles=titles)
     if video_format not in DOWNLOAD_VIDEO_TYPES.keys():
       LOG.error('Unsupported video format: ' + video_format)
       LOG.info('Try one of the following video formats: ' +
@@ -195,19 +196,20 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
 
   DownloadAlbum = download_album
 
-  def get_album(self, user='default', title=None):
+  def get_album(self, user='default', titles=None):
     """Get albums from a user feed.
 
     Keyword arguments:
       user: The user whose albums are being retrieved. (Default 'default')
-      title: Title that the album should have. (Default None, for all albums)
+      titles: list or string Title(s) that the album(s) should have.
+              Default None, for all albums.
 
     Returns:
       List of albums that match parameters, or [] if none do.
 
     """
     uri = '/data/feed/api/user/' + user + '?kind=album'
-    return self.GetEntries(uri, title)
+    return self.GetEntries(uri, titles)
 
   GetAlbum = get_album
 
@@ -319,6 +321,9 @@ SERVICE_CLASS = PhotosServiceCL
 #        required
 #===============================================================================
 def _run_create(client, options, args):
+  # Paths to media might be in options.src, args, both, or neither.
+  # But both are guaranteed to be lists.
+  media_list = options.src + args
   if options.date:
     import time
     try:
@@ -337,8 +342,8 @@ def _run_create(client, options, args):
                              access=googlecl.CONFIG.get(SECTION_HEADER,
                                                         'access'),
                              timestamp=options.date)
-  if options.src or args:
-    client.InsertMediaList(album, media_list=options.src or args,
+  if media_list:
+    client.InsertMediaList(album, media_list=media_list,
                            tags=options.tags)
 
 
@@ -349,7 +354,9 @@ def _run_delete(client, options, args):
   else:
     entry_type = 'album'
     search_string = options.title
-  entries = client.build_entry_list(title=options.title,
+
+  titles_list = googlecl.build_titles_list(options.title, args)
+  entries = client.build_entry_list(titles=titles_list,
                                     query=options.encoded_query)
   if not entries:
     LOG.info('No %ss matching %s' % (entry_type, search_string))
@@ -360,8 +367,9 @@ def _run_delete(client, options, args):
 
 
 def _run_list(client, options, args):
+  titles_list = googlecl.build_titles_list(options.title, args)
   entries = client.build_entry_list(user=options.owner or options.user,
-                                    title=options.title,
+                                    titles=titles_list,
                                     query=options.encoded_query,
                                     force_photos=True)
   for entry in entries:
@@ -372,9 +380,11 @@ def _run_list(client, options, args):
 
 
 def _run_list_albums(client, options, args):
+  titles_list = googlecl.build_titles_list(options.title, args)
   entries = client.build_entry_list(user=options.owner or options.user,
-                                    title=options.title,
+                                    titles=titles_list,
                                     force_photos=False)
+
   for entry in entries:
     print googlecl.base.compile_entry_string(
                                googlecl.base.BaseEntryToStringWrapper(entry),
@@ -383,12 +393,13 @@ def _run_list_albums(client, options, args):
 
 
 def _run_post(client, options, args):
-  if not options.src:
-    LOG.error('Must provide photos to post!')
+  media_list = options.src + args
+  if not media_list:
+    LOG.error('Must provide paths to media to post!')
   album = client.GetSingleAlbum(user=options.owner or options.user,
                                 title=options.title)
   if album:
-    client.InsertMediaList(album, options.src, tags=options.tags,
+    client.InsertMediaList(album, media_list, tags=options.tags,
                            user=options.owner or options.user)
   else:
     LOG.error('No albums found that match ' + options.title)
@@ -398,16 +409,19 @@ def _run_get(client, options, args):
   if not options.dest:
     LOG.error('Must provide destination of album(s)!')
     return
+
+  titles_list = googlecl.build_titles_list(options.title, args)
   client.DownloadAlbum(options.dest,
                        user=options.owner or options.user,
                        video_format=options.format or 'mp4',
-                       title=options.title)
+                       titles=titles_list)
 
 
 def _run_tag(client, options, args):
+  titles_list = googlecl.build_titles_list(options.title, args)
   entries = client.build_entry_list(user=options.owner or options.user,
                                     query=options.query,
-                                    title=options.title,
+                                    titles=titles_list,
                                     force_photos=True)
   if entries:
     client.TagPhotos(entries, options.tags)

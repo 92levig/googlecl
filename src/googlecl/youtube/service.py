@@ -69,12 +69,13 @@ class YouTubeServiceCL(YouTubeService, googlecl.service.BaseServiceCL):
 
   CategorizeVideos = categorize_videos
 
-  def get_videos(self, user='default', title=None):
+  def get_videos(self, user='default', titles=None):
     """Get entries for videos uploaded by a user.
 
     Keyword arguments:
       user: The user whose videos are being retrieved. (Default 'default')
-      title: Title that the videos should have. (Default None, for all videos)
+      title: list or string Title(s) that the video(s) should have.
+             Default None, for all videos.
 
     Returns:
       List of videos that match parameters, or [] if none do.
@@ -82,7 +83,7 @@ class YouTubeServiceCL(YouTubeService, googlecl.service.BaseServiceCL):
     """
     uri = 'http://gdata.youtube.com/feeds/api/users/' + user + '/uploads'
     return self.GetEntries(uri,
-                           title,
+                           titles,
                            converter=gdata.youtube.YouTubeVideoFeedFromString)
 
   GetVideos = get_videos
@@ -206,8 +207,9 @@ def build_category(category):
 #        required
 #===============================================================================
 def _run_list(client, options, args):
+  titles_list = googlecl.build_titles_list(options.title, args)
   entries = client.GetVideos(user=options.owner or 'default',
-                             title=options.title)
+                             titles=titles_list)
   for vid in entries:
     print googlecl.base.compile_entry_string(
                                  googlecl.base.BaseEntryToStringWrapper(vid),
@@ -216,12 +218,14 @@ def _run_list(client, options, args):
 
 
 def _run_post(client, options, args):
-  client.PostVideos(options.src, title=options.title, desc=options.summary,
+  video_list = options.src + args
+  client.PostVideos(video_list, title=options.title, desc=options.summary,
                     tags=options.tags, category=options.category)
 
 
 def _run_tag(client, options, args):
-  video_entries = client.GetVideos(title=options.title)
+  titles_list = googlecl.build_titles_list(options.title, args)
+  video_entries = client.GetVideos(titles=titles_list)
   if options.category:
     client.CategorizeVideos(video_entries, options.category)
   if options.tags:
@@ -229,7 +233,8 @@ def _run_tag(client, options, args):
 
 
 def _run_delete(client, options, args):
-  entries = client.GetVideos(title=options.title)
+  titles_list = googlecl.build_titles_list(options.title, args)
+  entries = client.GetVideos(titles=titles_list)
   client.DeleteEntryList(entries, 'video',
                 googlecl.CONFIG.getboolean('GENERAL', 'delete_by_default'))
 

@@ -96,7 +96,7 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
     # displayed to the user. Totally internal.
     single_events = self.get_events(cal_user, start_date=start_date,
                                     end_date=end_date,
-                                    title=event.title.text,
+                                    titles=event.title.text,
                                     expand_recurrence=True)
     delete_events = [e for e in single_events if e.original_event and
                      e.original_event.id == event.id.text.split('/')[-1]]
@@ -255,7 +255,7 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
       return [Calendar(user='default', name=self.email)]
     else:
       cal_list = self.GetEntries('/calendar/feeds/default/allcalendars/full',
-                                 title=cal_name,
+                                 cal_name,
                           converter=gdata.calendar.CalendarListFeedFromString)
       if cal_list:
         return [Calendar(cal) for cal in cal_list]
@@ -264,7 +264,7 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
   GetCalendarUserList = get_calendar_user_list
 
   def get_events(self, calendar_user, start_date=None, end_date=None,
-                 title=None, query=None, expand_recurrence=True):
+                 titles=None, query=None, expand_recurrence=True):
     """Get events.
 
     Keyword arguments:
@@ -274,8 +274,8 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
                   timestamp format and be in UTC. Default None.
       end_date: End date of the event(s). Must follow the RFC 3339 timestamp
                 format and be in UTC. Default None.
-      title: Title to look for in the event, supporting regular expressions.
-             Default None for any title.
+      titles: string or list Title(s) to look for in the event, supporting
+              regular expressions. Default None for any title.
       query: Query string (not encoded) for doing full-text searches on event
              titles and content.
       expand_recurrence: If true, expand recurring events per the 'singleevents'
@@ -295,7 +295,7 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
       query.singleevents = 'true'
     query.orderby = 'starttime'
     query.sortorder = 'ascend'
-    return self.GetEntries(query.ToUri(), title,
+    return self.GetEntries(query.ToUri(), titles,
                            converter=gdata.calendar.CalendarEventFeedFromString)
 
   GetEvents = get_events
@@ -451,18 +451,19 @@ def parse_recurrence(time_string):
   return (start_time, end_time, freq)
 
 
-def _list(client, options, date):
+def _list(client, options, date, args):
   cal_user_list = client.get_calendar_user_list(options.cal)
   if not cal_user_list:
     LOG.error('No calendar matches "' + options.cal + '"')
     return
+  titles_list = googlecl.build_titles_list(options.title, args)
   for cal in cal_user_list:
     print ''
     print safe_encode('[' + str(cal) + ']')
     entries = client.get_events(cal.user,
                                 start_date=date.utc_start,
                                 end_date=date.utc_end,
-                                title=options.title,
+                                titles=titles_list,
                                 query=options.query)
 
     for entry in entries:
@@ -489,12 +490,12 @@ def _run_list(client, options, args):
                                                  as_range=True))
   else:
     date = googlecl.calendar.Date(options.date)
-  _list(client, options,  date)
+  _list(client, options, date, args)
 
 
 def _run_list_today(client, options, args):
   date = googlecl.calendar.Date(get_date_today(include_hour=False))
-  _list(client, options, date)
+  _list(client, options, date, args)
 
 
 def _run_add(client, options, args):
@@ -503,8 +504,9 @@ def _run_add(client, options, args):
     LOG.error('No calendar matches "' + options.cal + '"')
     return
   minutes = convert_reminder_string(options.reminder)
+  events_list = options.src + args
   for cal in cal_user_list:
-    results = client.quick_add_event(options.src, cal.user)
+    results = client.quick_add_event(events_list, cal.user)
     if LOG.isEnabledFor(logging.DEBUG):
       for entry in results:
         LOG.debug('ID: %s, status: %s, reason: %s',
@@ -528,12 +530,18 @@ def _run_delete(client, options, args):
     LOG.error('No calendar matches "' + options.cal + '"')
     return
   date = googlecl.calendar.Date(options.date)
+  if args:
+    LOG.info('Sorry, no support for additional arguments for '
+             '"calendar delete" yet')
+    LOG.debug('(Ignoring ' + unicode(args) +')')
+
+  titles_list = googlecl.build_titles_list(options.title, args)
   for cal in cal_user_list:
     LOG.info(safe_encode('For calendar ' + str(cal)))
     events = client.get_events(cal.user,
                                start_date=date.utc_start,
                                end_date=date.utc_end,
-                               title=options.title,
+                               titles=titles_list,
                                query=options.query,
                                expand_recurrence=False)
     try:

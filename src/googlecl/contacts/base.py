@@ -188,7 +188,8 @@ class ContactsEntryToStringWrapper(googlecl.base.BaseEntryToStringWrapper):
 #        required
 #===============================================================================
 def _run_list(client, options, args):
-  entries = client.GetContacts(options.title)
+  titles_list = googlecl.build_titles_list(options.title, args)
+  entries = client.GetContacts(titles_list)
   for entry in entries:
     print googlecl.base.compile_entry_string(
                                             ContactsEntryToStringWrapper(entry),
@@ -197,45 +198,42 @@ def _run_list(client, options, args):
 
 
 def _run_add(client, options, args):
-  for contact in options.src:
+  new_contacts_list = options.src + args
+  for contact in new_contacts_list:
     client.add_contact_string(contact)
 
 
 def _run_delete(client, options, args):
-  # XXX: This will change soon, but for right now, only accept the title
-  # (of which there can only be one. That's the part that will change)
-  for name in [options.title]:
-    entries = client.GetContacts(name)
-    client.DeleteEntryList(entries, 'contact',
+  titles_list = googlecl.build_titles_list(options.title, args)
+  entries = client.GetContacts(titles_list)
+  client.DeleteEntryList(entries, 'contact',
                   googlecl.CONFIG.getboolean('GENERAL', 'delete_by_default'))
 
 
 def _run_add_groups(client, options, args):
-  # XXX: This will change soon, but for right now, only accept the title
-  # (of which there can only be one. That's the part that will change)
-  for group in [options.title]:
+  titles_list = googlecl.build_titles_list(options.title, args)
+  # XXX: Should the required option be src or title? It's a conceptual toss-up.
+  for group in titles_list:
     client.AddGroup(group)
 
 
 def _run_delete_groups(client, options, args):
-  # XXX: This will change soon, but for right now, only accept the title
-  # (of which there can only be one. That's the part that will change)
-  for group in [options.title]:
-    entries = client.GetGroups(group)
-    client.DeleteEntryList(entries, 'group',
+  titles_list = googlecl.build_titles_list(options.title, args)
+  entries = client.GetGroups(titles_list)
+  client.DeleteEntryList(entries, 'group',
                   googlecl.CONFIG.getboolean('GENERAL', 'delete_by_default'))
 
 
 def _run_list_groups(client, options, args):
-  for group in [options.title]:
-    entries = client.GetGroups(group)
-    for entry in entries:
-      print googlecl.base.compile_entry_string(
-                                           ContactsEntryToStringWrapper(entry),
-                                           ['name'],
-                                           delimiter=options.delimiter)
+  titles_list = googlecl.build_titles_list(options.title, args)
+  entries = client.GetGroups(titles_list)
+  for entry in entries:
+    print googlecl.base.compile_entry_string(
+                                         ContactsEntryToStringWrapper(entry),
+                                         ['name'],
+                                         delimiter=options.delimiter)
 
-
+# XXX: Don't require title for list tasks.
 TASKS = {'list': googlecl.base.Task('List contacts', callback=_run_list,
                                     required=['fields', 'title', 'delimiter']),
          'add': googlecl.base.Task('Add contacts', callback=_run_add,

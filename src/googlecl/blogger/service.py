@@ -110,12 +110,13 @@ class BloggerServiceCL(gdata.service.GDataService,
 
   IsTokenValid = is_token_valid
 
-  def get_posts(self, blog_title=None, post_title=None, user_id='default'):
+  def get_posts(self, blog_title=None, post_titles=None, user_id='default'):
     """Get entries for posts that match a title.
 
     Keyword arguments:
       blog_title: Name or title of the blog the post is in. (Default None)
-      post_title: Title that the post should have. (Default None, for all posts)
+      post_titles: string or list Titles that the posts should have.
+                   Default None, for all posts
       user_id: Profile ID of blog's owner as seen in the profile view URL.
               (Default 'default' for authenticated user)
 
@@ -126,7 +127,7 @@ class BloggerServiceCL(gdata.service.GDataService,
     blog_id = self._get_blog_id(blog_title, user_id)
     if blog_id:
       uri = '/feeds/' + blog_id + '/posts/default'
-      return self.GetEntries(uri, post_title)
+      return self.GetEntries(uri, post_titles)
     else:
       return []
 
@@ -190,12 +191,13 @@ class BloggerEntryToStringWrapper(googlecl.base.BaseEntryToStringWrapper):
 #===============================================================================
 def _run_post(client, options, args):
   max_size = 500000
-  if not options.src:
+  content_list = options.src + args
+  if not content_list:
     LOG.error('Must provide paths to files and/or string content to post')
     return
   if not options.blog:
     options.blog = googlecl.get_config_option(SECTION_HEADER, 'blog')
-  for content_string in options.src:
+  for content_string in content_list:
     if os.path.exists(content_string):
       with open(content_string, 'r') as content_file:
         content = content_file.read(max_size)
@@ -219,24 +221,26 @@ def _run_post(client, options, args):
 
 
 def _run_delete(client, options, args):
+  titles_list = googlecl.build_titles_list(options.title, args)
   if not options.blog:
     options.blog = googlecl.get_config_option(SECTION_HEADER, 'blog')
   try:
     post_entries = client.GetPosts(blog_title=options.blog,
-                                   post_title=options.title)
+                                   post_titles=titles_list)
   except BlogNotFound, err:
     LOG.error(err)
     return
   client.DeleteEntryList(post_entries, entry_type = 'post',
-                delete_default=googlecl.CONFIG.getboolean('GENERAL',
-                                                      'delete_by_default'))
+              delete_default=googlecl.CONFIG.getboolean('GENERAL',
+                                                        'delete_by_default'))
 
 
 def _run_list(client, options, args):
+  titles_list = googlecl.build_titles_list(options.title, args)
   if not options.blog:
     options.blog = googlecl.get_config_option(SECTION_HEADER, 'blog')
   try:
-    entries = client.GetPosts(options.blog, options.title,
+    entries = client.GetPosts(options.blog, titles_list,
                               user_id=options.owner or 'default')
   except BlogNotFound, err:
     LOG.error(err)
@@ -249,10 +253,11 @@ def _run_list(client, options, args):
 
 
 def _run_tag(client, options, args):
+  titles_list = googlecl.build_titles_list(options.title, args)
   if not options.blog:
     options.blog = googlecl.get_config_option(SECTION_HEADER, 'blog')
   try:
-    entries = client.GetPosts(options.blog, options.title)
+    entries = client.GetPosts(options.blog, titles_list)
   except BlogNotFound, err:
     LOG.error(err)
     return

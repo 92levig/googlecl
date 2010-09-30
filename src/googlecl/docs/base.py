@@ -466,8 +466,9 @@ def _run_get(client, options, args):
     LOG.error('Downloading documents is not supported for' +
               ' gdata-python-client < 2.0')
     return
+  titles_list = googlecl.build_titles_list(options.title, args)
   folder_entries = client.get_folder(options.folder)
-  entries = client.get_doclist(options.title, folder_entries)
+  entries = client.get_doclist(titles_list, folder_entries)
   try:
     client.get_docs(options.dest, entries, file_ext=options.format)
   except DocsError, err:
@@ -475,8 +476,9 @@ def _run_get(client, options, args):
 
 
 def _run_list(client, options, args):
+  titles_list = googlecl.build_titles_list(options.title, args)
   folder_entries = client.get_folder(options.folder)
-  entries = client.get_doclist(options.title, folder_entries)
+  entries = client.get_doclist(titles_list, folder_entries)
   for entry in entries:
     print googlecl.base.compile_entry_string(
                                googlecl.base.BaseEntryToStringWrapper(entry),
@@ -487,12 +489,18 @@ def _run_list(client, options, args):
 def _run_upload(client, options, args):
   folder_entries = client.get_folder(options.folder)
   folder_entry = client.get_single_entry(folder_entries)
-  client.upload_docs(options.src, title=options.title,
+  docs_list = options.src + args
+  client.upload_docs(docs_list, title=options.title,
                      folder_entry=folder_entry,
                      file_ext=options.format, convert=options.convert)
 
 
 def _run_edit(client, options, args):
+  if args:
+    LOG.info('Sorry, no support for additional arguments for '
+             '"docs edit" yet')
+    LOG.debug('(Ignoring ' + unicode(args) +')')
+
   if not hasattr(client, 'Download'):
     LOG.error('Editing documents is not supported' +
               ' for gdata-python-client < 2.0')
@@ -529,7 +537,9 @@ def _run_edit(client, options, args):
 
 
 def _run_delete(client, options, args):
-  entries = client.get_doclist(options.title)
+  titles_list = googlecl.build_titles_list(options.title, args)
+  folder_entries = client.get_folder(options.folder)
+  entries = client.get_doclist(titles_list, folder_entries)
   client.DeleteEntryList(entries, 'document',
                 googlecl.CONFIG.getboolean('GENERAL', 'delete_by_default'))
 
@@ -549,4 +559,5 @@ TASKS = {'upload': googlecl.base.Task('Upload a document',
                                     optional=['title', 'folder']),
          'delete': googlecl.base.Task('Delete documents',
                                       callback=_run_delete,
-                                      required='title')}
+                                      required='title',
+                                      optional='folder')}

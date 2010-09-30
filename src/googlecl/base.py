@@ -164,14 +164,13 @@ class BaseCL(object):
             'reason': server_response.reason, 'body': result_body}
     return email
 
-  def get_entries(self, uri, title=None, converter=None, desired_class=None):
+  def get_entries(self, uri, titles=None, converter=None, desired_class=None):
     """Get a list of entries from a feed uri.
 
     Keyword arguments:
       uri: URI to get the feed from.
-      title: String to use when looking for entries to return. Will be compared
-             to entry.title.text, using regular expressions if self.use_regex.
-             (Default None for all entries from feed)
+      titles: string or list What to look for in entry.title.text.
+              Default None for all entries from feed.
       converter: Converter to use on the feed. If specified, will be passed
                  into the GetFeed method. If both converter and
                  desired_class are None, GetFeed is called without those
@@ -186,6 +185,8 @@ class BaseCL(object):
       List of entries.
 
     """
+    # XXX: Should probably go through all code and make sure title can only be
+    # NoneType or list, not also maybe a string.
     uri = set_max_results(uri, self.max_results)
     feed = None
     try:
@@ -213,23 +214,34 @@ class BaseCL(object):
           feed = self.GetNext(feed)
           if feed:
             all_entries.extend(feed.entry)
-    if not title:
+    # Check if title is NoneType, empty string, empty list, or a single-item
+    # list containing any of the prior.
+    if not titles or (len(titles) == 1 and not titles[0]):
       LOG.debug('Retrieved ' + str(len(all_entries)) +
                 ' entries, returning them all')
       return all_entries
 
     if self.use_regex:
+      # Carefully build title regex.
+      if isinstance(titles, basestring):
+        title_regex = titles
+      else:
+        title_regex = safe_decode('|'.join(titles))
+      LOG.debug(safe_encode('Using regex: ' + title_regex))
       try:
         entries = [entry for entry in all_entries
                    if entry.title.text and
-                   re.match(title,safe_decode(entry.title.text))]
+                   re.match(title_regex, safe_decode(entry.title.text))]
       except re.error, err:
         LOG.error('Regular expression error: ' + str(err) + '!')
-        LOG.debug('regex provided: ' + title)
         entries = []
     else:
-      entries = [entry for entry in all_entries if title ==
-                 safe_decode(entry.title.text)]
+      if isinstance(titles, list):
+        title_list = titles
+      else:
+        title_list = [titles]
+      entries = [entry for entry in all_entries
+                 if safe_decode(entry.title.text) in title_list]
     LOG.debug('Retrieved ' + str(len(all_entries)) +
               ' entries, returning ' + str(len(entries)) + ' of them')
     return entries
@@ -246,7 +258,7 @@ class BaseCL(object):
     Keyword arguments:
       uri_or_entry_list: URI to get feed from (See get_entries) or list of
                          entries to select from.
-      title: Title to match on. See get_entries. (Default None).
+      title: string Title to match on. See get_entries. Default None.
       converter: Conversion function to apply to feed. See get_entries.
       desired_class: class to which a successful response should be converted.
                      See get_entries.

@@ -74,6 +74,28 @@ class SafeDecodeError(Exception):
   pass
 
 
+def build_titles_list(title, args):
+  """Build a list of titles from the 'title' option and arguments.
+
+  Args:
+    title: NoneType or unicode Title given to options.title
+    args: list Leftover arguments on the command line, presumably extra titles.
+
+  Returns:
+    List of strings or [None].
+
+  """
+  # If args is non-empty, assume the user is giving us titles to get
+  if args:
+    titles_list = args
+    # If options.title is also given, add it to the list of titles
+    if title:
+      titles_list.insert(0,title)
+  else:
+    titles_list = [title]
+  return titles_list
+
+
 def get_config_option(section, option, default=None, option_type=None):
   """Return option from config file.
 

@@ -5,6 +5,9 @@ version 0.9.11
   * 'list_fields' has been shortened to 'fields' in the config file, and the --fields option is introduced. Thanks to the "read required options from the argument list" ability also introduced in this version, your old scripts should be alright without specifying --fields. You can also change the XXX_fields entries in the config file to just fields.
   * --src and --dest options were added. Conceptually, --src indicates data being transmitted to Google and --dest is where you want to put data received from Google. They mostly replaced command line arguments that were flapping in the wind (i.e. not associated with a command line option, and had an "arguments description" in the --help output).This seems like a pain in the neck, but read the next point where we introduce...
   * Positional autofill for command line arguments! Read the --help output or man page, but in a nutshell, GoogleCL will figure out what argument corresponds to which option based on the order of the arguments and what the configuration file has specified. You should notice significantly less wear and tear on your hyphen key.
+  * Multiple arguments can be given to options.src and options.title by just sticking them on the command line. This should flow naturally with the "positional autofill" mentioned above. For example:
+    $ google contacts list huey dewy louie
+  will list all of your obnoxious nephews.
 
 version 0.9.10
   * List "styles" have been renamed to list "fields". If you have a custom list_style entry in your config file, rename it to list_fields to make it work again.
