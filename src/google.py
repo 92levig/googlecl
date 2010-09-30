@@ -187,7 +187,13 @@ def expand_as_command_line(command_string):
     return []
   # Sub in the home path.
   home_path = os.path.expanduser('~/')
-  command_string = command_string.replace( ' ~/', ' ' + home_path)
+  # We may get a tilde that needs expansion in the middle of the string...
+  # (Replace with the space to make sure we don't screw up /really/~/weird/path
+  command_string = command_string.replace(' ~/', ' ' + home_path)
+  # Or, if we're given options.src to expand, it could be the first few
+  # characters.
+  if command_string.startswith('~/'):
+    command_string = home_path + command_string[2:]
   # Look for quotation marks
   quote_index = command_string.find('"')
   if quote_index == -1:
@@ -556,12 +562,21 @@ def run_once(options, args):
     # TODO: It would be nice to make this more efficient.
     googlecl.write_devkey(options.devkey)
 
+  # Unicode-ize options and args
   for attr_name in dir(options):
     attr = getattr(options, attr_name)
     if not attr_name.startswith('_') and isinstance(attr, str):
       setattr(options, attr_name, safe_decode(attr, googlecl.TERMINAL_ENCODING))
   if args:
     args = [safe_decode(string, googlecl.TERMINAL_ENCODING) for string in args]
+
+  # Expand options.src. The goal is to expand things like
+  # --src=~/Photos/album1/* (which does not normally happen)
+  # XXX: This ought to be in fill_out_options(), along with unicode-ize above.
+  if options.src:
+    options.src = expand_as_command_line(options.src)
+  else:
+    options.src = []
 
   # Take a gander at the options filled in.
   if LOG.getEffectiveLevel() == logging.DEBUG:
@@ -571,17 +586,11 @@ def run_once(options, args):
         attr = getattr(options, attr_name)
         if attr is not None and not inspect.ismethod(attr):
           LOG.debug(safe_encode('Option ' + attr_name + ': ' + unicode(attr)))
+  LOG.debug(safe_encode('args: ' + unicode(args)))
 
   authenticated = authenticate(service, client, section_header, options)
 
   if authenticated:
-    LOG.warning('Just implemented options.src and options.out, which CANNOT'
-                ' take globbed expressions or multiple strings! Bear with me.')
-    LOG.warning('(That is what you get for being so bleeding edge.)')
-    if options.src:
-      options.src = [options.src]
-    else:
-      options.src = []
     task.run(client, options, args)
   else:
     LOG.debug('Authentication failed, exiting run_once')
