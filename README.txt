@@ -75,7 +75,7 @@ Note: You can use `--owner` to specify another user's blog when listing posts, b
 2.1.2 Calendar
 Common options:
   * cal: Specify the name of the calendar. This can be a regular expression. If this option is not given, the primary calendar is used.
-  * date: Specify a date, or date range. Dates are inclusive, so `--date 2010-06-23,2010-06-25` will include the 23rd, 24th, and 25th of June.
+  * date: Specify a date, or date range, to retrieve events from for listing or deletion. This will not (yet) do anything for the add task. Dates are inclusive, so `--date 2010-06-23,2010-06-25` will include the 23rd, 24th, and 25th of June.
   * reminder: (for add task only) Add a reminder to the events being added, one per default reminder type in your calendar settings. Default is in minutes, though you can say something like "2h" for one hour, "1d" for one day, etc.
 
 Tasks:
@@ -85,6 +85,7 @@ Tasks:
   * today: List events for today only. `today`
 
 Note: The add task uses the 'Quick Add' feature, which you can read about here: http://www.google.com/support/calendar/bin/answer.py?answer=36604#text
+*Warning*: Because the add task uses 'Quick Add', it will not work for non-English calendars. See Issue 211.
 
 2.1.3 Contacts
 Tasks:
