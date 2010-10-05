@@ -263,6 +263,13 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
                                                    err.args[0],
                                                    err.args[1])
         failures.append(file)
+      except Exception, err:
+        # Don't let a stray error wreck an upload of 1000 photos
+        LOG.error(safe_encode('Unexpected error -- ' + unicode(err)))
+        failures.append(file)
+    if failures:
+      LOG.info(str(len(failures)) + ' photos failed to upload')
+      LOG.debug(safe_encode('Failed files: ' + unicode(failures)))
     return failures
 
   InsertMediaList = insert_media_list
