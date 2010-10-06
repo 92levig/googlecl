@@ -8,6 +8,7 @@ version 0.9.11
   * Multiple arguments can be given to options.src and options.title by just sticking them on the command line. This should flow naturally with the "positional autofill" mentioned above. For example:
     $ google contacts list huey dewy louie
   will list all of your obnoxious nephews.
+  * Picasa got a whole mess of new list fields: distance, ev, exposure (aka shutter, speed), flash, focallength, fstop, imageUniqueID (aka ia), iso, make, model, time (aka when).
 
 version 0.9.10
   * List "styles" have been renamed to list "fields". If you have a custom list_style entry in your config file, rename it to list_fields to make it work again.

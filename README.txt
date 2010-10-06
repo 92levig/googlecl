@@ -186,6 +186,20 @@ Contacts:
   * 'user_defined', 'other' - custom labels.
   * 'website', 'links' - websites and links.
 
+Picasa:
+  * Photos (picasa list)
+  ** 'distance' - distance between camera and target.
+  ** 'ev' - exposure value.
+  ** 'exposure' - exposure time.
+  ** 'flash' - if flash was used.
+  ** 'focallength'- focal length used.
+  ** 'fstop' - focal length divided by "effective" aperture diameter (aka f-number, focal ratio, or relative aperture)
+  ** 'imageUniqueID', 'id' - EXIF identifier assigned uniquely to each image.
+  ** 'iso' - iso equivalent value used.
+  ** 'make' - make of the camera used.
+  ** 'model' - model of the camera used.
+  ** 'time', 'when' - time the photo was taken (as millisecond timestamp).
+
 The difference between 'url-site' and 'url-direct' is best exemplified by a picasa photo: 'url-site' gives a link to the photo in the user's album, 'url-direct' gives a link to the image url. If 'url-direct' is specified but is not applicable, 'url-site' is placed in its stead, and vice-versa.
 
 3. Options

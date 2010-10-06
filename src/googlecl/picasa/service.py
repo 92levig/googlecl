@@ -52,7 +52,7 @@ SUPPORTED_VIDEO_TYPES = {'wmv': 'video/x-ms-wmv',
 # 'video/', eliminating duplicates via set(), then converting to tuple()
 # since that's what gdata.photos.service uses.
 gdata.photos.service.SUPPORTED_UPLOAD_TYPES += \
-     tuple(set([type.split('/')[1] for type in SUPPORTED_VIDEO_TYPES.values()]))
+     tuple(set([vtype.split('/')[1] for vtype in SUPPORTED_VIDEO_TYPES.values()]))
 DOWNLOAD_VIDEO_TYPES = {'swf': 'application/x-shockwave-flash',
                         'mp4': 'video/mpeg4',}
 
@@ -318,6 +318,90 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
 SERVICE_CLASS = PhotosServiceCL
 
 
+class PhotoEntryToStringWrapper(googlecl.base.BaseEntryToStringWrapper):
+  @property
+  def distance(self):
+    """The distance to the subject."""
+    return self.entry.exif.distance.text
+
+  @property
+  def ev(self):
+    """Exposure value, if possible to calculate"""
+    try:
+      # Using the equation for EV I found on Wikipedia...
+      N = float(self.fstop)
+      t = float(self.exposure)
+      import math       # import math if fstop and exposure work
+      # str() actually "rounds" floats. Try repr(3.3) and print 3.3
+      ev_long_str = str(math.log(math.pow(N,2)/t, 2))
+      dec_point = ev_long_str.find('.')
+      # In the very rare case that there is no decimal point:
+      if dec_point == -1:
+        # Technically this can return something like 10000, violating
+        # our desired precision. But not likely.
+        return ev_long_str
+      else:
+        # return value to 1 decimal place
+        return ev_long_str[0:dec_point+2]
+    except Exception:
+      # Don't really care what goes wrong -- result is the same.
+      return None
+
+  @property
+  def exposure(self):
+    """The exposure time used."""
+    return self.entry.exif.exposure.text
+  shutter = exposure
+  speed = exposure
+
+  @property
+  def flash(self):
+    """Boolean value indicating whether the flash was used."""
+    return self.entry.exif.flash.text
+
+  @property
+  def focallength(self):
+    """The focal length used."""
+    return self.entry.exif.focallength.text
+
+  @property
+  def fstop(self):
+    """The fstop value used."""
+    return self.entry.exif.fstop.text
+
+  @property
+  def imageUniqueID(self):
+    """The unique image ID for the photo."""
+    return self.entry.exif.imageUniqueID.text
+  id = imageUniqueID
+
+  @property
+  def iso(self):
+    """The iso equivalent value used."""
+    return self.entry.exif.iso.text
+
+  @property
+  def make(self):
+    """The make of the camera used."""
+    return self.entry.exif.make.text
+
+  @property
+  def model(self):
+    """The model of the camera used."""
+    return self.entry.exif.model.text
+
+  @property
+  def time(self):
+    """The date/time the photo was taken.
+
+    Represented as the number of milliseconds since January 1st, 1970.
+    Note: The value of this element should always be identical to the value of
+    the <gphoto:timestamp>.
+    """
+    return self.entry.exif.time.text
+  when = time
+
+
 #===============================================================================
 # Each of the following _run_* functions execute a particular task.
 #
@@ -380,10 +464,9 @@ def _run_list(client, options, args):
                                     query=options.encoded_query,
                                     force_photos=True)
   for entry in entries:
-    print googlecl.base.compile_entry_string(
-                               googlecl.base.BaseEntryToStringWrapper(entry),
-                               options.fields.split(','),
-                               delimiter=options.delimiter)
+    print googlecl.base.compile_entry_string(PhotoEntryToStringWrapper(entry),
+                                             options.fields.split(','),
+                                             delimiter=options.delimiter)
 
 
 def _run_list_albums(client, options, args):
@@ -391,7 +474,6 @@ def _run_list_albums(client, options, args):
   entries = client.build_entry_list(user=options.owner or options.user,
                                     titles=titles_list,
                                     force_photos=False)
-
   for entry in entries:
     print googlecl.base.compile_entry_string(
                                googlecl.base.BaseEntryToStringWrapper(entry),

@@ -3,6 +3,7 @@ version 0.9.11
  * Added --src and --dest options to allow specifying data sources and download destinations respectively.
  * Enabled fully positional command line arguments (e.g. "google docs get my_doc .")
  * Add command line arguments to --title option to form list of titles to delete/list/download
+ * Added list fields for picasa list (see README.new-usage). Thanks ferranb!
 
  Bugfixes
  * (more certainly) enabled unicode support
