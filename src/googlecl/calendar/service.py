@@ -459,7 +459,7 @@ def _list(client, options, date, args):
   titles_list = googlecl.build_titles_list(options.title, args)
   for cal in cal_user_list:
     print ''
-    print safe_encode('[' + str(cal) + ']')
+    print safe_encode('[' + unicode(cal) + ']')
     entries = client.get_events(cal.user,
                                 start_date=date.utc_start,
                                 end_date=date.utc_end,
@@ -533,11 +533,11 @@ def _run_delete(client, options, args):
   if args:
     LOG.info('Sorry, no support for additional arguments for '
              '"calendar delete" yet')
-    LOG.debug('(Ignoring ' + unicode(args) +')')
+    LOG.debug(safe_encode('(Ignoring ' + unicode(args) +')'))
 
   titles_list = googlecl.build_titles_list(options.title, args)
   for cal in cal_user_list:
-    LOG.info(safe_encode('For calendar ' + str(cal)))
+    LOG.info(safe_encode('For calendar ' + unicode(cal)))
     events = client.get_events(cal.user,
                                start_date=date.utc_start,
                                end_date=date.utc_end,
