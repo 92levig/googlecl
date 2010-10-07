@@ -97,15 +97,15 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
     if query or force_photos:
       uri = '/data/feed/api/user/' + user
       if query and not album_entry:
-        entries = self.GetFeed(uri + '?kind=photo&q=' + query).entry
+        entries = self.GetEntries(uri + '?kind=photo&q=' + query, None)
       else:
         entries = []
         uri += '/albumid/%s?kind=photo'
         if query:
           uri += '&q=' + query
         for album in album_entry:
-          photo_feed = self.GetFeed(uri % album.gphoto_id.text)
-          entries.extend(photo_feed.entry)
+          photo_entries = self.GetEntries(uri % album.gphoto_id.text, None)
+          entries.extend(photo_entries)
     else:
       entries = album_entry
 
@@ -439,7 +439,7 @@ def _run_create(client, options, args):
 
 
 def _run_delete(client, options, args):
-  if options.encoded_query:
+  if options.query:
     entry_type = 'photo'
     search_string = options.query
   else:
@@ -448,7 +448,7 @@ def _run_delete(client, options, args):
 
   titles_list = googlecl.build_titles_list(options.title, args)
   entries = client.build_entry_list(titles=titles_list,
-                                    query=options.encoded_query)
+                                    query=options.query)
   if not entries:
     LOG.info('No %ss matching %s' % (entry_type, search_string))
   else:
@@ -461,7 +461,7 @@ def _run_list(client, options, args):
   titles_list = googlecl.build_titles_list(options.title, args)
   entries = client.build_entry_list(user=options.owner or options.user,
                                     titles=titles_list,
-                                    query=options.encoded_query,
+                                    query=options.query,
                                     force_photos=True)
   for entry in entries:
     print googlecl.base.compile_entry_string(PhotoEntryToStringWrapper(entry),

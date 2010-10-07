@@ -47,7 +47,6 @@ __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import logging
 import optparse
 import os
-import urllib
 import sys
 import googlecl
 
@@ -71,6 +70,8 @@ def authenticate(service, client, section_header, options):
   2) If the token was read, and options."""
 
   # Only try to set the access token if we're not forced to authenticate.
+  # XXX: logic in here is iffy. Don't bother checking access token if it's not
+  # set
   if not options.force_auth:
     set_token = set_access_token(service, client)
     if set_token:
@@ -283,10 +284,6 @@ def fill_out_options(args, service_header, task, options):
   if options.devkey and os.path.exists(os.path.expanduser(options.devkey)):
     with open(options.devkey, 'r') as key_file:
       options.devkey = key_file.read(max_file_size).strip()
-  if options.query:
-    options.encoded_query = urllib.quote_plus(options.query)
-  else:
-    options.encoded_query = None
 
 
 def get_hd_domain(username, default_domain='default'):
