@@ -616,8 +616,11 @@ def setup_logger(options):
     level = logging.ERROR
   else:
     level = logging.INFO
+  # basicConfig does nothing if it's been called before
+  # (e.g. in run_interactive loop)
   logging.basicConfig(level=level, format=msg_format)
-
+  # Redundant for single-runs, but necessary for run_interactive.
+  LOG.setLevel(level)
   # XXX: Inappropriate location (style-wise).
   if options.debug or options.verbose:
     import gdata

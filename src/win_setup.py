@@ -19,14 +19,9 @@ View the README on packaging for more instructions.
 """
 from distutils.core import setup
 import py2exe
-modules = ['googlecl.youtube.service', 
-           'googlecl.contacts.service',
-           'googlecl.blogger.service',
-           'googlecl.calendar.service',
-           'googlecl.docs.service',
-           'googlecl.picasa.service']
+packages = ['googlecl', 'gdata', 'atom']
 
 setup(console=['google'],
       options={"py2exe":{"optimize": 2,
-                         "includes": modules}}
+                         "packages": packages}}
      )
