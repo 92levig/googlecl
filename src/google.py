@@ -413,10 +413,10 @@ def run_interactive(parser):
     import readline
     try:
       readline.read_history_file(history_file)
-    except IOError:
-      pass
+    except EnvironmentError:
+      LOG.debug('Could not read history file.')
   except ImportError:
-    pass
+    LOG.debug('Could not import readline module.')
 
   while True:
     try:
@@ -444,7 +444,10 @@ def run_interactive(parser):
     except (KeyboardInterrupt, ValueError), err:
       # It would be nice if we could simply unregister or reset the
       # signal handler defined in the initial if __name__ block.
-      if str(err).find('I/O operation on closed file') == -1:
+      # Windows will raise a KeyboardInterrupt, GNU/Linux seems to also
+      # potentially raise a ValueError about I/O operation.
+      if isinstance(err, ValueError) and \
+         str(err).find('I/O operation on closed file') == -1:
         raise err
       print ''
       print 'Quit via keyboard interrupt'

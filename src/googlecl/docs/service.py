@@ -314,7 +314,7 @@ class DocsServiceCL(gdata.docs.service.DocsService,
     LOG.info(safe_encode('Loading ' + safe_decode(path)))
     try:
       media = gdata.MediaSource(file_path=path, content_type=content_type)
-    except IOError, err:
+    except EnvironmentError, err:
       LOG.error(err)
       return None
     entry_title = title or title_from_filename(filename)

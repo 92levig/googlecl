@@ -233,7 +233,7 @@ class DocsBaseCL(object):
       except self.request_error, err:
         LOG.error(safe_encode('Download of ' + entry_title + ' failed: ' + 
                               unicode(err)))
-      except IOError, err:
+      except EnvironmentError, err:
         LOG.error(err)
         LOG.info('Does your destination filename contain invalid characters?')
 

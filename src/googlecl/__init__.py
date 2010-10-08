@@ -322,11 +322,11 @@ def _move_failed_token_file(token_path):
     LOG.debug(new_path + ' already exists. Deleting it.')
     try:
       os.remove(new_path)
-    except IOError, err:
+    except EnvironmentError, err:
       LOG.debug('Cannot remove old failed token file: ' + str(err))
   try:
     os.rename(token_path, new_path)
-  except IOError, err:
+  except EnvironmentError, err:
     LOG.debug('Cannot rename token file to ' + new_path + ': ' + str(err))
 
 
@@ -393,9 +393,9 @@ def remove_access_token(service, user):
       else:
         try:
           pickle.dump(token_dict, token_file)
-        except IOError, err:
-          # IOError shouldn't happen, but I've seen Errno 0 pop up
-          # on Windows XP with Python 2.5.
+        except EnvironmentError, err:
+          # IOError (extends enverror) shouldn't happen, but I've seen 
+	  # IOError Errno 0 pop up on Windows XP with Python 2.5.
           LOG.error(err)
           if err.errno == 0:
             _move_failed_token_file(token_path)
