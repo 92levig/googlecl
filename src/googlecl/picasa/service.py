@@ -81,7 +81,7 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
 
     Keyword arguments:
       user: Username of the owner of the albums / photos (Default 'default').
-      title: Title of the album (Default None).
+      titles: list Titles of the albums (Default None).
       query: Query for photos, url-encoded (Default None).
       force_photos: If true, returns photo entries, even if album entries would
                     typically be returned. The entries will be for all photos
@@ -92,7 +92,7 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
 
     """
     album_entry = []
-    if titles or not(titles or query):
+    if titles[0] or not(titles[0] or query):
       album_entry = self.GetAlbum(user=user, titles=titles)
     if query or force_photos:
       uri = '/data/feed/api/user/' + user
