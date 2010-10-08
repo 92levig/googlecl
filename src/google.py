@@ -44,6 +44,7 @@ Some terminology in use:
 from __future__ import with_statement
 
 __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
+import glob
 import logging
 import optparse
 import os
@@ -61,6 +62,10 @@ AVAILABLE_SERVICES = ['picasa', 'blogger', 'youtube', 'docs', 'contacts',
                       'calendar']
 LOG = logging.getLogger(googlecl.LOGGER_NAME)
 
+
+class Error():
+  """Base error for this module."""
+  pass
 
 def authenticate(service, client, section_header, options):
   """Set a (presumably valid) OAuth token for the client to use.
@@ -152,38 +157,6 @@ def expand_as_command_line(command_string):
     was entered on the command line.
 
   """
-  def do_globbing(args, final_args_list):
-    """Do filename expansion.
-
-    Uses glob.glob to expand the default special characters of bash. Note that
-    the command line will leave in arguments that do not expand to anything,
-    unlike glob.glob. For example, entering 'myprogram.py total_nonsense*.txt'
-    will pass through 'total_nonsense*.txt' as sys.argv[1].
-
-    Keyword arguments:
-      args: String, or list of strings, to be expanded.
-      final_args_list: List that expanded arguments should be added to.
-
-    Returns:
-      Nothing, though final_args_list is modified.
-
-    """
-    import glob
-    if isinstance(args, basestring):
-      expanded_str = glob.glob(args)
-      if expanded_str:
-        final_args_list.extend(expanded_str)
-      else:
-        final_args_list.append(args)
-    else:
-      for arg in args:
-        expanded_arg = glob.glob(arg)
-        if expanded_arg:
-          final_args_list.extend(expanded_arg)
-        else:
-          final_args_list.append(arg)
-
-  # End of do_globbing(), begin expand_as_command_line()
   if not command_string:
     return []
   # Sub in the home path.
@@ -195,35 +168,35 @@ def expand_as_command_line(command_string):
   # characters.
   if command_string.startswith('~/'):
     command_string = home_path + command_string[2:]
-  # Look for quotation marks
-  quote_index = command_string.find('"')
-  if quote_index == -1:
-    args_list = command_string.split()
-    final_args_list = []
-    do_globbing(args_list, final_args_list)
-  else:
-    final_args_list = []
-    while quote_index != -1:
-      start = quote_index
-      end = command_string.find('"', start+1)
-      quoted_arg = command_string[start+1:end]
-      non_quoted_args = command_string[:start].split()
-
-      # Only do filename expansion on non-quoted args!
-      # do_globbing will modify final_args_list appropriately
-      do_globbing(non_quoted_args, final_args_list)
-      final_args_list.append(quoted_arg)
-
-      command_string = command_string[end+1:]
-      if command_string:
-        quote_index = command_string.find('"')
+  token_list = command_string.split()
+  args_list = []
+  while token_list:
+    tmp = token_list.pop(0)
+    start_of_quote = tmp[0] == '"'
+    # A test to see if the end of a qutoed argument has been reached
+    end_quote = lambda s: s[-1] == '"' and len(s) > 1 and s[-2] != '\\'
+    while start_of_quote and not end_quote(tmp):
+      if token_list:
+        tmp += ' ' + token_list.pop(0)
       else:
-        quote_index = -1
+        raise Error('Encountered end of string without finding matching "')
+    if start_of_quote:
+      # Add the resulting arg, stripping the " off
+      args_list.append(tmp[1:-1])
+    else:
+      # Grab all the tokens in a row that end with unescaped \
+      while tmp[-1] == '\\' and len(tmp) > 1 and tmp[-2] != '\\':
+        if token_list:
+          tmp = tmp[:-1] + ' ' + token_list.pop(0)
+        else:
+          raise Error('Encountered end of string ending in \\')
 
-    if command_string:
-      do_globbing(command_string.strip().split(), final_args_list)
-
-  return final_args_list
+      expanded_args = glob.glob(tmp)
+      if expanded_args:
+        args_list.extend(expanded_args)
+      else:
+        args_list.append(tmp)
+  return args_list
 
 
 def fill_out_options(args, service_header, task, options):
@@ -461,7 +434,11 @@ def run_interactive(parser):
       elif command_string == 'quit':
         break
       else:
-        args_list = expand_as_command_line(command_string)
+        try:
+          args_list = expand_as_command_line(command_string)
+        except Error, err:
+          LOG.error(err)
+          continue
         (options, args) = parser.parse_args(args_list)
         run_once(options, args)
     except (KeyboardInterrupt, ValueError), err:
@@ -571,7 +548,11 @@ def run_once(options, args):
   # --src=~/Photos/album1/* (which does not normally happen)
   # XXX: This ought to be in fill_out_options(), along with unicode-ize above.
   if options.src:
-    options.src = expand_as_command_line(options.src)
+    expanded_args = glob.glob(options.src)
+    if expanded_args:
+      options.src = expanded_args
+    else:
+      options.src = [options.src]
   else:
     options.src = []
 
