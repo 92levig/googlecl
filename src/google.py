@@ -67,6 +67,7 @@ class Error():
   """Base error for this module."""
   pass
 
+
 def authenticate(service, client, section_header, options):
   """Set a (presumably valid) OAuth token for the client to use.
 
@@ -440,6 +441,7 @@ def run_interactive(parser):
           LOG.error(err)
           continue
         (options, args) = parser.parse_args(args_list)
+        setup_logger(options)
         run_once(options, args)
     except (KeyboardInterrupt, ValueError), err:
       # It would be nice if we could simply unregister or reset the
@@ -604,17 +606,17 @@ def set_access_token(service_name, client):
 
 def setup_logger(options):
   """Setup the global (root, basic) configuration for logging."""
-  format = '%(message)s'
+  msg_format = '%(message)s'
   if options.debug:
     level = logging.DEBUG
-    format = '%(levelname)s:%(name)s:%(message)s'
+    msg_format = '%(levelname)s:%(name)s:%(message)s'
   elif options.verbose:
     level = logging.DEBUG
   elif options.quiet:
     level = logging.ERROR
   else:
     level = logging.INFO
-  logging.basicConfig(level=level, format=format)
+  logging.basicConfig(level=level, format=msg_format)
 
   # XXX: Inappropriate location (style-wise).
   if options.debug or options.verbose:
