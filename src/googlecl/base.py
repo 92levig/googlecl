@@ -189,9 +189,8 @@ class BaseCL(object):
     # XXX: Should probably go through all code and make sure title can only be
     # NoneType or list, not also maybe a string.
     uri = set_max_results(uri, self.max_results)
-    # Safely convert unicode uri to str type.
-    # The uri MUST NOT be encoded, but may have parameters etc.
-    uri = str(urllib.quote(safe_encode(uri), '$&+,/:;=?@#'))
+    if isinstance(uri, unicode):
+      uri = uri.encode('utf-8')
     feed = None
     try:
       if converter or desired_class:
