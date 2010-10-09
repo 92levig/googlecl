@@ -31,11 +31,7 @@ SCRIPT_TO_INSTALL = 'src/google'
 SCRIPT_TO_RENAME = 'src/google.py'
 
 
-# Following two if blocks safely move src/google.py to src/google
-if not os.path.exists(SCRIPT_TO_RENAME):
-  print SCRIPT_TO_RENAME + ' does not exist!'
-  exit(-1)
-
+# Safely move src/google.py to src/google
 if os.path.exists(SCRIPT_TO_INSTALL):
   # Read size is 128*20 for no good reason.
   # Just want to avoid reading in the whole file, and read in a multiple of 128.
@@ -50,7 +46,10 @@ if os.path.exists(SCRIPT_TO_INSTALL):
         hash_function.update(data)
         data = my_file.read(read_size)
     return hash_function.digest()
-  if not _md5_hash_file(SCRIPT_TO_INSTALL) == _md5_hash_file(SCRIPT_TO_RENAME):
+  # If running from trunk, SCRIPT_TO_RENAME should exist.
+  # For the distributed tarball, they should not.
+  if os.path.exists(SCRIPT_TO_RENAME) and\
+     not _md5_hash_file(SCRIPT_TO_INSTALL) == _md5_hash_file(SCRIPT_TO_RENAME):
     print SCRIPT_TO_INSTALL + ' exists and is not the same as ' +\
           SCRIPT_TO_RENAME
     print 'Not trusting ' + SCRIPT_TO_INSTALL
