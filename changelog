@@ -9,6 +9,7 @@ version 0.9.11
  * (more certainly) enabled unicode support
  * Create missing intermediate folders when saving config file and/or data files.
  * Uploads to Docs correctly parse filenames with multiple '.' characters.
+ * Verbosity of output settable in interactive mode.
 
 version 0.9.10
  Enhancements
