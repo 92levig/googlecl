@@ -122,10 +122,14 @@ class DocsClientCL(gdata.docs.client.DocsClient,
 
     match = gdata.docs.data.FILE_EXT_PATTERN.match(file_path)
     if match:
-      extra_params['exportFormat'] = match.group(1)
+      export_format = match.group(1)
+      # Hack for apps-api-issues Issue 2294
+      if export_format.lower() == 'html':
+        export_format = '102'
+      extra_params['exportFormat'] = export_format
       # Fix issue with new-style docs always downloading to PDF
       # (gdata-issues Issue 2157)
-      extra_params['format'] = match.group(1)
+      extra_params['format'] = export_format
 
     if gid is not None:
       extra_params['gid'] = gid

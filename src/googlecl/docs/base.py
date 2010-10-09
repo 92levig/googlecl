@@ -187,17 +187,16 @@ class DocsBaseCL(object):
     """
     if not os.path.isdir(base_path):
       if len(entries) > 1:
-        raise DocsError('Specified multiple source files, but destination "' +
-                        base_path + '" is not a directory')
+        raise DocsError(safe_encode(u'Specified multiple source files, but ' +
+                                    u'destination "' + base_path +
+                                    u'" is not a directory'))
       format_from_filename = googlecl.get_extension_from_path(base_path)
-      if format_from_filename:
+      if format_from_filename and not file_ext:
         # Strip the extension off here if it exists. Don't want to double up
         # on extension in for loop. (+1 for '.')
         base_path = base_path[:-(len(format_from_filename)+1)]
         # We can just set the file_ext here, since there's only one file.
         file_ext = format_from_filename
-    else:
-      format_from_filename = None
     for entry in entries:
       # Don't set file_ext if we cannot do export.
       # get_extension_from_doctype will check the config file for 'format'
@@ -231,7 +230,7 @@ class DocsBaseCL(object):
         else:
           self.Download(entry, path)
       except self.request_error, err:
-        LOG.error(safe_encode('Download of ' + entry_title + ' failed: ' + 
+        LOG.error(safe_encode('Download of ' + entry_title + ' failed: ' +
                               unicode(err)))
       except EnvironmentError, err:
         LOG.error(err)
