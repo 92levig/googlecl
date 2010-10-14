@@ -199,6 +199,10 @@ Picasa:
   ** 'make' - make of the camera used.
   ** 'model' - model of the camera used.
   ** 'time', 'when' - time the photo was taken (as millisecond timestamp).
+  * Albums (picasa list-albums)
+  ** 'access', 'visibility' - visibility setting on the album.
+  ** 'location', 'where' - location text of the album properties.
+  ** 'published', 'when' - when the album was uploaded
 
 YouTube:
   * 'author', 'owner' - username of video uploader.

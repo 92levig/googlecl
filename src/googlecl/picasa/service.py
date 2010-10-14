@@ -52,7 +52,7 @@ SUPPORTED_VIDEO_TYPES = {'wmv': 'video/x-ms-wmv',
 # 'video/', eliminating duplicates via set(), then converting to tuple()
 # since that's what gdata.photos.service uses.
 gdata.photos.service.SUPPORTED_UPLOAD_TYPES += \
-     tuple(set([vtype.split('/')[1] for vtype in SUPPORTED_VIDEO_TYPES.values()]))
+   tuple(set([vtype.split('/')[1] for vtype in SUPPORTED_VIDEO_TYPES.values()]))
 DOWNLOAD_VIDEO_TYPES = {'swf': 'application/x-shockwave-flash',
                         'mp4': 'video/mpeg4',}
 
@@ -402,6 +402,32 @@ class PhotoEntryToStringWrapper(googlecl.base.BaseEntryToStringWrapper):
   when = time
 
 
+class AlbumEntryToStringWrapper(googlecl.base.BaseEntryToStringWrapper):
+  @property
+  def access(self):
+    """Access level of the album, one of "public", "private", or "unlisted"."""
+    # Convert values to ones the user selects on the web
+    txt = self.entry.access.text
+    if txt == 'protected':
+      return 'private'
+    if txt == 'private':
+      return 'anyone with link'
+    return txt
+  visibility = access
+
+  @property
+  def location(self):
+    """Location of the album (where pictures were taken)."""
+    return self.entry.location.text
+  where = location
+
+  @property
+  def published(self):
+    """When the album was published/uploaded."""
+    return self.entry.published.text
+  when = published
+
+
 #===============================================================================
 # Each of the following _run_* functions execute a particular task.
 #
@@ -476,7 +502,7 @@ def _run_list_albums(client, options, args):
                                     force_photos=False)
   for entry in entries:
     print googlecl.base.compile_entry_string(
-                               googlecl.base.BaseEntryToStringWrapper(entry),
+                               AlbumEntryToStringWrapper(entry),
                                options.fields.split(','),
                                delimiter=options.delimiter)
 

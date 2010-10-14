@@ -1,6 +1,6 @@
 version x.x.x
  Enhancements
- * owner, length, seconds, and status list fields for YouTube videos.
+ * Improved and expanded list fields for youtube and picasa.
 
 version 0.9.11
  Enhancements
