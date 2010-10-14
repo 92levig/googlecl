@@ -23,6 +23,7 @@ import os
 import googlecl
 import googlecl.base
 import googlecl.service
+import re
 from googlecl.youtube import SECTION_HEADER
 from gdata.youtube.service import YouTubeService
 
@@ -145,7 +146,8 @@ class YouTubeServiceCL(YouTubeService, googlecl.service.BaseServiceCL):
     Keyword arguments:
       video_entries: List of YouTubeVideoEntry objects.
       tags: String representation of tags in a comma separated list. For how
-            tags are generated from the string, see googlecl.base.generate_tag_sets().
+            tags are generated from the string, see
+            googlecl.base.generate_tag_sets().
 
     """
     from gdata.media import Group, Keywords
@@ -174,6 +176,51 @@ class YouTubeServiceCL(YouTubeService, googlecl.service.BaseServiceCL):
 
 
 SERVICE_CLASS = YouTubeServiceCL
+
+
+class VideoEntryToStringWrapper(googlecl.base.BaseEntryToStringWrapper):
+  @property
+  def author(self):
+    """Author."""
+    # Name of author 'x' name is in entry.author[x].name.text
+    text_extractor = lambda entry: getattr(getattr(entry, 'name'), 'text')
+    return self._join(self.entry.author, text_extractor=text_extractor)
+  owner = author
+
+  @property
+  def minutes(self):
+    """Length of the video, in minutes (MM:SS)."""
+    minutes = int(self.seconds) / 60
+    seconds = int(self.seconds) % 60
+    return '%d:%#02d' % (minutes, seconds)
+  time = minutes
+  length = minutes
+  duration = minutes
+
+  @property
+  def seconds(self):
+    """Length of the video, in seconds."""
+    return self.entry.media.duration.seconds
+
+  @property
+  def status(self):
+    """Status of the video."""
+    if self.entry.control:
+      # Apparently the structure for video entries isn't fully fleshed out,
+      # so use a regex on the xml.
+      xml_string = self.xml
+      reason_regex = r'<ns1:control .*? name="(\w+)" reasonCode="(\w+)"'
+      match = re.search(reason_regex, xml_string)
+      if match:
+        return '%s (%s)' % (match.group(1), match.group(2))
+    if self.entry.media.private:
+      return 'private'
+    if self.entry.racy:
+      return 'racy'
+    else:
+      # Can't find a difference between public and unlisted videos, in the XML
+      # or self.entry data structure...
+      return 'public/unlisted'
 
 
 def build_category(category):
@@ -211,10 +258,9 @@ def _run_list(client, options, args):
   entries = client.GetVideos(user=options.owner or 'default',
                              titles=titles_list)
   for vid in entries:
-    print googlecl.base.compile_entry_string(
-                                 googlecl.base.BaseEntryToStringWrapper(vid),
-                                 options.fields.split(','),
-                                 delimiter=options.delimiter)
+    print googlecl.base.compile_entry_string(VideoEntryToStringWrapper(vid),
+                                             options.fields.split(','),
+                                             delimiter=options.delimiter)
 
 
 def _run_post(client, options, args):

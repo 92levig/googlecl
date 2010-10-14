@@ -200,6 +200,12 @@ Picasa:
   ** 'model' - model of the camera used.
   ** 'time', 'when' - time the photo was taken (as millisecond timestamp).
 
+YouTube:
+  * 'author', 'owner' - username of video uploader.
+  * 'minutes', 'time', 'length', 'duration' - length of the video, in MM:SS format. (Note that if you specify ':' as a delimiter, it will be MM SS).
+  * 'seconds' - length of the video in seconds.
+  * 'status' - status of the video. This is still an uncertain feature.
+
 The difference between 'url-site' and 'url-direct' is best exemplified by a picasa photo: 'url-site' gives a link to the photo in the user's album, 'url-direct' gives a link to the image url. If 'url-direct' is specified but is not applicable, 'url-site' is placed in its stead, and vice-versa.
 
 3. Options

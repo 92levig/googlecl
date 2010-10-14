@@ -1,3 +1,7 @@
+version x.x.x
+ Enhancements
+ * owner, length, seconds, and status list fields for YouTube videos.
+
 version 0.9.11
  Enhancements
  * Added --src and --dest options to allow specifying data sources and download destinations respectively.
