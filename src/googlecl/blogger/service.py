@@ -173,6 +173,14 @@ SERVICE_CLASS = BloggerServiceCL
 
 class BloggerEntryToStringWrapper(googlecl.base.BaseEntryToStringWrapper):
   @property
+  def access(self):
+    """Access level (draft or public)."""
+    if self.entry.control and self.entry.control.draft.text == 'yes':
+      return 'draft'
+    else:
+      return 'public'
+
+  @property
   def author(self):
     """Author."""
     # Name of author 'x' name is in entry.author[x].name.text

@@ -156,7 +156,10 @@ The list task can be given additional arguments to specify what exactly is being
 will output those fields, in that order, with ": " as a delimiter. Valid values for `<`field1`>` etc. are dependent on the service being used.
 
 Common (all services):
+
+*Note:* These are enabled for all services, but the service may not have a definition for it. For example, Docs does not support tags.
   * 'summary' - summary text. Includes Picasa captions.
+  * 'tags', 'labels', 'keywords' - tags / keywords / labels
   * 'title', 'name' - displayed title or name.
   * 'url' - treated as 'url-direct' or 'url-site' depending on setting in preferences file. See the note at the end of this section.
   * 'url-site' - url of the site associated with the resource.
@@ -164,6 +167,7 @@ Common (all services):
   * 'xml' - dump the XML representation of the result.
 
 Blogger:
+  * 'access' - access level of the post (either 'public' or 'draft')
   * 'author' - author of the post
 
 Calendar:
