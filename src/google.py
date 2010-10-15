@@ -675,6 +675,8 @@ def setup_parser():
       usage += get_task_help(service, service_module.TASKS) + '\n'
 
   parser = optparse.OptionParser(usage=usage, version='%prog ' + VERSION)
+  parser.add_option('--access', dest='access',
+                    help='Specify access/visibility level of an upload')
   parser.add_option('--blog', dest='blog',
                     help='Blogger only - specify a blog other than your' +
                     ' primary.')
@@ -706,9 +708,10 @@ def setup_parser():
   parser.add_option('--dest', dest='dest',
                     help=('Destination. Typically, where to save data being'
                           ' downloaded.'))
-  parser.add_option('--draft', dest='draft',
-                    action='store_true',
-                    help='Blogger only - post as a draft')
+  parser.add_option('--draft', dest='access',
+                    action='store_const', const='draft',
+                    help=('Blogger only - post as a draft. Shorthand for '
+                          '--access=draft'))
   parser.add_option('--editor', dest='editor',
                     help='Docs only - editor to use on a file.')
   parser.add_option('--fields', dest='fields',

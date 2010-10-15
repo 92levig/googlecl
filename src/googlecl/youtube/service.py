@@ -96,7 +96,7 @@ class YouTubeServiceCL(YouTubeService, googlecl.service.BaseServiceCL):
   IsTokenValid = is_token_valid
 
   def post_videos(self, paths, category, title=None, desc=None, tags=None,
-                 devtags=None):
+                 devtags=None, is_private=None):
     """Post video(s) to YouTube.
 
     Keyword arguments:
@@ -108,15 +108,17 @@ class YouTubeServiceCL(YouTubeService, googlecl.service.BaseServiceCL):
       devtags: Developer tags for the video (Default None).
 
     """
-    from gdata.media import Group, Title, Description, Keywords
+    from gdata.media import Group, Title, Description, Keywords, Private
     if isinstance(paths, basestring):
       paths = [paths]
+    set_private = lambda private: Private() if private else None
     for path in paths:
       filename = os.path.basename(path).split('.')[0]
       my_media_group = Group(title=Title(text=title or filename),
                              description=Description(text=desc or 'A video'),
                              keywords=Keywords(text=tags),
-                             category=build_category(category))
+                             category=build_category(category),
+                             private=set_private(is_private))
 
       video_entry = gdata.youtube.YouTubeVideoEntry(media=my_media_group)
       if devtags:
@@ -265,8 +267,10 @@ def _run_list(client, options, args):
 
 def _run_post(client, options, args):
   video_list = options.src + args
+  is_private = googlecl.youtube.MapAccessString(options.access)
   client.PostVideos(video_list, title=options.title, desc=options.summary,
-                    tags=options.tags, category=options.category)
+                    tags=options.tags, category=options.category,
+                    is_private=is_private)
 
 
 def _run_tag(client, options, args):
@@ -287,7 +291,8 @@ def _run_delete(client, options, args):
 
 TASKS = {'post': googlecl.base.Task('Post a video.', callback=_run_post,
                                     required=['src', 'category', 'devkey'],
-                                    optional=['title', 'summary', 'tags']),
+                                    optional=['title', 'summary', 'tags',
+                                              'access']),
          'list': googlecl.base.Task('List videos by user.',
                                     callback=_run_list,
                                     required=['fields', 'delimiter'],

@@ -259,7 +259,6 @@ def load_preferences(path=None):
     _youtube = {'max_results': '50'}
     _contacts = {'fields': 'name,email'}
     _calendar = {'fields': 'title,when'}
-    _picasa = {'access': 'public'}
     _general = {'regex': 'True',
                'delete_by_default': 'False',
                'delete_prompt': 'True',
@@ -277,7 +276,6 @@ def load_preferences(path=None):
              'spreadsheet_editor': 'openoffice.org',
              'presentation_editor': 'openoffice.org'}
     config_defaults = {googlecl.docs.SECTION_HEADER: _docs,
-                       googlecl.picasa.SECTION_HEADER: _picasa,
                        googlecl.contacts.SECTION_HEADER: _contacts,
                        googlecl.calendar.SECTION_HEADER: _calendar,
                        googlecl.youtube.SECTION_HEADER: _youtube,

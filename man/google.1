@@ -37,7 +37,7 @@ Requires: title AND dest Optional: owner, format
 .IP
 create: Create an album
 .IP
-Requires: title Optional: src, date, summary, tags
+Requires: title Optional: src, date, summary, tags, access
 .IP
 list: List photos
 .IP
@@ -63,7 +63,7 @@ Available tasks for service blogger: 'post', 'tag', 'list', 'delete'
 .IP
 post: Post content.
 .IP
-Requires: src Optional: blog, title, tags, draft
+Requires: src Optional: blog, title, tags, access
 .IP
 tag: Label posts
 .IP
@@ -81,7 +81,7 @@ Available tasks for service youtube: 'post', 'tag', 'list', 'delete'
 .IP
 post: Post a video.
 .IP
-Requires: src AND category AND devkey Optional: title, summary, tags
+Requires: src AND category AND devkey Optional: title, summary, tags, access
 .IP
 tag: Add tags to a video and/or change its category.
 .IP
@@ -168,6 +168,9 @@ show program's version number and exit
 \fB\-h\fR, \fB\-\-help\fR
 show this help message and exit
 .TP
+\fB\-\-access\fR=\fIACCESS\fR
+Specify access/visibility level of an upload
+.TP
 \fB\-\-blog\fR=\fIBLOG\fR
 Blogger only \- specify a blog other than your primary.
 .TP
@@ -204,7 +207,8 @@ Destination. Typically, where to save data being
 downloaded.
 .TP
 \fB\-\-draft\fR
-Blogger only \- post as a draft
+Blogger only \- post as a draft. Shorthand for
+\fB\-\-access\fR=\fIdraft\fR
 .TP
 \fB\-\-editor\fR=\fIEDITOR\fR
 Docs only \- editor to use on a file.

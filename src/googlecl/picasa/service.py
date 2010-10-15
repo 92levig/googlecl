@@ -454,10 +454,9 @@ def _run_create(client, options, args):
       # Timestamp needs to be in milliseconds after the epoch
       options.date = '%i' % (timestamp * 1000)
 
-  # XXX: Allow/implement --access flag (stupid easy, do it!)
+  access = googlecl.picasa.MapAccessString(options.access)
   album = client.InsertAlbum(title=options.title, summary=options.summary,
-                             access=googlecl.CONFIG.get(SECTION_HEADER,
-                                                        'access'),
+                             access=access,
                              timestamp=options.date)
   if media_list:
     client.InsertMediaList(album, media_list=media_list,
@@ -548,7 +547,7 @@ TASKS = {'create': googlecl.base.Task('Create an album',
                                       callback=_run_create,
                                       required='title',
                                       optional=['src', 'date',
-                                                'summary', 'tags']),
+                                                'summary', 'tags', 'access']),
          'post': googlecl.base.Task('Post photos to an album',
                                     callback=_run_post,
                                     required=['title', 'src'],

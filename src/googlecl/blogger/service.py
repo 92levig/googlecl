@@ -205,6 +205,7 @@ def _run_post(client, options, args):
     return
   if not options.blog:
     options.blog = googlecl.get_config_option(SECTION_HEADER, 'blog')
+  is_draft = googlecl.blogger.MapAccessString(options.access)
   for content_string in content_list:
     if os.path.exists(content_string):
       with open(content_string, 'r') as content_file:
@@ -220,7 +221,7 @@ def _run_post(client, options, args):
     try:
       entry = client.AddPost(options.title or title, content,
                              blog_title=options.blog,
-                             is_draft=options.draft)
+                             is_draft=is_draft)
     except gdata.service.RequestError, err:
       LOG.error('Failed to post: ' + str(err))
     else:
@@ -278,7 +279,7 @@ TASKS = {'delete': googlecl.base.Task('Delete a post.', callback=_run_delete,
          'post': googlecl.base.Task('Post content.', callback=_run_post,
                                     required='src',
                                     optional=['blog', 'title', 'tags',
-                                              'draft']),
+                                              'access']),
          'list': googlecl.base.Task('List posts in a blog',
                                     callback=_run_list,
                                     required=['fields', 'delimiter'],

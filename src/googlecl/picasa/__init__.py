@@ -16,3 +16,22 @@ import googlecl
 service_name = __name__.split('.')[-1]
 LOGGER_NAME = googlecl.LOGGER_NAME + '.' + service_name
 SECTION_HEADER = service_name.upper()
+
+def MapAccessString(access_string, default_value='private'):
+  if not access_string:
+    return default_value
+  # It seems to me that 'private' is less private than 'protected'
+  # but I'm going with what Picasa seems to be using.
+  access_string_mappings = {'public': 'public',
+                            'private': 'protected',
+                            'protected': 'private',
+                            'draft': 'private',
+                            'hidden': 'private',
+                            'link': 'private'}
+  try:
+    return access_string_mappings[access_string]
+  except KeyError:
+    import re
+    if access_string.find('link') != -1:
+      return 'private'
+  return default_value

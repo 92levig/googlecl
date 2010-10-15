@@ -16,3 +16,19 @@ import googlecl
 service_name = __name__.split('.')[-1]
 LOGGER_NAME = googlecl.LOGGER_NAME + '.' + service_name
 SECTION_HEADER = service_name.upper()
+
+
+def MapAccessString(access_string):
+  """Map an access string to a value YouTube will understand.
+
+  In this case, YouTube only cares about "is private" so 'public' gets mapped to
+  False, everything else to True.
+
+  Returns:
+    Boolean indicating True (is private) or False (is not private).
+  """
+  if not access_string:
+    return False
+  if access_string == 'public':
+    return False
+  return True

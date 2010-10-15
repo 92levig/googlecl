@@ -16,3 +16,19 @@ import googlecl
 service_name = __name__.split('.')[-1]
 LOGGER_NAME = googlecl.LOGGER_NAME + '.' + service_name
 SECTION_HEADER = service_name.upper()
+
+
+def MapAccessString(access_string):
+  """Map an access string to a value Blogger will understand.
+
+  In this case, Blogger only cares about "is draft" so 'public' gets mapped to
+  False, everything else to True.
+
+  Returns:
+    Boolean indicating True (is a draft) or False (is not a draft).
+  """
+  if not access_string:
+    return False
+  if access_string == 'public':
+    return False
+  return True
