@@ -79,14 +79,15 @@ class BaseCL(object):
       LOG.warning('You are requesting only ' + str(self.max_results) +
                   ' results per query -- this may be slow')
 
-  def delete_entry_list(self, entries, entry_type, delete_default):
+  def delete_entry_list(self, entries, entry_type, delete_default,
+                        callback=None):
     """Extends Delete to handle a list of entries.
 
     Keyword arguments:
       entries: List of entries to delete.
       entry_type: String describing the thing being deleted (e.g. album, post).
       delete_default: Whether or not the default action should be deletion.
-
+      callback: function which takes entry as an argument and deletes it
     """
     if delete_default and self.prompt_for_delete:
       prompt_str = '(Y/n)'
@@ -104,12 +105,16 @@ class BaseCL(object):
         delete = True
       if delete:
         try:
-          # Later versions are defined with lowercase function names.
-          # These versions take GDataEntry objects, older takes the edit link.
-          if hasattr(self, 'delete'):
-            self.delete(item)
+          if callback:
+            # if callback is provided then deletion is done by calling it
+            callback(item)
           else:
-            self.Delete(item.GetEditLink().href)
+            # Later versions are defined with lowercase function names.
+            # These versions take GDataEntry objects, older takes the edit link.
+            if hasattr(self, 'delete'):
+              self.delete(item)
+            else:
+              self.Delete(item.GetEditLink().href)
         except self.request_error, err:
           LOG.warning('Could not delete ' + entry_type + ': ' + str(err))
 
@@ -188,7 +193,8 @@ class BaseCL(object):
     """
     # XXX: Should probably go through all code and make sure title can only be
     # NoneType or list, not also maybe a string.
-    uri = set_max_results(uri, self.max_results)
+    if self.max_results is not None:
+      uri = set_max_results(uri, self.max_results)
     if isinstance(uri, unicode):
       uri = uri.encode('utf-8')
     feed = None
