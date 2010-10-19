@@ -277,7 +277,7 @@ class DocsBaseCL(object):
         folder_entries = {}
         # final '/' sets folder_name to '' which causes
         # 503 "Service Unavailable".
-        path = path.rstrip('/')
+        path = path.rstrip(os.path.sep)
         for dirpath, dirnames, filenames in os.walk(path):
           directory = os.path.dirname(dirpath)
           folder_name = os.path.basename(dirpath)
