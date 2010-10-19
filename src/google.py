@@ -59,7 +59,7 @@ safe_decode = googlecl.safe_decode
 VERSION = '0.9.11'
 
 AVAILABLE_SERVICES = ['picasa', 'blogger', 'youtube', 'docs', 'contacts',
-                      'calendar']
+                      'calendar', 'finance']
 LOG = logging.getLogger(googlecl.LOGGER_NAME)
 
 
@@ -686,8 +686,12 @@ def setup_parser():
   parser.add_option('-c', '--category', dest='category',
                     help='YouTube only - specify video categories' +
                     ' as a comma-separated list, e.g. "Film, Travel"')
+  parser.add_option('--commission', dest='commission',
+                    help=("Finance only - specify commission for transaction"))
   parser.add_option('--config', dest='config',
                     help='Specify location of config file.')
+  parser.add_option('--currency', dest='currency',
+                    help=("Finance only - specify currency for portfolio"))
   parser.add_option('--devtags', dest='devtags',
                     help='YouTube only - specify developer tags' +
                     ' as a comma-separated list.')
@@ -699,7 +703,8 @@ def setup_parser():
                     ' Calendar only - date of the event to add / look for. ' +
                     ' Can also specify a range with a comma:' +
                     ' "YYYY-MM-DD", events between date and future.' +
-                    ' "YYYY-MM-DD,YYYY-MM-DD" events between two dates.')
+                    ' "YYYY-MM-DD,YYYY-MM-DD" events between two dates.\n' +
+                    ' Finance only - transaction creation date')
   parser.add_option('--debug', dest='debug',
                     action='store_true',
                     help=('Enable all debugging output, including HTTP data'))
@@ -733,10 +738,14 @@ def setup_parser():
                     action='store_false', default=True,
                     help='Google Apps Premier only - do not convert the file' +
                     ' on upload. (Else converts to native Google Docs format)')
+  parser.add_option('--notes', dest='notes',
+                    help=("Finance only - specify notes for transaction"))
   parser.add_option('-o', '--owner', dest='owner',
                     help=('Username or ID of the owner of the resource. ' +
                           'For example,' +
                           " 'picasa list-albums -o bob' to list bob's albums"))
+  parser.add_option('--price', dest='price',
+                    help=("Finance only - specify price for transaction"))
   parser.add_option('-q', '--query', dest='query',
                     help=('Full text query string for specifying items.'
                           + ' Searches on titles, captions, and tags.'))
@@ -746,6 +755,9 @@ def setup_parser():
   parser.add_option('--reminder', dest='reminder',
                     help=("Calendar only - specify time for added event's " +
                           'reminder, e.g. "10m", "3h", "1d"'))
+  parser.add_option('--shares', dest='shares',
+                    help=("Finance only - specify amount of shares " +
+                          "for transaction"))
   parser.add_option('--skip-auth', dest='skip_auth',
                     action='store_true',
                     help='Skip validation step for re-used access tokens.')
@@ -756,6 +768,13 @@ def setup_parser():
                           'or file containing the description.'))
   parser.add_option('-t',  '--tags', dest='tags',
                     help='Tags for item, e.g. "Sunsets, Earth Day"')
+  parser.add_option('--ticker', dest='ticker',
+                    help=("Finance only - specify ticker"))
+  parser.add_option('--ttype', dest='ttype',
+                    help=("Finance only - specify transaction type, " +
+                          'e.g. "Bye", "Sell", "Buy to Cover", "Sell Short"'))
+  parser.add_option('--txnid', dest='txnid',
+                    help=("Finance only - specify transaction id"))
   parser.add_option('-u', '--user', dest='user',
                     help='Username to log in with for the service.')
   parser.add_option('-v', '--verbose', dest='verbose',

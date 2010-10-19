@@ -26,10 +26,11 @@ packages =['googlecl',
            'googlecl.contacts',
            'googlecl.docs',
            'googlecl.picasa',
-           'googlecl.youtube']
+           'googlecl.youtube',
+           'googlecl.finance']
+
 SCRIPT_TO_INSTALL = 'src/google'
 SCRIPT_TO_RENAME = 'src/google.py'
-
 
 # Safely move src/google.py to src/google
 if os.path.exists(SCRIPT_TO_INSTALL):
@@ -58,7 +59,6 @@ if os.path.exists(SCRIPT_TO_INSTALL):
 else:
   shutil.copy(SCRIPT_TO_RENAME, SCRIPT_TO_INSTALL)
 
-
 long_desc = """The Google Data APIs allow programmatic access to
 various Google services.  This package wraps a subset of those APIs into a
 command-line tool that makes it easy to do things like posting to a Blogger
@@ -83,5 +83,5 @@ setup(name="googlecl",
           'Operating System :: POSIX',
           'Intended Audience :: Developers',
           'Intended Audience :: End Users/Desktop'
-      ]     
-     ) 
+      ]
+     )

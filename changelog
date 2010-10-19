@@ -1,5 +1,6 @@
 version x.x.x
  Enhancements
+ * Added support for Google Finance (thanks, bartosh!)
  * Added --access option for Picasa, Blogger, and YouTube creation tasks.
  * Improved and expanded list fields for youtube, picasa, and blogger.
 
