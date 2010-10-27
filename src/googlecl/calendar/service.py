@@ -33,6 +33,7 @@ import logging
 import time
 import urllib
 from googlecl.calendar import SECTION_HEADER
+from googlecl.calendar.date import Date, DateParser, DateRangeParser
 
 # Renamed here to reduce verbosity in other sections
 safe_encode = googlecl.safe_encode
@@ -42,6 +43,7 @@ safe_decode = googlecl.safe_decode
 LOG = logging.getLogger(googlecl.calendar.LOGGER_NAME)
 USER_BATCH_URL_FORMAT = \
                gdata.calendar.service.DEFAULT_BATCH_URL.replace('default', '%s')
+
 
 class CalendarError(googlecl.base.Error):
   """Base error for Calendar errors."""
@@ -94,11 +96,15 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
     request_feed = gdata.calendar.CalendarEventFeed()
     # Don't need to decode event.title.text here because it's not being
     # displayed to the user. Totally internal.
-    single_events = self.get_events(cal_user, start_date=start_date,
-                                    end_date=end_date,
-                                    titles=event.title.text,
-                                    expand_recurrence=True)
-    delete_events = [e for e in single_events if e.original_event and
+    _, recurring_events = self.get_events(cal_user, start_date=start_date,
+                                          end_date=end_date,
+                                          titles=event.title.text,
+                                          expand_recurrence=True)
+    print len(recurring_events)
+    print recurring_events[0].original_event.id
+    print event.id.text
+
+    delete_events = [e for e in recurring_events if e.original_event and
                      e.original_event.id == event.id.text.split('/')[-1]]
     if not delete_events:
       raise EventsNotFound
@@ -133,27 +139,17 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
 
   AddReminders = add_reminders
 
-  def delete_events(self, events, date, calendar_user):
-    """Delete events from a calendar.
+  def delete_recurring_events(self, events, start_date, end_date, cal_user):
+    """Delete recurring events from a calendar.
 
     Keyword arguments:
       events: List of non-expanded calendar events to delete.
-      date: Date string specifying the date range of the events, as the date
-            option.
-      calendar_user: "User" of the calendar to delete events from.
+      start_date: Date specifying the start of events (inclusive).
+      end_date: Date specifying the end of events (inclusive). None for no end
+          date.
+      cal_user: "User" of the calendar to delete events from.
 
     """
-    single_events = [e for e in events if not e.recurrence and
-                     e.event_status.value != 'CANCELED']
-    recurring_events = [e for e in events if e.recurrence and e.when]
-    # Not sure which is faster/better: above approach, or using set subtraction
-    # recurring_events = set(events) - set(single_events)
-    if not single_events and not recurring_events:
-      raise EventsNotFound
-    delete_default = googlecl.CONFIG.getboolean('GENERAL', 'delete_by_default')
-    self.DeleteEntryList(single_events, 'event', delete_default)
-
-    date = googlecl.calendar.Date(date)
     # option_list is a list of tuples, (prompt_string, deletion_instruction)
     # prompt_string gets displayed to the user,
     # deletion_instruction is a special value that will let the program know
@@ -164,49 +160,85 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
     #     'ON' -- delete events on the single date given.
     #     'ONAFTER' -- delete events on and after the date given.
     option_list = [('All events in this series', 'ALL')]
-    if date.start and date.end:
-      option_list.append(('Instances between ' + date.start + ' and ' +
-                          date.end, 'TWIXT'))
-    elif date.start or date.end:
-      delete_date = (date.start or date.end)
-      delete_date_utc = (date.utc_start or date.utc_end)
-      option_list.append(('Instances on ' + delete_date,
-                          'ON'))
-      option_list.append(('All events on and after ' + delete_date,
+    if start_date and end_date:
+      option_list.append(('Instances between %s and %s' %
+                          (start_date, end_date), 'TWIXT'))
+    elif start_date or end_date:
+      delete_date = (start_date or end_date)
+      option_list.append(('Instances on %s' % delete_date, 'ON'))
+      option_list.append(('All events on and after %s' % delete_date,
                           'ONAFTER'))
     option_list.append(('Do not delete', 'NONE'))
     prompt_str = ''
     for i, option in enumerate(option_list):
       prompt_str += str(i) + ') ' + option[0] + '\n'
-    for event in recurring_events:
+    for event in events:
       if self.prompt_for_delete:
         delete_selection = -1
         while delete_selection < 0 or delete_selection > len(option_list)-1:
           msg = 'Delete "%s"?\n%s' %\
                 (safe_decode(event.title.text), prompt_str)
-          delete_selection = int(raw_input(safe_encode(msg)))
+          try:
+            delete_selection = int(raw_input(safe_encode(msg)))
+          except ValueError:
+            continue
         option = option_list[delete_selection]
         if option[1] == 'ALL':
           gdata.service.GDataService.Delete(self, event.GetEditLink().href)
         elif option[1] == 'TWIXT':
-          self._batch_delete_recur(event, calendar_user,
-                                   start_date=date.utc_start,
-                                   end_date=date.utc_end)
+          self._batch_delete_recur(event, cal_user,
+                                   start_date=start_date,
+                                   end_date=end_date)
         elif option[1] == 'ON':
-          new_date = googlecl.calendar.Date(delete_date_utc)
-          self._batch_delete_recur(event, calendar_user,
-                                   start_date=new_date.utc_start,
-                                   end_date=new_date.utc_end)
+          self._batch_delete_recur(event, cal_user,
+                                   start_date=delete_date,
+                                   end_date=delete_date)
         elif option[1] == 'ONAFTER':
-          self._batch_delete_recur(event, calendar_user,
-                                   start_date=delete_date_utc)
+          self._batch_delete_recur(event, cal_user,
+                                   start_date=delete_date)
         elif option[1] != 'NONE':
           raise CalendarError('Got unexpected batch deletion command!')
 
       else:
         gdata.service.GDataService.Delete(self, event.GetEditLink().href)
 
-  DeleteEvents = delete_events
+  DeleteRecurringEvents = delete_recurring_events
+
+  def full_add_event(self, titles, calendar_user, date, reminder):
+    """Create an event piece by piece (no quick add).
+
+    Args:
+      titles: List of titles of events.
+      calendar_user: "User" of the calendar to add to.
+      date: Text representation of a date and/or time.
+      reminder: Number of minutes before event to send reminder. Set to 0 for no
+          reminder.
+
+    Returns:
+      Response entries from batch-inserting the events.
+    """
+
+    import atom
+    request_feed = gdata.calendar.CalendarEventFeed()
+    start_text, _, end_text = googlecl.calendar.date.split_string(date, [','])
+    parser = DateParser()
+    start_date = parser.parse(start_text)
+    if end_text:
+      end_date = parser.parse(end_text, base=start_date.local)
+    else:
+      end_date = start_date + datetime.timedelta(hours=1)
+    for title in titles:
+      event = gdata.calendar.CalendarEventEntry()
+      event.title = atom.Title(text=title)
+      when = gdata.calendar.When(start_time=start_date.to_day(),
+                                 end_time=end_date.to_day())
+      if reminder:
+        when.reminder.append(gdata.calendar.Reminder(minutes=reminder))
+      event.when.append(when)
+      request_feed.AddInsert(event, 'insert-' + title[0:5])
+    response_feed = self.ExecuteBatch(request_feed,
+                                      USER_BATCH_URL_FORMAT % calendar_user)
+    return response_feed.entry
 
   def quick_add_event(self, quick_add_strings, calendar_user):
     """Add an event using the Calendar Quick Add feature.
@@ -264,16 +296,14 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
   GetCalendarUserList = get_calendar_user_list
 
   def get_events(self, calendar_user, start_date=None, end_date=None,
-                 titles=None, query=None, expand_recurrence=True):
+                 titles=None, query=None, expand_recurrence=True, split=True):
     """Get events.
 
     Keyword arguments:
       calendar_user: "user" of the calendar to get events for.
                      See get_calendar_user_list.
-      start_date: Start date of the event(s). Must follow the RFC 3339
-                  timestamp format and be in UTC. Default None.
-      end_date: End date of the event(s). Must follow the RFC 3339 timestamp
-                format and be in UTC. Default None.
+      start_date: Start date of the event(s). Default None.
+      end_date: End date of the event(s). Default None.
       titles: string or list Title(s) to look for in the event, supporting
               regular expressions. Default None for any title.
       query: Query string (not encoded) for doing full-text searches on event
@@ -288,15 +318,42 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
     query = gdata.calendar.service.CalendarEventQuery(user=calendar_user,
                                                       text_query=query)
     if start_date:
-      query.start_min = start_date
+      query.start_min = start_date.to_query()
     if end_date:
-      query.start_max = end_date
+      # End dates are naturally exclusive, so make it inclusive.
+      query.start_max = end_date.to_inclusive_query()
     if expand_recurrence:
       query.singleevents = 'true'
     query.orderby = 'starttime'
     query.sortorder = 'ascend'
-    return self.GetEntries(query.ToUri(), titles,
+    events = self.GetEntries(query.ToUri(), titles,
                            converter=gdata.calendar.CalendarEventFeedFromString)
+
+    events = googlecl.calendar.filter_cancelled_events(events)
+    if split:
+      single_events = googlecl.calendar.filter_recurring_events(events,
+                                                              expand_recurrence)
+      recurring_events = googlecl.calendar.filter_single_events(events,
+                                                              expand_recurrence)
+      if start_date and end_date:
+        single_events = \
+            googlecl.calendar.filter_all_day_events_outside_range(start_date,
+                                                                  end_date,
+                                                                  single_events)
+        if expand_recurrence:
+          recurring_events = \
+          googlecl.calendar.filter_all_day_events_outside_range(start_date,
+                                                                end_date,
+                                                               recurring_events)
+      return single_events, recurring_events
+    else:
+      # need to filter...
+      if expand_recurrence and start_date and end_date:
+        return googlecl.calendar.filter_all_day_events_outside_range(start_date,
+                                                                     end_date,
+                                                                     events)
+      else:
+        return events
 
   GetEvents = get_events
 
@@ -308,29 +365,6 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
 
 
 SERVICE_CLASS = CalendarServiceCL
-
-
-class CalendarEntryToStringWrapper(googlecl.base.BaseEntryToStringWrapper):
-  @property
-  def when(self):
-    """When event takes place."""
-    start_time_data, end_time_data, freq = get_datetimes(self.entry)
-    print_format = googlecl.get_config_option(SECTION_HEADER,
-                                              'date_print_format')
-    start_time = time.strftime(print_format, start_time_data)
-    end_time = time.strftime(print_format, end_time_data)
-    value = start_time + ' - ' + end_time
-    if freq:
-      if freq.has_key('BYDAY'):
-        value += ' (' + freq['BYDAY'].lower() + ')'
-      else:
-        value += ' (' + freq['FREQ'].lower() + ')'
-    return value
-
-  @property
-  def where(self):
-    """Where event takes place"""
-    return self._join(self.entry.where, text_attribute='value_string')
 
 
 def convert_reminder_string(reminder):
@@ -346,7 +380,6 @@ def convert_reminder_string(reminder):
 
   Raises:
     ValueError if conversion failed.
-
   """
   if not reminder:
     return None
@@ -366,107 +399,48 @@ def convert_reminder_string(reminder):
     return int(reminder)
 
 
-def get_date_today(include_hour=False, as_range=False):
-  """Get today's date, as if entered by the user.
+class CalendarEntryToStringWrapper(googlecl.base.BaseEntryToStringWrapper):
+  @property
+  def when(self):
+    """When event takes place."""
+    start_date, end_date, freq = googlecl.calendar.get_datetimes(self.entry)
+    print_format = googlecl.get_config_option(SECTION_HEADER,
+                                              'date_print_format')
+    start_text = time.strftime(print_format, start_date)
+    end_text = time.strftime(print_format, end_date)
+    value = start_text + ' - ' + end_text
+    if freq:
+      if freq.has_key('BYDAY'):
+        value += ' (' + freq['BYDAY'].lower() + ')'
+      else:
+        value += ' (' + freq['FREQ'].lower() + ')'
+    return value
 
-  Keyword arguments:
-    include_hour: Include the hour in the return string. Default False.
-
-  Returns:
-    String representation of today's date
-
-  """
-  date_data = datetime.datetime.today()
-  if include_hour:
-    date_str = date_data.strftime(googlecl.calendar.QUERY_DATE_FORMAT)
-  else:
-    date_str = date_data.strftime(googlecl.base.DATE_FORMAT)
-  if as_range:
-    date_str += ','
-  return date_str
-
-
-def get_datetimes(cal_entry):
-  """Get datetime objects for the start and end of the event specified by a
-  calendar entry.
-
-  Keyword arguments:
-    cal_entry: A CalendarEventEntry.
-
-  Returns:
-    (start_time, end_time, freq) where
-      start_time - datetime object of the start of the event.
-      end_time - datetime object of the end of the event.
-      freq - string that tells how often the event repeats (NoneType if the
-           event does not repeat (does not have a gd:recurrence element)).
-
-  """
-  if cal_entry.recurrence:
-    return parse_recurrence(cal_entry.recurrence.text)
-  else:
-    freq = None
-    when = cal_entry.when[0]
-    try:
-      # Trim the string data from "when" to only include down to seconds
-      start_time_data = time.strptime(when.start_time[:19],
-                                      '%Y-%m-%dT%H:%M:%S')
-      end_time_data = time.strptime(when.end_time[:19],
-                                    '%Y-%m-%dT%H:%M:%S')
-    except ValueError:
-      # Try to handle date format for all-day events
-      start_time_data = time.strptime(when.start_time, '%Y-%m-%d')
-      end_time_data = time.strptime(when.end_time, '%Y-%m-%d')
-  return (start_time_data, end_time_data, freq)
+  @property
+  def where(self):
+    """Where event takes place"""
+    return self._join(self.entry.where, text_attribute='value_string')
 
 
-def parse_recurrence(time_string):
-  """Parse recurrence data found in event entry.
-
-  Keyword arguments:
-    time_string: Value of entry's recurrence.text field.
-
-  Returns:
-    Tuple of (start_time, end_time, frequency). All values are in the user's
-    current timezone (I hope). start_time and end_time are datetime objects,
-    and frequency is a dictionary mapping RFC 2445 RRULE parameters to their
-    values. (http://www.ietf.org/rfc/rfc2445.txt, section 4.3.10)
-
-  """
-  # Google calendars uses a pretty limited section of RFC 2445, and I'm
-  # abusing that here. This will probably break if Google ever changes how
-  # they handle recurrence, or how the recurrence string is built.
-  data = time_string.split('\n')
-  start_time_string = data[0].split(':')[-1]
-  start_time = time.strptime(start_time_string,'%Y%m%dT%H%M%S')
-
-  end_time_string = data[1].split(':')[-1]
-  end_time = time.strptime(end_time_string,'%Y%m%dT%H%M%S')
-
-  freq_string = data[2][6:]
-  freq_properties = freq_string.split(';')
-  freq = {}
-  for prop in freq_properties:
-    key, value = prop.split('=')
-    freq[key] = value
-  return (start_time, end_time, freq)
-
-
-def _list(client, options, date, args):
+def _list(client, options, args):
   cal_user_list = client.get_calendar_user_list(options.cal)
   if not cal_user_list:
     LOG.error('No calendar matches "' + options.cal + '"')
     return
   titles_list = googlecl.build_titles_list(options.title, args)
+  parser = DateRangeParser()
+  date_range = parser.parse(options.date)
   for cal in cal_user_list:
     print ''
     print safe_encode('[' + unicode(cal) + ']')
-    entries = client.get_events(cal.user,
-                                start_date=date.utc_start,
-                                end_date=date.utc_end,
-                                titles=titles_list,
-                                query=options.query)
+    single_events = client.get_events(cal.user,
+                                      start_date=date_range.start,
+                                      end_date=date_range.end,
+                                      titles=titles_list,
+                                      query=options.query,
+                                      split=False)
 
-    for entry in entries:
+    for entry in single_events:
       print googlecl.base.compile_entry_string(
                                             CalendarEntryToStringWrapper(entry),
                                             options.fields.split(','),
@@ -485,17 +459,14 @@ def _list(client, options, date, args):
 def _run_list(client, options, args):
   # If no other search parameters are mentioned, set date to be
   # today. (Prevent user from retrieving all events ever)
-  if not (options.title or options.query or options.date):
-    date = googlecl.calendar.Date(get_date_today(include_hour=True,
-                                                 as_range=True))
-  else:
-    date = googlecl.calendar.Date(options.date)
-  _list(client, options, date, args)
+  if not (options.title or args  or options.query or options.date):
+    options.date = 'today,'
+  _list(client, options, args)
 
 
 def _run_list_today(client, options, args):
-  date = googlecl.calendar.Date(get_date_today(include_hour=False))
-  _list(client, options, date, args)
+  options.date = 'today'
+  _list(client, options, args)
 
 
 def _run_add(client, options, args):
@@ -503,25 +474,24 @@ def _run_add(client, options, args):
   if not cal_user_list:
     LOG.error('No calendar matches "' + options.cal + '"')
     return
-  minutes = convert_reminder_string(options.reminder)
+  reminder_in_minutes = convert_reminder_string(options.reminder)
   events_list = options.src + args
   for cal in cal_user_list:
-    results = client.quick_add_event(events_list, cal.user)
+    if options.date:
+      results = client.full_add_event(events_list, cal.user, options.date,
+                                      reminder_in_minutes)
+      reminder_results = []
+    else:
+      results = client.quick_add_event(events_list, cal.user)
+      reminder_results = client.add_reminders(cal.user,
+                                              results,
+                                              reminder_in_minutes)
     if LOG.isEnabledFor(logging.DEBUG):
-      for entry in results:
+      for entry in results + reminder_results:
         LOG.debug('ID: %s, status: %s, reason: %s',
                   entry.batch_id.text,
                   entry.batch_status.code,
                   entry.batch_status.reason)
-
-    if minutes:
-      new_results = client.add_reminders(cal.user, results, minutes)
-      if LOG.isEnabledFor(logging.DEBUG):
-        for entry in new_results:
-          LOG.debug('ID: %s, status: %s, reason: %s',
-                    entry.batch_id.text,
-                    entry.batch_status.code,
-                    entry.batch_status.reason)
 
 
 def _run_delete(client, options, args):
@@ -529,24 +499,32 @@ def _run_delete(client, options, args):
   if not cal_user_list:
     LOG.error('No calendar matches "' + options.cal + '"')
     return
-  date = googlecl.calendar.Date(options.date)
-  if args:
-    LOG.info('Sorry, no support for additional arguments for '
-             '"calendar delete" yet')
-    LOG.debug(safe_encode('(Ignoring ' + unicode(args) +')'))
+  parser = DateRangeParser()
+  date_range = parser.parse(options.date)
 
   titles_list = googlecl.build_titles_list(options.title, args)
+  delete_default = googlecl.CONFIG.getboolean('GENERAL', 'delete_by_default')
+  print date_range.start
+  print date_range.end
   for cal in cal_user_list:
+    single_events, recurring_events = client.get_events(cal.user,
+                                                    start_date=date_range.start,
+                                                    end_date=date_range.end,
+                                                    titles=titles_list,
+                                                    query=options.query,
+                                                    expand_recurrence=False)
     LOG.info(safe_encode('For calendar ' + unicode(cal)))
-    events = client.get_events(cal.user,
-                               start_date=date.utc_start,
-                               end_date=date.utc_end,
-                               titles=titles_list,
-                               query=options.query,
-                               expand_recurrence=False)
-    try:
-      client.delete_events(events, options.date, cal.user)
-    except EventsNotFound:
+    if single_events:
+      client.DeleteEntryList(single_events, 'event', delete_default)
+    if recurring_events:
+      if date_range.specified_as_range:
+        # if the user specified a date that was a range...
+        client.delete_recurring_events(recurring_events, date_range.start,
+                                       date_range.end, cal.user)
+      else:
+        client.delete_recurring_events(recurring_events, date_range.start,
+                                       None, cal.user)
+    if not (single_events or recurring_events):
       LOG.warning('No events found that match your options!')
 
 

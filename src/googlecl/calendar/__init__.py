@@ -15,72 +15,125 @@
 import datetime
 import googlecl
 import googlecl.base
+import re
+import time
 
 service_name = __name__.split('.')[-1]
 LOGGER_NAME = googlecl.LOGGER_NAME + '.' + service_name
 SECTION_HEADER = service_name.upper()
-QUERY_DATE_FORMAT = '%Y-%m-%dT%H:%M:%S'
 
 
-class Date(object):
-
-  """Contains information on a date."""
-
-  def __init__(self, date):
-    """Constructor.
-
-    Keyword arguments:
-      date: String representation of a date in RFC 3339
-            ('YYYY-MM-DD' or 'YYYY-MM-DD' + 'T' + 'HH:MM:SS')
-    """
-    if date and date != ',':
-      self.start, is_range, self.end = date.partition(',')
-    else:
-      self.start = None
-      self.end = None
-    self.utc_start_data = None
-    self.utc_end_data = None
-    utc_timedelta = get_utc_timedelta()
-    # Even though the "when" elements of events will be properly shifted into
-    # the user's timezone, all queries are interpreted as UTC (GMT) time.
-    if self.start:
-      try:
-        start_time = datetime.datetime.strptime(self.start,
-                                                googlecl.base.DATE_FORMAT)
-      except ValueError:
-        start_time = datetime.datetime.strptime(self.start, QUERY_DATE_FORMAT)
-      self.utc_start_data = start_time + (utc_timedelta)
-      # If start is defined, and not as part of a range,
-      # the end should be undefined.
-      if not is_range:
-        # If the user specified a start, but not as a range, assume
-        # they want just that day
-        self.utc_end_data = self.utc_start_data + datetime.timedelta(hours=24)
-    if self.end:
-      try:
-        end_time = datetime.datetime.strptime(self.end,
-                                              googlecl.base.DATE_FORMAT)
-      except ValueError:
-        end_time = datetime.datetime.strptime(self.end, QUERY_DATE_FORMAT)
-      self.utc_end_data = end_time + (utc_timedelta)
-      # Queries exclude the end date, so advance by one day to include the day
-      # the user specified.
-      self.utc_end_data += datetime.timedelta(hours=24)
-
-    if self.utc_end_data:
-      self.utc_end = self.utc_end_data.strftime(QUERY_DATE_FORMAT)
-    else:
-      self.utc_end = None
-    if self.utc_start_data:
-      self.utc_start = self.utc_start_data.strftime(QUERY_DATE_FORMAT)
-    else:
-      self.utc_start = None
-
-
-def get_utc_timedelta():
-  """Return the UTC offset of local zone at present time as a timedelta."""
-  import time
-  if time.localtime().tm_isdst and time.daylight:
-    return datetime.timedelta(hours=time.altzone/3600)
+def filter_recurring_events(events, recurrences_expanded):
+  if recurrences_expanded:
+    is_recurring = lambda event: event.original_event
   else:
-    return datetime.timedelta(hours=time.timezone/3600)
+    is_recurring = lambda event: event.recurrence
+  return [e for e in events if not is_recurring(e)]
+
+
+def filter_single_events(events, recurrences_expanded):
+  if recurrences_expanded:
+    is_single = lambda event: not event.original_event
+  else:
+    is_single = lambda event: not event.recurrence
+  return [e for e in events if not is_single(e)]
+
+
+def filter_all_day_events_outside_range(start_date, end_date, events):
+  if start_date.all_day:
+    start_datetime = start_date.local
+  else:
+    start_datetime = datetime.datetime(year=start_date.local.year,
+                                       month=start_date.local.month,
+                                       day=start_date.local.day)
+  if end_date.all_day:
+    end_datetime = end_date.local
+  else:
+    end_datetime = datetime.datetime(year=end_date.local.year,
+                                     month=end_date.local.month,
+                                     day=end_date.local.day)
+  new_events = []
+  for event in events:
+    try:
+      start = datetime.datetime.strptime(event.when[0].start_time, '%Y-%m-%d')
+      end = datetime.datetime.strptime(event.when[0].end_time, '%Y-%m-%d')
+    except ValueError, err:
+      if str(err).find('unconverted data remains') == -1:
+        raise err
+      else:
+        #Errors that complain of unconverted data are events with duration
+        new_events.append(event)
+    else:
+      inclusive_end_datetime = end_datetime + datetime.timedelta(hours=24)
+      if start >= start_datetime and end <= inclusive_end_datetime:
+        new_events.append(event)
+  return new_events
+
+
+def filter_cancelled_events(events):
+  return [e for e in events if e.event_status.value != 'CANCELED' or not e.when]
+
+
+def get_datetimes(cal_entry):
+  """Get datetime objects for the start and end of the event specified by a
+  calendar entry.
+
+  Keyword arguments:
+    cal_entry: A CalendarEventEntry.
+
+  Returns:
+    (start_time, end_time, freq) where
+      start_time - datetime object of the start of the event.
+      end_time - datetime object of the end of the event.
+      freq - string that tells how often the event repeats (NoneType if the
+           event does not repeat (does not have a gd:recurrence element)).
+
+  """
+  if cal_entry.recurrence:
+    return parse_recurrence(cal_entry.recurrence.text)
+  else:
+    freq = None
+    when = cal_entry.when[0]
+    try:
+      # Trim the string data from "when" to only include down to seconds
+      start_time_data = time.strptime(when.start_time[:19],
+                                      '%Y-%m-%dT%H:%M:%S')
+      end_time_data = time.strptime(when.end_time[:19],
+                                    '%Y-%m-%dT%H:%M:%S')
+    except ValueError:
+      # Try to handle date format for all-day events
+      start_time_data = time.strptime(when.start_time, '%Y-%m-%d')
+      end_time_data = time.strptime(when.end_time, '%Y-%m-%d')
+  return (start_time_data, end_time_data, freq)
+
+
+def parse_recurrence(time_string):
+  """Parse recurrence data found in event entry.
+
+  Keyword arguments:
+    time_string: Value of entry's recurrence.text field.
+
+  Returns:
+    Tuple of (start_time, end_time, frequency). All values are in the user's
+    current timezone (I hope). start_time and end_time are datetime objects,
+    and frequency is a dictionary mapping RFC 2445 RRULE parameters to their
+    values. (http://www.ietf.org/rfc/rfc2445.txt, section 4.3.10)
+
+  """
+  # Google calendars uses a pretty limited section of RFC 2445, and I'm
+  # abusing that here. This will probably break if Google ever changes how
+  # they handle recurrence, or how the recurrence string is built.
+  data = time_string.split('\n')
+  start_time_string = data[0].split(':')[-1]
+  start_time = time.strptime(start_time_string,'%Y%m%dT%H%M%S')
+
+  end_time_string = data[1].split(':')[-1]
+  end_time = time.strptime(end_time_string,'%Y%m%dT%H%M%S')
+
+  freq_string = data[2][6:]
+  freq_properties = freq_string.split(';')
+  freq = {}
+  for prop in freq_properties:
+    key, value = prop.split('=')
+    freq[key] = value
+  return (start_time, end_time, freq)
