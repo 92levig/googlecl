@@ -75,7 +75,7 @@ Note: You can use `--owner` to specify another user's blog when listing posts, b
 2.1.2 Calendar
 Common options:
   * cal: Specify the name of the calendar. This can be a regular expression. If this option is not given, the primary calendar is used.
-  * date: Specify a date, or date range, to retrieve events from for listing or deletion. This will not (yet) do anything for the add task. Dates are inclusive, so `--date 2010-06-23,2010-06-25` will include the 23rd, 24th, and 25th of June.
+  * date: Specify a date, or date range. For the add task, this DISABLES the Quick Add text parsing feature, but allows you to specify when the event occurs. For listing and deleting events, `--date` will only return events that fall on or within the given date(s). Dates are inclusive, so `--date 2010-06-23,2010-06-25` will include the 23rd, 24th, and 25th of June 2010. See the detailed description of the `--date` option below.
   * reminder: (for add task only) Add a reminder to the events being added, one per default reminder type in your calendar settings. Default is in minutes, though you can say something like "2h" for one hour, "1d" for one day, etc.
 
 Tasks:
@@ -84,8 +84,8 @@ Tasks:
   * list: List events. `list --date 2010-06-01,2010-06-30`
   * today: List events for today only. `today`
 
-Note: The add task uses the 'Quick Add' feature, which you can read about here: http://www.google.com/support/calendar/bin/answer.py?answer=36604#text
-*Warning*: Because the add task uses 'Quick Add', it will not work for non-English calendars. See Issue 211.
+*Note:* The add task uses the 'Quick Add' feature unless you specify `--date`. You you can read about Quick Add here: http://www.google.com/support/calendar/bin/answer.py?answer=36604#text
+*Warning*: Because the add task uses 'Quick Add', it will not work for non-English calendars. See Issue 211. If you have a non-English calendar, use the `--date` option to add events to your calendar.
 
 2.1.3 Contacts
 Tasks:
@@ -249,9 +249,40 @@ The tags option will let you both add and remove tags / labels. Here are some ex
 
 3.2 Date
 The behavior given here is applicable to the calendar service.
-  * '2010-06-01': Specify June 1st, 2010
-  * '2010-06-01,': On and after June 1st, 2010
-  * '2010-06-01,2010-06-25': Between June 1st and June 25th, inclusive
-  * ',2010-06-15': On or before June 15th
 
-Note that the delete task will still interpret 'date,' and ',date' identically.
+  * '[datetime]': Specify date/time.
+  * '[datetime],': On and after given date/time.
+  * '[starting datetime],[ending datetime]': Between the two dates/times, inclusive
+  * ',[datetime]': On or before date/time.
+
+The contents of [datetime] can follow several formats. You can specify a date with any of the following:
+
+  * today/tomorrow
+  * YYYY-M-D ("2010-9-25")
+  * M/D[/YY or /YYYY] (e.g. "9/2", "9/2/10", "9/2/2010")
+  * Month/mo. D [YYYY] (e.g. "January 1", "Feb 20", "Dec 31 1999")
+
+You can specify a time in most typical formats:
+
+  * hour [am or pm] (e.g. "3pm", but NOT just "23")
+  * hour:minute [am or pm] (e.g. "10:30am" "11:45", "23:00")
+
+  but note that if you specify a time without specifying am or pm, it will be converted the same way Google Calendar Quick Add does. 1-6 are interpreted as "pm", 7-12 are "am". So "6" will be interpreted as "18:00".
+
+Finally, you can combine a date and time with "at" or "@"
+
+  * 11/3 @ 5:30pm
+  * Feb 5 at 16:00
+  * tomorrow @ 3:33am
+
+In case those weren't enough options for you, you can specify an offset by prefixing a number with "+", which is interpreted based on where it appears in the date expression. Appearing by itself, it translates to an offset from the current time. After a datetime and comma, it translates to an offset from the previous datetime.
+
+  * '+3': A time of "three hours from now"
+  * '1/1/11 at 4pm,+2': A range of "1/1/11 at 4pm" to "1/1/11 at 6pm"
+  * '+4,+1': A range of "four hours from now" to "five hours from now"
+
+See the example scripts for examples on how to use this option.
+
+*Note:* the calendar delete task will interpret 'datetime,' and ',datetime' identically.
+
+*Note:* picasa create will only accept the "date" portion of possibilities for `--date`

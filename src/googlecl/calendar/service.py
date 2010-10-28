@@ -100,12 +100,9 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
                                           end_date=end_date,
                                           titles=event.title.text,
                                           expand_recurrence=True)
-    print len(recurring_events)
-    print recurring_events[0].original_event.id
-    print event.id.text
 
     delete_events = [e for e in recurring_events if e.original_event and
-                     e.original_event.id == event.id.text.split('/')[-1]]
+                     e.original_event.id == event.original_event.id]
     if not delete_events:
       raise EventsNotFound
     map(request_feed.AddDelete, [None], delete_events, [None])
@@ -172,6 +169,9 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
     prompt_str = ''
     for i, option in enumerate(option_list):
       prompt_str += str(i) + ') ' + option[0] + '\n'
+    # Condense events so that the user isn't prompted for the same event
+    # multiple times. This is assuming that recurring events have been expanded.
+    events = googlecl.calendar.condense_recurring_events(events)
     for event in events:
       if self.prompt_for_delete:
         delete_selection = -1
@@ -184,7 +184,7 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
             continue
         option = option_list[delete_selection]
         if option[1] == 'ALL':
-          gdata.service.GDataService.Delete(self, event.GetEditLink().href)
+          self._delete_original_event(event, cal_user)
         elif option[1] == 'TWIXT':
           self._batch_delete_recur(event, cal_user,
                                    start_date=start_date,
@@ -200,9 +200,26 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
           raise CalendarError('Got unexpected batch deletion command!')
 
       else:
-        gdata.service.GDataService.Delete(self, event.GetEditLink().href)
+        self._delete_original_event(event, cal_user)
 
   DeleteRecurringEvents = delete_recurring_events
+
+  def _delete_original_event(self, expanded_event, cal_user):
+    """Deletes the original event corresponding to an expanded recurrence.
+
+    Args:
+      expanded_event: Expanded recurrence. Should contain the "original_event"
+          attribute.
+      cal_user: Calendar user, used to retrieve events.
+    """
+    _, recurring_events = self.get_events(cal_user,
+                                          query=expanded_event.title.text,
+                                          expand_recurrence=False)
+    for event in recurring_events:
+      if event.id.text.split('/')[-1] == expanded_event.original_event.id:
+        LOG.debug('Matched on event %s, deleting without prompt' %
+                  event.title.text)
+        self.Delete(event.GetEditLink().href)
 
   def full_add_event(self, titles, calendar_user, date, reminder):
     """Create an event piece by piece (no quick add).
@@ -220,18 +237,15 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
 
     import atom
     request_feed = gdata.calendar.CalendarEventFeed()
-    start_text, _, end_text = googlecl.calendar.date.split_string(date, [','])
-    parser = DateParser()
-    start_date = parser.parse(start_text)
-    if end_text:
-      end_date = parser.parse(end_text, base=start_date.local)
-    else:
-      end_date = start_date + datetime.timedelta(hours=1)
+#    start_text, _, end_text = googlecl.calendar.date.split_string(date, [','])
+    parser = DateRangeParser()
+    date_range = parser.parse(date)
+    start_time, end_time = date_range.to_when()
     for title in titles:
       event = gdata.calendar.CalendarEventEntry()
       event.title = atom.Title(text=title)
-      when = gdata.calendar.When(start_time=start_date.to_day(),
-                                 end_time=end_date.to_day())
+      when = gdata.calendar.When(start_time=start_time,
+                                 end_time=end_time)
       if reminder:
         when.reminder.append(gdata.calendar.Reminder(minutes=reminder))
       event.when.append(when)
@@ -310,10 +324,10 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
              titles and content.
       expand_recurrence: If true, expand recurring events per the 'singleevents'
                          query parameter. Otherwise, don't.
+      split: Split events into "one-time" and "recurring" events.
 
     Returns:
-      List of events from primary calendar that match the given params.
-
+      List of events from calendar that match the given params.
     """
     query = gdata.calendar.service.CalendarEventQuery(user=calendar_user,
                                                       text_query=query)
@@ -329,26 +343,26 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
     events = self.GetEntries(query.ToUri(), titles,
                            converter=gdata.calendar.CalendarEventFeedFromString)
 
-    events = googlecl.calendar.filter_cancelled_events(events)
     if split:
       single_events = googlecl.calendar.filter_recurring_events(events,
                                                               expand_recurrence)
       recurring_events = googlecl.calendar.filter_single_events(events,
                                                               expand_recurrence)
-      if start_date and end_date:
+      if start_date or end_date:
+        # Because of how the "when" info on all-day events is stored, we need to
+        # do a filter step to remove all-day events on the edge of the date
+        # range.
         single_events = \
             googlecl.calendar.filter_all_day_events_outside_range(start_date,
                                                                   end_date,
                                                                   single_events)
-        if expand_recurrence:
-          recurring_events = \
-          googlecl.calendar.filter_all_day_events_outside_range(start_date,
-                                                                end_date,
+        recurring_events = \
+            googlecl.calendar.filter_all_day_events_outside_range(start_date,
+                                                                  end_date,
                                                                recurring_events)
       return single_events, recurring_events
     else:
-      # need to filter...
-      if expand_recurrence and start_date and end_date:
+      if start_date or end_date:
         return googlecl.calendar.filter_all_day_events_outside_range(start_date,
                                                                      end_date,
                                                                      events)
@@ -504,15 +518,13 @@ def _run_delete(client, options, args):
 
   titles_list = googlecl.build_titles_list(options.title, args)
   delete_default = googlecl.CONFIG.getboolean('GENERAL', 'delete_by_default')
-  print date_range.start
-  print date_range.end
   for cal in cal_user_list:
     single_events, recurring_events = client.get_events(cal.user,
                                                     start_date=date_range.start,
                                                     end_date=date_range.end,
                                                     titles=titles_list,
                                                     query=options.query,
-                                                    expand_recurrence=False)
+                                                    expand_recurrence=True)
     LOG.info(safe_encode('For calendar ' + unicode(cal)))
     if single_events:
       client.DeleteEntryList(single_events, 'event', delete_default)

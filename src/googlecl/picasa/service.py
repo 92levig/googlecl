@@ -21,13 +21,17 @@ from __future__ import with_statement
 __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import logging
 import os
+import time
 import urllib
+
+import gdata.photos
+from gdata.photos.service import PhotosService, GooglePhotosException
+
 import googlecl
 import googlecl.base
 import googlecl.service
-from googlecl.picasa import SECTION_HEADER
-from gdata.photos.service import PhotosService, GooglePhotosException
-import gdata.photos
+import googlecl.picasa
+import googlecl.calendar.date
 
 # Shortening the names of these guys.
 safe_encode = googlecl.safe_encode
@@ -68,7 +72,8 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
   def __init__(self):
     """Constructor."""
     PhotosService.__init__(self)
-    googlecl.service.BaseServiceCL.__init__(self, SECTION_HEADER)
+    googlecl.service.BaseServiceCL.__init__(self,
+                                            googlecl.picasa.SECTION_HEADER)
 
   def build_entry_list(self, user='default', titles=None, query=None,
                        force_photos=False):
@@ -442,22 +447,22 @@ def _run_create(client, options, args):
   # But both are guaranteed to be lists.
   media_list = options.src + args
   if options.date:
-    import time
-    try:
-      timestamp = time.mktime(time.strptime(options.date,
-                                            googlecl.base.DATE_FORMAT))
-    except ValueError, err:
-      LOG.error(err)
-      LOG.info('Ignoring date option, using today')
-      options.date = ''
+    parser = googlecl.calendar.date.DateParser()
+    date = parser.determine_day(options.date, shift_dates=False)
+    if date:
+      timestamp = time.mktime(date.timetuple())
+      timestamp_ms = '%i' % int((timestamp * 1000))
     else:
-      # Timestamp needs to be in milliseconds after the epoch
-      options.date = '%i' % (timestamp * 1000)
+      LOG.error('Could not parse date %s. (Picasa will only takes day info)' %
+                date)
+      timestamp_ms = ''
+  else:
+    timestamp_ms = ''
 
   access = googlecl.picasa.MapAccessString(options.access)
   album = client.InsertAlbum(title=options.title, summary=options.summary,
                              access=access,
-                             timestamp=options.date)
+                             timestamp=timestamp_ms)
   if media_list:
     client.InsertMediaList(album, media_list=media_list,
                            tags=options.tags)

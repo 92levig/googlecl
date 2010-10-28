@@ -57,7 +57,8 @@ import logging
 import datetime
 
 import googlecl
-from googlecl.base import BaseCL, Task, DATE_FORMAT
+import googlecl.calendar.date
+from googlecl.base import BaseCL, Task
 from googlecl.service import BaseServiceCL
 from googlecl.finance import SECTION_HEADER
 
@@ -148,7 +149,7 @@ class FinanceServiceCL(FinanceService, BaseServiceCL):
       price: [optional] decimal, price of the share.
       currency: [optional] string, portfolio currency by default.
       commission: [optional] decimal, brocker commission.
-      date: [optional] string, transaction date in DATE_FORMAT,
+      date: [optional] string, transaction date,
             datetime.now() by default.
       notes: [optional] string, notes.
 
@@ -157,20 +158,17 @@ class FinanceServiceCL(FinanceService, BaseServiceCL):
     """
     if not currency:
       currency = pfl.portfolio_data.currency_code
-    if date:
-      try:
-        date = datetime.datetime.strptime(date, DATE_FORMAT).isoformat()
-      except ValueError:
-        return 'date is not in YYYY-MM-DD format'
+    if date is None:
+      # if date is not provided from the command line current date is set
+      date = datetime.datetime.now().isoformat()
+    elif date is '':
+      # special case for create position task. date should be set to None
+      # to create empty transaction. See detailed explanations in
+      # the _run_create_position function below
+      date = None
     else:
-      if date is None:
-        # if date is not provided from the command line current date is set
-        date = datetime.datetime.now().isoformat()
-      else:
-        # special case for create position task. date should be set to None
-        # to create empty transaction. See detailed explanations in
-        # the _run_create_position function below
-        date = None
+      parser = googlecl.calendar.date.DateParser()
+      date = parser.parse(date).local.isoformat()
 
     if price is not None:
       price = Price(money=[Money(amount=price, currency_code=currency)])

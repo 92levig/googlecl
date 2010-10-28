@@ -698,13 +698,10 @@ def setup_parser():
   parser.add_option('--devkey', dest='devkey',
                     help='YouTube only - specify a developer key')
   parser.add_option('-d', '--date', dest='date',
-                    help='Date in YYYY-MM-DD format.' +
-                    ' Picasa only - sets the date of the album\n' +
-                    ' Calendar only - date of the event to add / look for. ' +
-                    ' Can also specify a range with a comma:' +
-                    ' "YYYY-MM-DD", events between date and future.' +
-                    ' "YYYY-MM-DD,YYYY-MM-DD" events between two dates.\n' +
-                    ' Finance only - transaction creation date')
+                    help=('Calendar only - date of the event to add/look for. '
+                          'Can also specify a range with a comma.\n'
+                          'Picasa only - sets the date of the album\n'
+                          'Finance only - transaction creation date'))
   parser.add_option('--debug', dest='debug',
                     action='store_true',
                     help=('Enable all debugging output, including HTTP data'))

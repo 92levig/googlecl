@@ -23,7 +23,6 @@ import urllib
 safe_encode = googlecl.safe_encode
 safe_decode = googlecl.safe_decode
 
-DATE_FORMAT = '%Y-%m-%d'
 LOG = logging.getLogger(googlecl.LOGGER_NAME)
 
 

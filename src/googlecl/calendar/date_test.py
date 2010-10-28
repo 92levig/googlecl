@@ -40,7 +40,6 @@ def static_today():
                               second=0,
                               microsecond=0)
 
-
 NOW = static_now()
 YEAR = NOW.year
 ONE_DAY = timedelta(hours=24)
@@ -64,6 +63,7 @@ AMBIGUOUS_TESTS = {'6': NOW.replace(hour=18, minute=0),
 FULL_DATE_TESTS = {'7/15/2011': datetime(year=2011, month=7, day=15),
                    '4/30/2000': datetime(year=2000, month=4, day=30),
                    '2010-06-02': datetime(year=2010, month=6, day=2),
+                   '2010-9-2': datetime(year=2010, month=9, day=2),
                    'March 30 2010': datetime(year=2010, month=3, day=30),
                    'Jan 1 1970': datetime(year=1970, month=1, day=1)}
 
@@ -86,6 +86,8 @@ TRICK_TESTS = {'today at 2': NOW.replace(minute=0),
 DURATION_TESTS = {'+3': NOW + timedelta(hours=3),
                   '+1:20': NOW + timedelta(hours=1, minutes=20),
                   '+:45': NOW + timedelta(minutes=45)}
+
+FAIL_TESTS = [',', '@', '115', 'notadate', '1-4']
 
 RANGE_BASE_TEXT = '11/3 @ 9pm'
 RANGE_EXPECTED_START = datetime(year=YEAR, month=11, day=3, hour=21)
@@ -137,6 +139,15 @@ class ParseSingleDateTest(ParsingDatesTest):
   def testDuration(self):
     self.runTestSet(DURATION_TESTS)
 
+  def testFailures(self):
+    for text in FAIL_TESTS:
+      try:
+        self.parser.parse(text)
+      except date.ParsingError, err:
+        pass
+      else:
+        self.fail('Expected ParsingError for %s' % text)
+
 
 class ParseDateRange(ParsingDatesTest):
 
@@ -144,45 +155,78 @@ class ParseDateRange(ParsingDatesTest):
     self.parser = date.DateRangeParser(static_today, static_now)
 
   def testSingleDate(self):
-    start, end = self.parser.parse(RANGE_BASE_TEXT)
-    self.assertConvertedEqual(RANGE_BASE_TEXT, RANGE_EXPECTED_START,
-                              start.local)
-    self.assertEqual(end.local, RANGE_EXPECTED_START + timedelta(hours=24))
+    date_range = self.parser.parse(RANGE_BASE_TEXT)
+    self.assertConvertedEqual(RANGE_BASE_TEXT,
+                              RANGE_EXPECTED_START,
+                              date_range.start.local)
+    self.assertEqual(date_range.end.local, RANGE_EXPECTED_START)
+    self.assertFalse(date_range.specified_as_range)
 
   def testStartRange(self):
     text = RANGE_BASE_TEXT + ','
-    start, end = self.parser.parse(text)
-    self.assertConvertedEqual(text, RANGE_EXPECTED_START, start.local)
-    self.assertEqual(end, None)
+    date_range = self.parser.parse(text)
+    self.assertConvertedEqual(text,
+                              RANGE_EXPECTED_START,
+                              date_range.start.local)
+    self.assertEqual(date_range.end, None)
+    self.assertTrue(date_range.specified_as_range)
 
-  def testDurationRange(self):
+  def testStartAndDurationRange(self):
     text = RANGE_BASE_TEXT + ',+5'
-    start, end = self.parser.parse(text)
-    self.assertConvertedEqual(RANGE_BASE_TEXT, RANGE_EXPECTED_START,
-                              start.local)
-    self.assertEqual(end.local, RANGE_EXPECTED_START + timedelta(hours=5))
+    date_range = self.parser.parse(text)
+    self.assertConvertedEqual(RANGE_BASE_TEXT,
+                              RANGE_EXPECTED_START,
+                              date_range.start.local)
+    self.assertEqual(date_range.end.local,
+                     RANGE_EXPECTED_START + timedelta(hours=5))
+    self.assertTrue(date_range.specified_as_range)
+
+  def testAllDurationRange(self):
+    text = '+2,+3'
+    date_range = self.parser.parse(text)
+    self.assertEqual(date_range.start.local,
+                     NOW + timedelta(hours=2))
+    self.assertEqual(date_range.end.local,
+                     NOW + timedelta(hours=5))
+    self.assertTrue(date_range.specified_as_range)
+
+  def testEndDurationRange(self):
+    text = ',+3'
+    date_range = self.parser.parse(text)
+    self.assertEqual(date_range.start, None)
+    self.assertEqual(date_range.end.local,
+                     NOW + timedelta(hours=3))
+    self.assertTrue(date_range.specified_as_range)
 
   def testDurationStart(self):
     text = '+1' + ',' + RANGE_BASE_TEXT
-    start, end = self.parser.parse(text)
-    self.assertEqual(start.local, NOW + timedelta(hours=1))
-    self.assertConvertedEqual(RANGE_BASE_TEXT, RANGE_EXPECTED_START,
-                              end.local)
+    date_range = self.parser.parse(text)
+    self.assertEqual(date_range.start.local, NOW + timedelta(hours=1))
+    self.assertConvertedEqual(RANGE_BASE_TEXT,
+                              RANGE_EXPECTED_START,
+                              date_range.end.local)
+    self.assertTrue(date_range.specified_as_range)
 
   def testStartEndRange(self):
     end_text = '11/29'
     text = RANGE_BASE_TEXT + ',' + end_text
-    start, end = self.parser.parse(text)
-    self.assertConvertedEqual(RANGE_BASE_TEXT, RANGE_EXPECTED_START,
-                              start.local)
-    self.assertConvertedEqual(end_text, datetime(year=YEAR, month=11, day=29),
-                              end.local)
+    date_range = self.parser.parse(text)
+    self.assertConvertedEqual(RANGE_BASE_TEXT,
+                              RANGE_EXPECTED_START,
+                              date_range.start.local)
+    self.assertConvertedEqual(end_text,
+                              datetime(year=YEAR, month=11, day=29),
+                              date_range.end.local)
+    self.assertTrue(date_range.specified_as_range)
 
   def testEndRange(self):
     text = ',' + RANGE_BASE_TEXT
-    start, end = self.parser.parse(text)
-    self.assertEqual(start, None)
-    self.assertConvertedEqual(text, RANGE_EXPECTED_START, end.local)
+    date_range = self.parser.parse(text)
+    self.assertEqual(date_range.start, None)
+    self.assertConvertedEqual(text,
+                              RANGE_EXPECTED_START,
+                              date_range.end.local)
+    self.assertTrue(date_range.specified_as_range)
 
 
 if __name__ == '__main__':

@@ -23,6 +23,17 @@ LOGGER_NAME = googlecl.LOGGER_NAME + '.' + service_name
 SECTION_HEADER = service_name.upper()
 
 
+def condense_recurring_events(events):
+  seen_ids = []
+  combined_events = []
+  for event in events:
+    print "looking at event %s" % event.title.text
+    if event.original_event.id not in seen_ids:
+      seen_ids.append(event.original_event.id)
+      combined_events.append(event)
+  return combined_events
+
+
 def filter_recurring_events(events, recurrences_expanded):
   if recurrences_expanded:
     is_recurring = lambda event: event.original_event
@@ -40,18 +51,20 @@ def filter_single_events(events, recurrences_expanded):
 
 
 def filter_all_day_events_outside_range(start_date, end_date, events):
-  if start_date.all_day:
-    start_datetime = start_date.local
-  else:
-    start_datetime = datetime.datetime(year=start_date.local.year,
-                                       month=start_date.local.month,
-                                       day=start_date.local.day)
-  if end_date.all_day:
-    end_datetime = end_date.local
-  else:
-    end_datetime = datetime.datetime(year=end_date.local.year,
-                                     month=end_date.local.month,
-                                     day=end_date.local.day)
+  if start_date:
+    if start_date.all_day:
+      start_datetime = start_date.local
+    else:
+      start_datetime = datetime.datetime(year=start_date.local.year,
+                                         month=start_date.local.month,
+                                         day=start_date.local.day)
+  if end_date:
+    if end_date.all_day:
+      end_datetime = end_date.local
+    else:
+      end_datetime = datetime.datetime(year=end_date.local.year,
+                                       month=end_date.local.month,
+                                       day=end_date.local.day)
   new_events = []
   for event in events:
     try:
@@ -65,13 +78,58 @@ def filter_all_day_events_outside_range(start_date, end_date, events):
         new_events.append(event)
     else:
       inclusive_end_datetime = end_datetime + datetime.timedelta(hours=24)
-      if start >= start_datetime and end <= inclusive_end_datetime:
+      if ((not start_date or start >= start_datetime) and
+          (not end_date or end <= inclusive_end_datetime)):
         new_events.append(event)
+      elif event.recurrence:
+        # While writing the below comment, I was 90% sure it was true. Testing
+        # this case, however, showed that things worked out just fine -- the
+        # events were filtered out. I must have misunderstood the "when" data.
+
+        # The tricky case: an Event that describes a recurring all-day event.
+        # In the rare case that:
+        # NO recurrences occur in the given range AND AT LEAST ONE recurrence
+        # occurs just outside the given range (AND it's an all-day recurrence),
+        # we will incorrectly return this event.
+        # This is unavoidable unless we a) perform another query or b)
+        # incorporate a recurrence parser.
+        new_events.append(event)
+
   return new_events
 
 
-def filter_cancelled_events(events):
-  return [e for e in events if e.event_status.value != 'CANCELED' or not e.when]
+def filter_canceled_events(events, recurrences_expanded):
+  AT_LEAST_ONE_EVENT = 'not dead yet!'
+  canceled_recurring_events = {}
+  ongoing_events = []
+  is_canceled = lambda e: e.event_status.value == 'CANCELED' or not e.when
+
+  for event in events:
+    print 'looking at event %s' % event.title.text
+    if recurrences_expanded:
+      if event.original_event:
+        print 'event is original: %s' % event.title.text
+        try:
+          status = canceled_recurring_events[event.original_event.id]
+        except KeyError:
+          status = None
+        if is_canceled(event) and status != AT_LEAST_ONE_EVENT:
+          print 'adding event to canceled: %s' % event.title.text
+          canceled_recurring_events[event.original_event.id] = event
+        if not is_canceled(event):
+          print 'at least one more of: %s' % event.title.text
+          canceled_recurring_events[event.original_event.id]= AT_LEAST_ONE_EVENT
+      ongoing_events.append(event)
+    # If recurrences have not been expanded, we can't tell if they were
+    # canceled or not.
+    if not is_canceled(event):
+      ongoing_events.append(event)
+
+  for event in canceled_recurring_events.values():
+    if event != AT_LEAST_ONE_EVENT:
+      ongoing_events.remove(event)
+
+  return ongoing_events
 
 
 def get_datetimes(cal_entry):

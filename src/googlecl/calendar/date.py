@@ -20,11 +20,14 @@ __author__ = 'thmiller@google.com (Tom Miller)'
 import datetime
 import re
 import googlecl.base
+import time
+import logging
 
+LOG = logging.getLogger("date.py")
 QUERY_DATE_FORMAT = '%Y-%m-%dT%H:%M:%S.000Z'
 
 ACCEPTED_DAY_TIME_FORMAT = '%Y-%m-%dT%H:%M:%S'
-ACCEPTED_DAY_FORMATS = [googlecl.base.DATE_FORMAT,
+ACCEPTED_DAY_FORMATS = ['%Y-%m-%d',
                         '%m/%d',
                         '%m/%d/%Y',
                         '%m/%d/%y',
@@ -50,6 +53,15 @@ class Error(Exception):
   pass
 
 
+class ParsingError(Error):
+  """Failed to parse a token."""
+  def __init__(self, token):
+    self.token = token
+
+  def __str__(self):
+    return 'Failed to parse "%s"' % self.token
+
+
 def datetime_today():
   """Creates a datetime object with zeroed-out time parameters."""
   return datetime.datetime.now().replace(hour=0,
@@ -69,30 +81,30 @@ def determine_duration(duration_token):
   """
   hour, minute = parse_ambiguous_time(duration_token)
   if not (hour or minute):
-    raise ValueError('Duration must be in form of [hours][:minutes]')
+    LOG.error('Duration must be in form of [hours][:minutes]')
+    return None
   return datetime.timedelta(hours=hour, minutes=minute)
 
 
 def get_utc_timedelta():
   """Return the UTC offset of local zone at present time as a timedelta."""
-  import time
   if time.localtime().tm_isdst and time.daylight:
     return datetime.timedelta(hours=time.altzone/3600)
   else:
     return datetime.timedelta(hours=time.timezone/3600)
 
 
-def parse_ambiguous_time(time):
+def parse_ambiguous_time(time_token):
   """Parses an ambiguous time into an hour and minute value.
 
   Args:
-    time: Ambiguous time to be parsed. "Ambiguous" means it could be before noon
-    or after noon. For example, "5:30" or "12"
+    time_token: Ambiguous time to be parsed. "Ambiguous" means it could be
+        before noon or after noon. For example, "5:30" or "12".
 
   Returns:
     Tuple of (hour, minute). The hour is still not on a 24 hour clock.
   """
-  ambiguous_time = re.match(AMBIGUOUS_TIME_REGEX, time)
+  ambiguous_time = re.match(AMBIGUOUS_TIME_REGEX, time_token)
   if not ambiguous_time:
     return None, None
 
@@ -136,26 +148,24 @@ def split_string(string, tokenizers=None):
   return (string.strip(), False, '')
 
 
-def split_time(date_string, tokenizers):
-  day_token, _, hour_token = split_string(date_string, tokenizers)
-  if not hour_token:
-    # If there was not a specific token for the hour, assume that the
-    # day_token c
-    hour_token = day_token
-    day_token = ''
-  return day_token, hour_token
-
-
-def _is_specific_date(day_token):
-  if day_token == 'today' or day_token.lower().find('%y') != -1:
-    return True
-  else:
-    return False
-
-
 class Date(object):
   def __init__(self, local_datetime=None, utc_datetime=None, all_day=False):
-    """Does not check utc info, pass with appropriate keyword argument."""
+    """Initializes the object.
+
+    The datetime objects passed in are treated as naive -- no timezone info will
+    be read from them.
+
+    Args:
+      local_datetime: A datetime object that specifies the date and time in the
+          local timezone. Default None to set off utc_datetime.
+      utc_datetime: Datetime object that specifies date and time in Coordinated
+          Universal Time (UTC). Default None to set off local_datetime.
+      all_day: Set True to indicate this Date is associated with an all day, or
+          "time-less" date. Default False.
+
+    Raises:
+      Error: local_datetime and utc_datetime are both left undefined.
+    """
     if not (local_datetime or utc_datetime):
       raise Error('Need to provide a local or UTC datetime')
     if local_datetime:
@@ -174,39 +184,58 @@ class Date(object):
 
   def __sub__(self, other):
     """Returns a Date with other subtracted from its time."""
-    return Date(utc_datetime=(self.utc - other))
+    return Date(utc_datetime=(self.utc - other), all_day=self.all_day)
 
   def __str__(self):
+    """Formats local datetime info into human-friendly string."""
     basic_string_format = '%m/%d/%Y'
     if self.all_day:
       return self.local.strftime(basic_string_format)
     else:
       return self.local.strftime(basic_string_format + ' %H:%M')
 
-  def to_query(self):
-    """Converts UTC data to a query-friendly, date-inclusive string."""
-    return self.to_format(QUERY_DATE_FORMAT)
-
-  def to_inclusive_query(self):
-    """Converts UTC data to query-friendly, date-inclusive string."""
-    if self.all_day:
-      delta = datetime.timedelta(hours=24)
-      new_datetime = self.utc + delta
-    else:
-      new_datetime = self.utc
-    return new_datetime.strftime(QUERY_DATE_FORMAT)
-
-  def to_day(self):
-    """Returns date formatted according to whether or not Date is an all-day
-    date or not."""
-    if self.all_day:
-      return self.to_format(googlecl.base.DATE_FORMAT)
-    else:
-      return self.to_query()
-
   def to_format(self, format_string):
     """Converts UTC data to specific format string."""
     return self.utc.strftime(format_string)
+
+  def to_inclusive_query(self):
+    """Converts UTC data to query-friendly, date-inclusive string.
+
+    Note: This behavior is specific to Google Calendar.
+    """
+    if self.all_day:
+      # If it's an all-day date, we need to boost the time by a day to make it
+      # inclusive.
+      delta = datetime.timedelta(hours=24)
+      new_datetime = self.utc + delta
+    else:
+      # For some unknown reason, this isn't necessary for dates that aren't all
+      # day.
+      new_datetime = self.utc
+    return new_datetime.strftime(QUERY_DATE_FORMAT)
+
+  def to_query(self):
+    """Converts UTC data to a query-friendly string."""
+    return self.to_format(QUERY_DATE_FORMAT)
+
+  def to_timestamp(self):
+    """Converts UTC data to timestamp in seconds.
+
+    Returns:
+      Seconds since the epoch as a float.
+    """
+    format_string = '%Y-%m-%dT%H:%M'
+    return time.mktime(time.strptime(self.utc.strftime(format_string),
+                                     format_string))
+
+  def to_when(self):
+    """Returns datetime info formatted to Google Calendar "when" style."""
+    if self.all_day:
+      # All day events must leave off hour data.
+      return self.to_format('%Y-%m-%d')
+    else:
+      # Otherwise, treated like a query string.
+      return self.to_query()
 
 
 class DateParser(object):
@@ -216,8 +245,10 @@ class DateParser(object):
     """Initializes the DateParser object.
 
     Args:
-      today: Function capable of giving the current local date.
-      now: Function capable of giving the current local time.
+      today: Function capable of giving the current local date. Default None to
+          use datetime_today
+      now: Function capable of giving the current local time. Default None to
+          use datetime.datetime.now
     """
     if today is None:
       today = datetime_today
@@ -243,62 +274,106 @@ class DateParser(object):
 
     Returns:
       Date object.
+
+    Raises:
+      ParsingError: Given text could not be parsed.
     """
-    delta = datetime.timedelta(hours=0)
+    local_datetime = None
     day = None
+    all_day = False
     try:
       # Unlikely anyone uses this, but if so, it's done in one shot
-      return Date(local_datetime=datetime.datetime.strptime(text,
-                                                      ACCEPTED_DAY_TIME_FORMAT))
+      all_info = datetime.datetime.strptime(text, ACCEPTED_DAY_TIME_FORMAT)
     except ValueError:
       pass
+    else:
+      return Date(local_datetime=all_info, all_day=False)
 
     day_token, _, time_token = split_string(text, _DAY_TIME_TOKENIZERS)
     if not (day_token or time_token):
-      raise ValueError('Invalid time text: "%s" ' % time_text)
+      raise ParsingError(text)
 
     past_time_to_tomorrow = False
     if day_token:
-      try:
-        day = self._determine_day(day_token, shift_dates)
-      except ValueError:
+      day = self.determine_day(day_token, shift_dates)
+      if day is None:
+        # If we couldn't figure out the day...
+        # ...Calendar will shift times that already happened to tomorrow
         past_time_to_tomorrow = True
+        # ...Maybe the day_token is actually a time_token
         time_token = day_token
         if base:
+          # ... and we'll use the starting point passed in.
           day = base
       else:
-        all_day = True
+        # If there's no time token, we're parsing an all day date.
+        all_day = not bool(time_token)
 
     if time_token:
-      all_day = False
       if time_token.startswith('+'):
         delta = determine_duration(time_token.lstrip('+'))
-        if not day:
+        if delta and not day:
+          # Durations go off of right now.
           day = self.now()
       else:
-        time = self._determine_time(time_token)
-        if past_time_to_tomorrow and self._time_has_passed(time):
-          delta = datetime.timedelta(hours=time.hour + 24, minutes=time.minute)
+        time_offset = self.determine_time(time_token)
+        if time_offset is None:
+          delta = None
         else:
-          delta = datetime.timedelta(hours=time.hour, minutes=time.minute)
-        if not day:
-          day = self.today()
+          if past_time_to_tomorrow and self._time_has_passed(time_offset):
+            delta = datetime.timedelta(hours=time_offset.hour + 24,
+                                       minutes=time_offset.minute)
+          else:
+            delta = datetime.timedelta(hours=time_offset.hour,
+                                       minutes=time_offset.minute)
+          if not day:
+            # Hour/minutes (i.e. not durations) go off of the date.
+            day = self.today()
+      if delta is not None:
+        local_datetime = day + delta
+    else:
+      local_datetime = day
 
-    return Date(local_datetime=day + delta, all_day=all_day)
+    if local_datetime:
+      return Date(local_datetime=local_datetime, all_day=all_day)
+    else:
+      raise ParsingError(text)
 
   def _day_has_passed(self, date):
-    """"Checks to see if date has passed."""
+    """"Checks to see if date has passed.
+
+    Args:
+      date: Datetime object to compare to today.
+
+    Returns:
+      True if date is earlier than today, False otherwise.
+    """
     today = self.today()
     return (date.month < today.month or
             (date.month == today.month and date.day < today.day))
 
-  def _determine_day(self, day_token, shift_dates):
+  def determine_day(self, day_token, shift_dates):
+    """Parses day token into a date.
+
+    Args:
+      day_token: String to be interpreted as a year, month, and day.
+      shift_dates: Indicates if past dates should be shifted to next year. Set
+          True to move the date to next year if the date has already occurred
+          this year, False otherwise.
+
+    Returns:
+      Datetime object with year, month, and day fields filled in if the
+      day_token could be parsed. Otherwise, None.
+    """
     if day_token == 'tomorrow':
       return self.today() + datetime.timedelta(hours=24)
     elif day_token == 'today':
       return self.today()
     else:
       date, valid_format = self._extract_time(day_token, ACCEPTED_DAY_FORMATS)
+      if not date:
+        LOG.debug('%s did not match any expected day formats' % day_token)
+        return None
       # If the year was not explicitly mentioned...
       # (strptime will set a default year of 1900)
       if valid_format.lower().find('%y') == -1:
@@ -308,7 +383,20 @@ class DateParser(object):
           date = date.replace(year=self.today().year)
       return date
 
-  def _determine_time(self, time_token):
+  def determine_time(self, time_token):
+    """Parses time token into a time.
+
+    Note: ambiguous times like "6" are converted according to how Google
+    Calendar interprets them. So "1" - "6" are converted to 13-18 on a 24 hour
+    clock.
+
+    Args:
+      time_token: String to be interpreted as an hour and minute.
+
+    Returns:
+      Time object with hour and minute fields filled in if the
+      time_token could be parsed. Otherwise, None.
+    """
     hour, minute = parse_ambiguous_time(time_token)
     if (hour or minute):
       # The ambiguous hours arranged in order, according to Google Calendar:
@@ -317,41 +405,84 @@ class DateParser(object):
         hour += 12
     else:
       tmp, _ = self._extract_time(time_token, ACCEPTED_TIME_FORMATS)
+      if not tmp:
+        LOG.debug('%s did not match any expected time formats')
+        return None
       hour = tmp.hour
       minute = tmp.minute
     return datetime.time(hour=hour, minute=minute)
 
-  def _extract_time(self, time, possible_formats):
+  def _extract_time(self, time_string, possible_formats):
     """Returns date data contained in a string.
 
     Args:
-      time: String representing a date and/or time.
+      time_string: String representing a date and/or time.
       possible_formats: List of possible formats "time" may be in.
 
     Returns:
-      datetime object populated by data found in "time", or None if no formats
-      matched.
+      Tuple of (datetime, format) with the datetime object populated by data
+      found in "time" according to the returned format, or (None, None)
+      if no formats matched.
     """
     for time_format in possible_formats:
       try:
-        date = datetime.datetime.strptime(time, time_format)
+        date = datetime.datetime.strptime(time_string, time_format)
       except ValueError, err:
         continue
       else:
         return date, time_format
-    raise ValueError('Token "%s" does not match any provided formats' % time)
+    return None, None
 
-  def _time_has_passed(self, time):
+  def _time_has_passed(self, time_container):
+    """Checks if time has already passed the current time.
+
+    Args:
+      time_container: Object with hour and minute fields.
+
+    Returns:
+      True if the given time has passed, False otherwise.
+    """
     now = self.now()
-    return (time.hour < now.hour or
-            (time.hour == now.hour and time.minute < now.minute))
+    return (time_container.hour < now.hour or
+            (time_container.hour == now.hour and
+             time_container.minute < now.minute))
 
 
 class DateRange(object):
+  """Holds info on a range of dates entered by the user."""
   def __init__(self, start, end, is_range):
+    """Initializes the object.
+
+    Args:
+      start: Start of the range.
+      end: End of the range.
+      is_range: Set True if the user specified this range as a range, False if
+          it was interpreted as a range.
+    """
     self.start = start
     self.end = end
     self.specified_as_range = is_range
+
+  def to_when(self):
+    """Returns Google Calendar friendly text for "when" attribute.
+
+    Raises:
+      Error: starting point or ending point are not defined.
+    """
+    if not self.start or not self.end:
+      raise Error('Cannot convert range of dates without start and end points.')
+    else:
+      start = self.start
+    if not self.specified_as_range:
+      # If only a start date was given...
+      if self.start.all_day:
+        end = self.start + datetime.timedelta(hours=24)
+      else:
+        end = self.start + datetime.timedelta(hours=1)
+    else:
+      end = self.end
+    return start.to_when(), end.to_when()
+
 
 class DateRangeParser(object):
   """Parser that treats strings as ranges."""
@@ -390,12 +521,11 @@ class DateRangeParser(object):
     """
     start_date = None
     end_date = None
-    if not date_string:
-      return (None, None)
     start_text, is_range, end_text = split_string(date_string,
                                                   self.range_tokenizers)
     if start_text:
       start_date = self.date_parser.parse(start_text, shift_dates=shift_dates)
+
     if end_text:
       if start_date:
         base = start_date.local
