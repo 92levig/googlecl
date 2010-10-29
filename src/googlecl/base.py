@@ -18,6 +18,7 @@ import googlecl
 import logging
 import re
 import urllib
+import time
 
 # Renamed here to reduce verbosity in other sections
 safe_encode = googlecl.safe_encode
@@ -69,6 +70,15 @@ class BaseCL(object):
                                                   'max_results',
                                                   default=large_max_results,
                                                   option_type=int)
+    self.max_retries = googlecl.get_config_option(section,
+                                                  'max_retries', 
+                                                  default=1,
+                                                  option_type=int)
+    self.retry_delay = googlecl.get_config_option(section,
+                                                  'retry_delay', 
+                                                  default=0,
+                                                  option_type=float)
+
     try:
       service_name = self.auth_service
     except AttributeError:
@@ -330,6 +340,33 @@ class BaseCL(object):
   def request_access(self, domain, hostid, scopes=None):
     raise NotImplementedError('request_access must be defined!')
   RequestAccess = request_access
+
+  def retry_operation(self, *args, **kwargs):
+    try_forever = self.max_retries >= 0
+    attempts_remaining = self.max_retries
+    err = None
+    while try_forever or attempts_remaining:
+      try:
+        return self.original_operation(*args, **kwargs)
+      except self.request_error, err:
+        error = str(err)
+        if (error.find('Moved Temporarily') != -1 or
+           error.find('Redirect received, but redirects_remaining <= 0') != -1):
+          attempts_remaining -= 1
+          LOG.debug('Retrying when you would have failed otherwise!')
+          LOG.debug('Arguments: %s' % args)
+          LOG.debug('Keyword arguments: %s' % kwargs)
+          LOG.debug('Error: %s' % err)
+          time.sleep(self.retry_delay)
+        else:
+          raise err
+      except Exception, unexpected:
+        LOG.debug('unexpected exception: %s' % unexpected)
+        LOG.debug('Arguments: %s' % args)
+        LOG.debug('Keyword arguments: %s' % kwargs)
+        raise unexpected
+    # Can only leave above loop if err is set at least once.
+    raise err 
 
 
 def set_max_results(uri, max):

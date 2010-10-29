@@ -37,7 +37,23 @@ class BaseServiceCL(googlecl.base.BaseCL):
                                         **kwargs)
     # Most services using old gdata API have to disable ssl.
     self.ssl = False
+
+    # Used for automatic retries of Get/Delete requests that fail due to 302
+    # errors. See BaseCL.retry_operation.
+    self.original_get = self.Get
+    self.Get = self.retry_get
+    self.original_delete = self.Delete
+    self.Delete = self.retry_delete
+
     LOG.debug('Initialized googlecl.service.BaseServiceCL')
+
+  def retry_get(self, *args, **kwargs):
+    self.original_operation = self.original_get
+    return self.retry_operation(*args, **kwargs)
+
+  def retry_delete(self, *args, **kwargs):
+    self.original_operation = self.original_delete
+    return self.retry_operation(*args, **kwargs)
 
   def request_access(self, domain, hostid, scopes=None):
     """Do all the steps involved with getting an OAuth access token.

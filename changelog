@@ -6,6 +6,9 @@ version x.x.x
  * Added --access option for Picasa, Blogger, and YouTube creation tasks.
  * Improved and expanded list fields for youtube, picasa, and blogger.
 
+ Bugfixes
+ * max_retries and retry_delay configuration options help combat 302 Redirect errors.
+
 version 0.9.11
  Enhancements
  * Added --src and --dest options to allow specifying data sources and download destinations respectively.

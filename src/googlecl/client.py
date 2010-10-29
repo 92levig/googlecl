@@ -36,6 +36,11 @@ class BaseClientCL(googlecl.base.BaseCL):
                *args, **kwargs):
     super(BaseClientCL, self).__init__(section, request_error_class,
                                        *args, **kwargs)
+    # Used for automatic retries of requests that fail due to 302 errors.
+    # See BaseCL.retry_operation.
+    self.original_request = self.request
+    self.request = self.retry_request
+
     LOG.debug('Initialized googlecl.client.BaseClientCL')
 
   def is_token_valid(self, test_uri):
@@ -47,6 +52,10 @@ class BaseClientCL(googlecl.base.BaseCL):
       return False
 
   IsTokenValid = is_token_valid
+
+  def retry_request(self, *args, **kwargs):
+    self.original_operation = self.original_request
+    return self.retry_operation(*args, **kwargs)
 
   def request_access(self, domain, hostid, scopes=None):
     """Do all the steps involved with getting an OAuth access token.
