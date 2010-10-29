@@ -60,7 +60,7 @@ def filter_all_day_events_outside_range(start_date, end_date, events):
                                          day=start_date.local.day)
   if end_date:
     if end_date.all_day:
-      end_datetime = end_date.local
+      inclusive_end_datetime = end_date.local + datetime.timedelta(hours=24)
     else:
       end_datetime = datetime.datetime(year=end_date.local.year,
                                        month=end_date.local.month,
@@ -77,7 +77,6 @@ def filter_all_day_events_outside_range(start_date, end_date, events):
         #Errors that complain of unconverted data are events with duration
         new_events.append(event)
     else:
-      inclusive_end_datetime = end_datetime + datetime.timedelta(hours=24)
       if ((not start_date or start >= start_datetime) and
           (not end_date or end <= inclusive_end_datetime)):
         new_events.append(event)
