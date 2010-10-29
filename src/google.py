@@ -142,6 +142,53 @@ def check_access_token(service_name, client):
     return False
 
 
+# I don't know if this and shlex.split() can replace expand_as_command_line
+# because of the behavior of globbing characters that are in ""
+def expand_args(args, on_linesep, on_glob, on_homepath):
+  """Expands arguments list.
+
+  Args:
+    on_linesep: Set True to split on occurrences of os.linesep. This is
+        reasonably safe -- line separators appear to be escaped when given to
+        Python on the command line.
+    on_glob: Set True to glob expressions. May not be safe! For example, if user
+        passes in "A*" (including the quotes) the * should NOT be expanded.
+        Recommended only if sys.platform == 'win32'
+    on_homepath: Set True to replace a leading ~/ with the user's home
+        directory. May not be safe! Same situation as on_glob, described above.
+
+  Returns:
+    List of arguments that have been expanded
+  """
+  new_args = []
+  for arg in args:
+    temp_arg_list = None
+    if on_linesep:
+      temp_arg_list = arg.split(os.linesep)
+    if on_glob:
+      if temp_arg_list:
+        tmp = []
+        for sub_arg in temp_arg_list:
+          tmp.extend(glob.glob(sub_arg))
+        temp_arg_list = tmp
+      else:
+        temp_arg_list = glob.glob(arg)
+    if on_homepath:
+      if temp_arg_list:
+        tmp = []
+        for sub_arg in temp_arg_list:
+          tmp.append(os.path.expanduser(sub_arg))
+        temp_arg_list = tmp
+      else:
+        arg = os.path.expanduser(arg)
+
+    if temp_arg_list:
+      new_args.extend(temp_arg_list)
+    else:
+      new_args.append(arg)
+  return new_args
+
+
 def expand_as_command_line(command_string):
   """Expand a string as if it was entered at the command line.
 
@@ -813,6 +860,8 @@ def main():
   if not args:
     run_interactive(parser)
   else:
+    is_windows = sys.platform == 'win32'
+    args = expand_args(args, True, is_windows, is_windows)
     try:
       run_once(options, args)
     except KeyboardInterrupt:
