@@ -25,7 +25,7 @@ safe_encode = googlecl.safe_encode
 safe_decode = googlecl.safe_decode
 
 LOG = logging.getLogger(googlecl.LOGGER_NAME)
-HTTP_ERROR_CODES_TO_RETRY_ON = [302, 500]
+HTTP_ERROR_CODES_TO_RETRY_ON = [302, 500, 503]
 
 
 class Error(Exception):
@@ -72,11 +72,11 @@ class BaseCL(object):
                                                   default=large_max_results,
                                                   option_type=int)
     self.max_retries = googlecl.get_config_option(section,
-                                                  'max_retries', 
+                                                  'max_retries',
                                                   default=1,
                                                   option_type=int)
     self.retry_delay = googlecl.get_config_option(section,
-                                                  'retry_delay', 
+                                                  'retry_delay',
                                                   default=0,
                                                   option_type=float)
 
@@ -142,7 +142,6 @@ class BaseCL(object):
 
     Returns:
       Full email address ('schmoe@domain.wtf') of the account with access.
-
     """
     # Use request instead of Get to avoid the attempts to parse from xml.
     server_response = self.request('GET',
@@ -199,7 +198,6 @@ class BaseCL(object):
                      arguments.
     Returns:
       List of entries.
-
     """
     # XXX: Should probably go through all code and make sure title can only be
     # NoneType or list, not also maybe a string.
@@ -284,7 +282,6 @@ class BaseCL(object):
 
     Returns:
       None if there were no matches, or one entry matching the given title.
-
     """
     if not uri_or_entry_list:
       return None
@@ -321,7 +318,6 @@ class BaseCL(object):
     Returns:
       True if Get was successful, False if Get raised an exception with the
       string 'Token invalid' in its body, and raises any other exceptions.
-
     """
     if not test_uri:
       raise Error('No uri to test token with!' +
@@ -408,14 +404,12 @@ def set_max_results(uri, max):
 # logging in, and google.py does not check whether or not a task
 # says otherwise.
 class Task(object):
-
   """A container of requirements.
 
   Each requirement matches up with one of the attributes of the option parser
   used to parse command line arguments. Requirements are given as lists.
   For example, if a task needs to have attr1 and attr2 and either attr3 or 4,
   the list would look like ['attr1', 'attr2', ['attr3', 'attr4']]
-
   """
 
   def __init__(self, description, callback=None, required=[], optional=[],
@@ -433,7 +427,6 @@ class Task(object):
                 (Default True)
       args_desc: Description of what the arguments should be.
                  (Default '', for no arguments necessary for this task)
-
     """
     if isinstance(required, basestring):
       required = [required]
@@ -476,7 +469,6 @@ class Task(object):
     Returns:
       A subset of self.required containing only strings representing unmet
       requirements.
-
     """
     missing_options_set = set(attr for attr in dir(options)
                               if not attr.startswith('_') and
@@ -526,7 +518,6 @@ class BaseEntryToStringWrapper(object):
                        Default ' ' (there is no whitespace between label and
                        value if it is not specified).
                        Set as NoneType to omit labels entirely.
-
     """
     self.entry = gdata_entry
     self.intra_property_delimiter = intra_property_delimiter
@@ -634,7 +625,6 @@ class BaseEntryToStringWrapper(object):
 
     Returns:
       String from joining the items in entry_list.
-
     """
     if not text_extractor:
       if not text_attribute:
@@ -676,7 +666,6 @@ def compile_entry_string(wrapped_entry, attribute_list, delimiter,
                          option).
     newline_replacer: String to replace newlines with. Default ' '. Set to
                       NoneType to leave newlines in place.
-
   """
   import sys
 
@@ -737,7 +726,6 @@ def generate_tag_sets(tags):
       remove_set: set object of the tags to remove
       add_set: set object of the tags to add
       replace_tags: boolean indicating if all the old tags are removed
-
   """
   tags = tags.replace(', ', ',')
   tagset = set(tags.split(','))
