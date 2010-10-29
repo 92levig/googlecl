@@ -142,6 +142,17 @@ class DocsBaseCL(object):
 
     command_args = shlex.split(safe_encode(editor)) + [path]
     subprocess.call(command_args)
+    impatient_editors = googlecl.get_config_option(SECTION_HEADER,
+                                                   'impatient_editors',
+                                                   default='')
+    if impatient_editors:
+      impatient_editors = impatient_editors.split(',')
+      if command_args[0] in impatient_editors:
+        LOG.info('I noticed you are using an application that will not wait for '
+                 'you to finish editing your file.')
+        LOG.info('Hit enter in this shell when you finished editing and saved '
+                 'your work.')
+        raw_input('')
     if file_hash and file_hash == _md5_hash_file(path):
       LOG.info('No modifications to file, not uploading.')
       return
