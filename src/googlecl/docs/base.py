@@ -32,6 +32,7 @@ __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import ConfigParser
 import logging
 import os
+import shlex
 import shutil
 import googlecl
 from googlecl.docs import SECTION_HEADER
@@ -139,7 +140,8 @@ class DocsBaseCL(object):
     else:
       file_hash = None
 
-    subprocess.call([editor, path])
+    command_args = shlex.split(safe_encode(editor)) + [path]
+    subprocess.call(command_args)
     if file_hash and file_hash == _md5_hash_file(path):
       LOG.info('No modifications to file, not uploading.')
       return
