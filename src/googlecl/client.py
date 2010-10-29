@@ -46,14 +46,15 @@ class BaseClientCL(googlecl.base.BaseCL):
   def is_token_valid(self, test_uri):
     try:
       return super(BaseClientCL, self).is_token_valid(test_uri)
-    # If access has been revoked through account settings, get weird Unauthorized
-    # error complaining about AuthSub.
+    # If access has been revoked through account settings, get weird
+    # Unauthorized error complaining about AuthSub.
     except gdata.client.Unauthorized:
       return False
 
   IsTokenValid = is_token_valid
 
   def retry_request(self, *args, **kwargs):
+    """Retries a request."""
     self.original_operation = self.original_request
     return self.retry_operation(*args, **kwargs)
 

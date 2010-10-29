@@ -25,6 +25,7 @@ safe_encode = googlecl.safe_encode
 safe_decode = googlecl.safe_decode
 
 LOG = logging.getLogger(googlecl.LOGGER_NAME)
+HTTP_ERROR_CODES_TO_RETRY_ON = [302, 500]
 
 
 class Error(Exception):
@@ -342,6 +343,24 @@ class BaseCL(object):
   RequestAccess = request_access
 
   def retry_operation(self, *args, **kwargs):
+    """Retries an operation if certain status codes are returned.
+
+    Wraps self.original_operation in a try block for catching request errors.
+    self.original_operation should be an alias to the original method being
+    attempted. See BaseServiceCL.retry_(get/post/delete).
+
+    Args:
+      *args: The *args passed to the operation being attempted.
+      **kwargs: The **kwargs passed to the operation being attempted.
+
+    Returns:
+      Results from original operation being attempted.
+
+    Raises:
+      Exception: On exception from original operation. Certain RequestErrors
+      will be caught, and the original operation attempted again, if enough
+      retries remain (set by self.max_retries)
+    """
     try_forever = self.max_retries >= 0
     attempts_remaining = self.max_retries
     err = None
@@ -349,9 +368,13 @@ class BaseCL(object):
       try:
         return self.original_operation(*args, **kwargs)
       except self.request_error, err:
-        error = str(err)
-        if (error.find('Moved Temporarily') != -1 or
-           error.find('Redirect received, but redirects_remaining <= 0') != -1):
+        try:
+          # RequestError defined in gdata.client
+          status_code = err.status
+        except AttributeError:
+          # RequestError defined in gdata.service (and raised by GDataService)
+          status_code = err.args[0]['status']
+        if err.status in HTTP_ERROR_CODES_TO_RETRY_ON:
           attempts_remaining -= 1
           LOG.debug('Retrying when you would have failed otherwise!')
           LOG.debug('Arguments: %s' % args)
@@ -366,7 +389,7 @@ class BaseCL(object):
         LOG.debug('Keyword arguments: %s' % kwargs)
         raise unexpected
     # Can only leave above loop if err is set at least once.
-    raise err 
+    raise err
 
 
 def set_max_results(uri, max):

@@ -41,18 +41,34 @@ class BaseServiceCL(googlecl.base.BaseCL):
     # Used for automatic retries of Get/Delete requests that fail due to 302
     # errors. See BaseCL.retry_operation.
     self.original_get = self.Get
-    self.Get = self.retry_get
     self.original_delete = self.Delete
+    self.original_post = self.Post
+    self.original_put = self.Put
+    self.Get = self.retry_get
     self.Delete = self.retry_delete
+    self.Post = self.retry_post
+    self.Put = self.retry_put
 
     LOG.debug('Initialized googlecl.service.BaseServiceCL')
 
   def retry_get(self, *args, **kwargs):
+    """Retries the Get method."""
     self.original_operation = self.original_get
     return self.retry_operation(*args, **kwargs)
 
   def retry_delete(self, *args, **kwargs):
+    """Retries the Delete method."""
     self.original_operation = self.original_delete
+    return self.retry_operation(*args, **kwargs)
+
+  def retry_post(self, *args, **kwargs):
+    """Retries the Post method."""
+    self.original_operation = self.original_post
+    return self.retry_operation(*args, **kwargs)
+
+  def retry_put(self, *args, **kwargs):
+    """Retries the Put method."""
+    self.original_operation = self.original_put
     return self.retry_operation(*args, **kwargs)
 
   def request_access(self, domain, hostid, scopes=None):
