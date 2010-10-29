@@ -259,16 +259,18 @@ def load_preferences(path=None):
     _youtube = {'max_results': '50'}
     _contacts = {'fields': 'name,email'}
     _calendar = {'fields': 'title,when'}
-    _general = {'regex': 'True',
-               'delete_by_default': 'False',
-               'delete_prompt': 'True',
-               'tags_prompt': 'False',
-               'url_field': 'site',
-               'fields': 'title,url-site',
-               'missing_field_value': 'N/A',
-               'date_print_format': '%b %d %H:%M',
-               'cap_results': 'False',
-               'hostid': default_hostid}
+    _general = {'max_retries': '2',
+                'retry_delay': '0.5',
+                'regex': 'True',
+                'delete_by_default': 'False',
+                'delete_prompt': 'True',
+                'tags_prompt': 'False',
+                'url_field': 'site',
+                'fields': 'title,url-site',
+                'missing_field_value': 'N/A',
+                'date_print_format': '%b %d %H:%M',
+                'cap_results': 'False',
+                'hostid': default_hostid}
     _docs = {'document_format': 'txt',
              'spreadsheet_format': 'xls',
              'presentation_format': 'ppt',
