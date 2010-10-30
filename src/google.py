@@ -165,14 +165,6 @@ def expand_args(args, on_linesep, on_glob, on_homepath):
     temp_arg_list = None
     if on_linesep:
       temp_arg_list = arg.split(os.linesep)
-    if on_glob:
-      if temp_arg_list:
-        tmp = []
-        for sub_arg in temp_arg_list:
-          tmp.extend(glob.glob(sub_arg))
-        temp_arg_list = tmp
-      else:
-        temp_arg_list = glob.glob(arg)
     if on_homepath:
       if temp_arg_list:
         tmp = []
@@ -181,6 +173,16 @@ def expand_args(args, on_linesep, on_glob, on_homepath):
         temp_arg_list = tmp
       else:
         arg = os.path.expanduser(arg)
+    # Globbing needs to happen last, otherwise it wont be able to find
+    # any files.
+    if on_glob:
+      if temp_arg_list:
+        tmp = []
+        for sub_arg in temp_arg_list:
+          tmp.extend(glob.glob(sub_arg))
+        temp_arg_list = tmp
+      else:
+        temp_arg_list = glob.glob(arg)
 
     if temp_arg_list:
       new_args.extend(temp_arg_list)
@@ -862,6 +864,8 @@ def main():
   else:
     is_windows = sys.platform == 'win32'
     args = expand_args(args, True, is_windows, is_windows)
+    print args
+    return
     try:
       run_once(options, args)
     except KeyboardInterrupt:
