@@ -370,7 +370,7 @@ class BaseCL(object):
         except AttributeError:
           # RequestError defined in gdata.service (and raised by GDataService)
           status_code = err.args[0]['status']
-        if err.status in HTTP_ERROR_CODES_TO_RETRY_ON:
+        if status_code in HTTP_ERROR_CODES_TO_RETRY_ON:
           attempts_remaining -= 1
           LOG.debug('Retrying when you would have failed otherwise!')
           LOG.debug('Arguments: %s' % args)

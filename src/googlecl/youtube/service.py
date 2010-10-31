@@ -129,15 +129,16 @@ class YouTubeServiceCL(YouTubeService, googlecl.service.BaseServiceCL):
       try:
         self.InsertVideoEntry(video_entry, path)
       except gdata.service.RequestError, err:
-        if err.args[0]['body'].find('invalid_value') != -1:
-          err_str = 'Invalid category name'
-        else:
-          err_str = str(err)
-        LOG.error('Failed to upload video: ' + err_str)
+        LOG.error('Failed to upload video: %s' % err)
       except gdata.youtube.service.YouTubeError, err:
         err_str = str(err)
         if err_str.find('path name or a file-like object') != -1:
           err_str = 'Could not find file ' + path
+        if (err.args[0]['body'].find('invalid_value') != -1 and 
+            err.args[0]['body'].find('media:category') != -1):
+          err_str = 'Invalid category: %s' % category
+          err_str += ('\nFor a list of valid categories, see '
+                      'http://code.google.com/p/googlecl/wiki/Manual#YouTube')
         LOG.error(err_str)
 
   PostVideos = post_videos
