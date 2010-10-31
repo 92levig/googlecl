@@ -376,7 +376,8 @@ class BaseCL(object):
           LOG.debug('Arguments: %s' % args)
           LOG.debug('Keyword arguments: %s' % kwargs)
           LOG.debug('Error: %s' % err)
-          time.sleep(self.retry_delay)
+          if try_forever or attempts_remaining:
+            time.sleep(self.retry_delay)
         else:
           raise err
       except Exception, unexpected:

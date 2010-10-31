@@ -864,8 +864,6 @@ def main():
   else:
     is_windows = sys.platform == 'win32'
     args = expand_args(args, True, is_windows, is_windows)
-    print args
-    return
     try:
       run_once(options, args)
     except KeyboardInterrupt:
