@@ -47,13 +47,13 @@ list\-albums: List albums
 .IP
 Requires: fields AND delimiter Optional: title, owner
 .IP
-tag: Tag photos
+tag: Tag/caption photos
 .IP
-Requires: (title OR query) AND tags Optional: owner, photo
+Requires: (title OR query) AND (tags OR summary) Optional: owner, photo
 .IP
 post: Post photos to an album
 .IP
-Requires: title AND src Optional: tags, owner
+Requires: title AND src Optional: tags, owner, photo, summary
 .IP
 delete: Delete photos or albums
 .IP

@@ -231,7 +231,7 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
   GetSingleAlbum = get_single_album
 
   def insert_media_list(self, album, media_list, tags='', user='default',
-                        photo_name=None):
+                        photo_name=None, caption=None):
     """Insert photos or videos into an album.
 
     Keyword arguments:
@@ -240,11 +240,13 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
                   the local host.
       tags: Text of the tags to be added to each item, e.g. 'Islands, Vacation'
             (Default '').
-
+      caption: Caption/summary to give each item. Default None for no caption.
     """
     album_url = ('/data/feed/api/user/%s/albumid/%s' %
                  (user, album.gphoto_id.text))
     keywords = tags
+    if caption is None:
+      caption = ''
     failures = []
     for path in media_list:
       if not tags and self.prompt_for_tags:
@@ -267,7 +269,7 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
       try:
         self.InsertPhotoSimple(album_url,
                                title=photo_name,
-                               summary='',
+                               summary=caption,
                                filename_or_handle=path,
                                keywords=keywords,
                                content_type=content_type)
@@ -293,35 +295,45 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
 
   IsTokenValid = is_token_valid
 
-  def tag_photos(self, photo_entries, tags):
+  def tag_photos(self, photo_entries, tags, caption):
     """Add or remove tags on a list of photos.
 
     Keyword arguments:
       photo_entries: List of photo entry objects.
       tags: String representation of tags in a comma separated list.
             For how tags are generated from the string,
-            see googlecl.base.generate_tag_sets().
-
+            see googlecl.base.generate_tag_sets(). Set None to leave the tags as
+            they currently are.
+      caption: New caption for the photo. Set None to leave the caption as it
+          is.
     """
     from gdata.media import Group, Keywords
-    remove_set, add_set, replace_tags = googlecl.base.generate_tag_sets(tags)
+    from atom import Summary
+    if tags is not None:
+      remove_set, add_set, replace_tags = googlecl.base.generate_tag_sets(tags)
     for photo in photo_entries:
-      if not photo.media:
-        photo.media = Group()
-      if not photo.media.keywords:
-        photo.media.keywords = Keywords()
+      if tags is not None:
+        if not photo.media:
+          photo.media = Group()
+        if not photo.media.keywords:
+          photo.media.keywords = Keywords()
+        # No point removing tags if the photo has no keywords,
+        # or we're replacing the keywords.
+        if photo.media.keywords.text and remove_set and not replace_tags:
+          current_tags = photo.media.keywords.text.replace(', ', ',')
+          current_set = set(current_tags.split(','))
+          photo.media.keywords.text = ','.join(current_set - remove_set)
 
-      # No point removing tags if the photo has no keywords,
-      # or we're replacing the keywords.
-      if photo.media.keywords.text and remove_set and not replace_tags:
-        current_tags = photo.media.keywords.text.replace(', ', ',')
-        current_set = set(current_tags.split(','))
-        photo.media.keywords.text = ','.join(current_set - remove_set)
+        if replace_tags or not photo.media.keywords.text:
+          photo.media.keywords.text = ','.join(add_set)
+        elif add_set:
+          photo.media.keywords.text += ',' + ','.join(add_set)
 
-      if replace_tags or not photo.media.keywords.text:
-        photo.media.keywords.text = ','.join(add_set)
-      elif add_set:
-        photo.media.keywords.text += ',' + ','.join(add_set)
+      if caption is not None:
+        if not photo.summary:
+          photo.summary = Summary(text=caption, summary_type='text')
+        else:
+          photo.summary.text = caption
 
       self.UpdatePhotoMetadata(photo)
 
@@ -480,8 +492,8 @@ def _run_create(client, options, args):
 
 
 def _run_delete(client, options, args):
-  if options.query:
-    entry_type = 'photo'
+  if options.query or options.photo:
+    entry_type = 'media'
     search_string = options.query
   else:
     entry_type = 'album'
@@ -533,7 +545,7 @@ def _run_post(client, options, args):
   if album:
     client.InsertMediaList(album, media_list, tags=options.tags,
                            user=options.owner or options.user,
-                           photo_name=options.photo)
+                           photo_name=options.photo, caption=options.summary)
   else:
     LOG.error('No albums found that match ' + options.title)
 
@@ -559,7 +571,7 @@ def _run_tag(client, options, args):
                                     force_photos=True,
                                     photo_title=options.photo)
   if entries:
-    client.TagPhotos(entries, options.tags)
+    client.TagPhotos(entries, options.tags, options.summary)
   else:
     LOG.error('No matches for the title and/or query you gave.')
 
@@ -572,7 +584,8 @@ TASKS = {'create': googlecl.base.Task('Create an album',
          'post': googlecl.base.Task('Post photos to an album',
                                     callback=_run_post,
                                     required=['title', 'src'],
-                                    optional=['tags', 'owner', 'photo']),
+                                    optional=['tags', 'owner', 'photo',
+                                              'summary']),
          'delete': googlecl.base.Task('Delete photos or albums',
                                       callback=_run_delete,
                                       required=[['title', 'query']],
@@ -588,6 +601,7 @@ TASKS = {'create': googlecl.base.Task('Create an album',
          'get': googlecl.base.Task('Download albums', callback=_run_get,
                                    required=['title', 'dest'],
                                    optional=['owner', 'format', 'photo']),
-         'tag': googlecl.base.Task('Tag photos', callback=_run_tag,
-                                   required=[['title', 'query'], 'tags'],
+         'tag': googlecl.base.Task('Tag/caption photos', callback=_run_tag,
+                                   required=[['title', 'query'],
+                                             ['tags', 'summary']],
                                    optional=['owner', 'photo'])}
