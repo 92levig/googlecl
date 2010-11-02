@@ -5,6 +5,7 @@ version x.x.x
  * Allow specification of date for added calendar events.
  * Added --access option for Picasa, Blogger, and YouTube creation tasks.
  * Improved and expanded list fields for youtube, picasa, and blogger.
+ * Added --photo option to specify names of photos in Picasa to operate on.
  * impatient_editors config file option can stop programs like openoffice.org from exiting immediately during docs edit command.
 
  Bugfixes

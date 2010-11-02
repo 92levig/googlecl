@@ -790,6 +790,8 @@ def setup_parser():
                     help=('Username or ID of the owner of the resource. ' +
                           'For example,' +
                           " 'picasa list-albums -o bob' to list bob's albums"))
+  parser.add_option('--photo', dest='photo',
+                    help='Picasa only - specify title or name of photo(s)')
   parser.add_option('--price', dest='price',
                     help=("Finance only - specify price for transaction"))
   parser.add_option('-q', '--query', dest='query',

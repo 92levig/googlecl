@@ -76,7 +76,7 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
                                             googlecl.picasa.SECTION_HEADER)
 
   def build_entry_list(self, user='default', titles=None, query=None,
-                       force_photos=False):
+                       force_photos=False, photo_title=None):
     """Build a list of entries of either photos or albums.
 
     If no title is specified, entries will be of photos matching the query.
@@ -91,6 +91,7 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
       force_photos: If true, returns photo entries, even if album entries would
                     typically be returned. The entries will be for all photos
                     in each album.
+      photo_title: Title of the photo(s) to return. Default None for all photos.
 
     Returns:
       A list of entries, as specified above.
@@ -99,24 +100,26 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
     album_entry = []
     if titles[0] or not(titles[0] or query):
       album_entry = self.GetAlbum(user=user, titles=titles)
-    if query or force_photos:
+    if photo_title or query or force_photos:
       uri = '/data/feed/api/user/' + user
       if query and not album_entry:
-        entries = self.GetEntries(uri + '?kind=photo&q=' + query, None)
+        entries = self.GetEntries(uri + '?kind=photo&q=' + query, photo_title)
       else:
         entries = []
         uri += '/albumid/%s?kind=photo'
         if query:
           uri += '&q=' + query
         for album in album_entry:
-          photo_entries = self.GetEntries(uri % album.gphoto_id.text, None)
+          photo_entries = self.GetEntries(uri % album.gphoto_id.text,
+                                          photo_title)
           entries.extend(photo_entries)
     else:
       entries = album_entry
 
     return entries
 
-  def download_album(self, base_path, user, video_format='mp4', titles=None):
+  def download_album(self, base_path, user, video_format='mp4', titles=None,
+                     photo_title=None):
     """Download an album to the local host.
 
     Keyword arguments:
@@ -178,10 +181,11 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
           album_concat += 1
       os.makedirs(album_path)
 
-      photo_feed = self.GetFeed('/data/feed/api/user/%s/albumid/%s?kind=photo' %
-                                (user, album.gphoto_id.text))
+      uri = ('/data/feed/api/user/%s/albumid/%s?kind=photo' %
+             (user, album.gphoto_id.text))
+      photo_entries = self.GetEntries(uri, photo_title)
 
-      for photo_or_video in photo_feed.entry:
+      for photo_or_video in photo_entries:
         #TODO: Test on Windows (upload from one OS, download from another)
         photo_or_video_name = safe_decode(photo_or_video.title.text)
         photo_or_video_name = photo_or_video_name.split(os.extsep)[0]
@@ -225,7 +229,8 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
 
   GetSingleAlbum = get_single_album
 
-  def insert_media_list(self, album, media_list, tags='', user='default'):
+  def insert_media_list(self, album, media_list, tags='', user='default',
+                        photo_name=None):
     """Insert photos or videos into an album.
 
     Keyword arguments:
@@ -256,9 +261,11 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
           content_type = SUPPORTED_VIDEO_TYPES[ext]
         except KeyError:
           content_type = 'image/' + ext
+      if not photo_name:
+        photo_name = os.path.split(path)[1]
       try:
         self.InsertPhotoSimple(album_url,
-                               title=os.path.split(path)[1],
+                               title=photo_name,
                                summary='',
                                filename_or_handle=path,
                                keywords=keywords,
@@ -453,7 +460,7 @@ def _run_create(client, options, args):
       timestamp = time.mktime(date.timetuple())
       timestamp_ms = '%i' % int((timestamp * 1000))
     else:
-      LOG.error('Could not parse date %s. (Picasa will only takes day info)' %
+      LOG.error('Could not parse date %s. (Picasa only takes day info)' %
                 date)
       timestamp_ms = ''
   else:
@@ -478,7 +485,8 @@ def _run_delete(client, options, args):
 
   titles_list = googlecl.build_titles_list(options.title, args)
   entries = client.build_entry_list(titles=titles_list,
-                                    query=options.query)
+                                    query=options.query,
+                                    photo_title=options.photo)
   if not entries:
     LOG.info('No %ss matching %s' % (entry_type, search_string))
   else:
@@ -492,7 +500,8 @@ def _run_list(client, options, args):
   entries = client.build_entry_list(user=options.owner or options.user,
                                     titles=titles_list,
                                     query=options.query,
-                                    force_photos=True)
+                                    force_photos=True,
+                                    photo_title=options.photo)
   for entry in entries:
     print googlecl.base.compile_entry_string(PhotoEntryToStringWrapper(entry),
                                              options.fields.split(','),
@@ -519,7 +528,8 @@ def _run_post(client, options, args):
                                 title=options.title)
   if album:
     client.InsertMediaList(album, media_list, tags=options.tags,
-                           user=options.owner or options.user)
+                           user=options.owner or options.user,
+                           photo_name=options.photo)
   else:
     LOG.error('No albums found that match ' + options.title)
 
@@ -533,7 +543,8 @@ def _run_get(client, options, args):
   client.DownloadAlbum(options.dest,
                        user=options.owner or options.user,
                        video_format=options.format or 'mp4',
-                       titles=titles_list)
+                       titles=titles_list,
+                       photo_title=options.photo)
 
 
 def _run_tag(client, options, args):
@@ -541,7 +552,8 @@ def _run_tag(client, options, args):
   entries = client.build_entry_list(user=options.owner or options.user,
                                     query=options.query,
                                     titles=titles_list,
-                                    force_photos=True)
+                                    force_photos=True,
+                                    photo_title=options.photo)
   if entries:
     client.TagPhotos(entries, options.tags)
   else:
@@ -556,20 +568,22 @@ TASKS = {'create': googlecl.base.Task('Create an album',
          'post': googlecl.base.Task('Post photos to an album',
                                     callback=_run_post,
                                     required=['title', 'src'],
-                                    optional=['tags', 'owner']),
+                                    optional=['tags', 'owner', 'photo']),
          'delete': googlecl.base.Task('Delete photos or albums',
                                       callback=_run_delete,
-                                      required=[['title', 'query']]),
+                                      required=[['title', 'query']],
+                                      optional='photo'),
          'list': googlecl.base.Task('List photos', callback=_run_list,
                                     required=['fields', 'delimiter'],
-                                    optional=['title', 'query', 'owner']),
+                                    optional=['title', 'query',
+                                              'owner', 'photo']),
          'list-albums': googlecl.base.Task('List albums',
                                            callback=_run_list_albums,
                                            required=['fields', 'delimiter'],
                                            optional=['title', 'owner']),
          'get': googlecl.base.Task('Download albums', callback=_run_get,
                                    required=['title', 'dest'],
-                                   optional=['owner', 'format']),
+                                   optional=['owner', 'format', 'photo']),
          'tag': googlecl.base.Task('Tag photos', callback=_run_tag,
                                    required=[['title', 'query'], 'tags'],
-                                   optional='owner')}
+                                   optional=['owner', 'photo'])}
