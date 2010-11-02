@@ -506,6 +506,8 @@ def _run_add(client, options, args):
                   entry.batch_id.text,
                   entry.batch_status.code,
                   entry.batch_status.reason)
+    for entry in results:
+      LOG.info('Event created: %s' % entry.GetHtmlLink().href)
 
 
 def _run_delete(client, options, args):

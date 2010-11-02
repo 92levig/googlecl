@@ -127,7 +127,7 @@ class YouTubeServiceCL(YouTubeService, googlecl.service.BaseServiceCL):
         video_entry.AddDeveloperTags(taglist)
       LOG.info('Loading ' + path)
       try:
-        self.InsertVideoEntry(video_entry, path)
+        entry = self.InsertVideoEntry(video_entry, path)
       except gdata.service.RequestError, err:
         LOG.error('Failed to upload video: %s' % err)
       except gdata.youtube.service.YouTubeError, err:
@@ -140,6 +140,8 @@ class YouTubeServiceCL(YouTubeService, googlecl.service.BaseServiceCL):
           err_str += ('\nFor a list of valid categories, see '
                       'http://code.google.com/p/googlecl/wiki/Manual#YouTube')
         LOG.error(err_str)
+      else:
+        LOG.info('Video uploaded: %s' % entry.GetHtmlLink().href)
 
   PostVideos = post_videos
 

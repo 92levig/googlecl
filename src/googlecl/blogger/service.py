@@ -227,6 +227,7 @@ def _run_post(client, options, args):
     else:
       if entry and options.tags:
         client.LabelPosts([entry], options.tags)
+      LOG.info('Post created: %s' % entry.GetHtmlLink().href)
 
 
 def _run_delete(client, options, args):

@@ -487,6 +487,7 @@ def _run_create(client, options, args):
   if media_list:
     client.InsertMediaList(album, media_list=media_list,
                            tags=options.tags)
+  LOG.info('Created album: %s' % album.GetHtmlLink().href)
 
 
 def _run_delete(client, options, args):
