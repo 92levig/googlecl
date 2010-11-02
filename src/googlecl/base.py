@@ -364,7 +364,7 @@ class BaseCL(object):
         if status_code in HTTP_ERROR_CODES_TO_RETRY_ON:
           attempts_remaining -= 1
           LOG.debug('Retrying when you would have failed otherwise!')
-          LOG.debug('Arguments: %s' % args)
+          LOG.debug('Arguments: %s' % str(args))
           LOG.debug('Keyword arguments: %s' % kwargs)
           LOG.debug('Error: %s' % err)
           if try_forever or attempts_remaining:
