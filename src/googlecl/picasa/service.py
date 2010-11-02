@@ -19,6 +19,7 @@
 from __future__ import with_statement
 
 __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
+import datetime
 import logging
 import os
 import time
@@ -435,8 +436,11 @@ class AlbumEntryToStringWrapper(googlecl.base.BaseEntryToStringWrapper):
 
   @property
   def published(self):
-    """When the album was published/uploaded."""
-    return self.entry.published.text
+    """When the album was published/uploaded in local time."""
+    date = datetime.datetime.strptime(self.entry.published.text,
+                                      googlecl.calendar.date.QUERY_DATE_FORMAT)
+    date = date - googlecl.calendar.date.get_utc_timedelta()
+    return date.strftime('%Y-%m-%dT%H:%M:%S')
   when = published
 
 
