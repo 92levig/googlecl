@@ -9,6 +9,7 @@ version x.x.x
   * --date takes way, way more that just YYYY-MM-DD format. See the README and example scripts for a detailed list.
   * --photo will act like a "--title for photos" for Picasa, allowing you to list, get, delete, or tag only certain photos.
   * --summary can be given to picasa tag and post, to change the captions of photos being modified by those commands.
+  * Got rid of the following config file options: tags_prompt, delete_by_default, delete_prompt. Essentially, tags_prompt is now always False, and delete_by_default is always False (the default values for these options). delete_prompt was obsoleted by the command line argument --yes, which will answer "yes" to all "are you sure" deletion prompts.
 
 version 0.9.11
   * --force-auth and --skip-auth will let you specify if GoogleCL should verify the oauth access token it has on file for the service being used. After the first valid access token retrieved, --skip-auth is set in your config file as True. You can set this value to False to force a validation step on every run. The validation step is an authenticated request to Google to retrieve a small amount of data -- removing this step can yield a significant decrease in execution time for slow connections.

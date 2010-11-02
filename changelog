@@ -6,12 +6,12 @@ version x.x.x
  * Added --access option for Picasa, Blogger, and YouTube creation tasks.
  * Improved and expanded list fields for youtube, picasa, and blogger.
  * Added --photo option to specify names of photos in Picasa to operate on.
+ * Added --yes option to automatically delete files, instead of asking for confirmation.
  * impatient_editors config file option can stop programs like openoffice.org from exiting immediately during docs edit command.
 
  Bugfixes
  * --editor option for Docs can take flags and options.
- * max_retries and retry_delay configuration options help combat some server
- errors.
+ * max_retries and retry_delay configuration options help combat some server errors.
 
 version 0.9.11
  Enhancements

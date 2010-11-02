@@ -517,7 +517,6 @@ def _run_delete(client, options, args):
   date_range = parser.parse(options.date)
 
   titles_list = googlecl.build_titles_list(options.title, args)
-  delete_default = googlecl.CONFIG.getboolean('GENERAL', 'delete_by_default')
   for cal in cal_user_list:
     single_events, recurring_events = client.get_events(cal.user,
                                                     start_date=date_range.start,
@@ -525,9 +524,10 @@ def _run_delete(client, options, args):
                                                     titles=titles_list,
                                                     query=options.query,
                                                     expand_recurrence=True)
-    LOG.info(safe_encode('For calendar ' + unicode(cal)))
+    if options.prompt:
+      LOG.info(safe_encode('For calendar ' + unicode(cal)))
     if single_events:
-      client.DeleteEntryList(single_events, 'event', delete_default)
+      client.DeleteEntryList(single_events, 'event', options.prompt)
     if recurring_events:
       if date_range.specified_as_range:
         # if the user specified a date that was a range...

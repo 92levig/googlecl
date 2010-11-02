@@ -239,9 +239,7 @@ def _run_delete(client, options, args):
   except BlogNotFound, err:
     LOG.error(err)
     return
-  client.DeleteEntryList(post_entries, entry_type = 'post',
-              delete_default=googlecl.CONFIG.getboolean('GENERAL',
-                                                        'delete_by_default'))
+  client.DeleteEntryList(post_entries, 'post', options.prompt)
 
 
 def _run_list(client, options, args):

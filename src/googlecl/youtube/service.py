@@ -286,8 +286,7 @@ def _run_tag(client, options, args):
 def _run_delete(client, options, args):
   titles_list = googlecl.build_titles_list(options.title, args)
   entries = client.GetVideos(titles=titles_list)
-  client.DeleteEntryList(entries, 'video',
-                googlecl.CONFIG.getboolean('GENERAL', 'delete_by_default'))
+  client.DeleteEntryList(entries, 'video', options.prompt)
 
 
 TASKS = {'post': googlecl.base.Task('Post a video.', callback=_run_post,

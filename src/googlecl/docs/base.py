@@ -552,8 +552,7 @@ def _run_delete(client, options, args):
   titles_list = googlecl.build_titles_list(options.title, args)
   folder_entries = client.get_folder(options.folder)
   entries = client.get_doclist(titles_list, folder_entries)
-  client.DeleteEntryList(entries, 'document',
-                googlecl.CONFIG.getboolean('GENERAL', 'delete_by_default'))
+  client.DeleteEntryList(entries, 'document', options.prompt)
 
 
 TASKS = {'upload': googlecl.base.Task('Upload a document',

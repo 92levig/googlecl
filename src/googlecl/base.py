@@ -56,13 +56,6 @@ class BaseCL(object):
     # Some new attributes, not inherited.
     self.use_regex = googlecl.get_config_option(section, 'regex',
                                                 default=True, option_type=bool)
-    self.prompt_for_tags = googlecl.get_config_option(section, 'tags_prompt',
-                                                      default=False,
-                                                      option_type=bool)
-    self.prompt_for_delete = googlecl.get_config_option(section,
-                                                        'delete_prompt',
-                                                        default=True,
-                                                        option_type=bool)
     self.cap_results = googlecl.get_config_option(section,
                                                   'cap_results',
                                                   default=False,
@@ -89,26 +82,24 @@ class BaseCL(object):
       LOG.warning('You are requesting only ' + str(self.max_results) +
                   ' results per query -- this may be slow')
 
-  def delete_entry_list(self, entries, entry_type, delete_default,
+  def delete_entry_list(self, entries, entry_type, prompt,
                         callback=None):
     """Extends Delete to handle a list of entries.
 
     Keyword arguments:
       entries: List of entries to delete.
       entry_type: String describing the thing being deleted (e.g. album, post).
-      delete_default: Whether or not the default action should be deletion.
+      prompt: Whether or not the user should be prompted to confirm deletion.
       callback: function which takes entry as an argument and deletes it
     """
-    if delete_default and self.prompt_for_delete:
-      prompt_str = '(Y/n)'
-    elif self.prompt_for_delete:
-      prompt_str = '(y/N)'
+    if prompt:
+      prompt_message = ('Are you SURE you want to delete %s "%s"? (y/N): ' %
+                        (entry_type, '%s'))
     for item in entries:
-      if self.prompt_for_delete:
-        delete_str = raw_input('Are you SURE you want to delete %s "%s"? %s: ' %
-                      (entry_type, safe_decode(item.title.text), prompt_str))
+      if prompt:
+        delete_str = raw_input(prompt_message % safe_encode(item.title.text))
         if not delete_str:
-          delete = delete_default
+          delete = False
         else:
           delete = delete_str.lower() == 'y'
       else:
@@ -382,7 +373,7 @@ class BaseCL(object):
           raise err
       except Exception, unexpected:
         LOG.debug('unexpected exception: %s' % unexpected)
-        LOG.debug('Arguments: %s' % args)
+        LOG.debug('Arguments: %s' % str(args))
         LOG.debug('Keyword arguments: %s' % kwargs)
         raise unexpected
     # Can only leave above loop if err is set at least once.

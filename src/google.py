@@ -828,6 +828,9 @@ def setup_parser():
   parser.add_option('-v', '--verbose', dest='verbose',
                     action='store_true',
                     help='Print all messages.')
+  parser.add_option('--yes', dest='prompt',
+                    action='store_false', default=True,
+                    help='Answer "yes" to all prompts')
   return parser
 
 

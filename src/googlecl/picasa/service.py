@@ -249,8 +249,6 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
       caption = ''
     failures = []
     for path in media_list:
-      if not tags and self.prompt_for_tags:
-        keywords = raw_input('Enter tags for photo %s: ' % path)
       LOG.info(safe_encode('Loading file ' + path + ' to album ' +
                            safe_decode(album.title.text)))
 
@@ -506,9 +504,7 @@ def _run_delete(client, options, args):
   if not entries:
     LOG.info('No %ss matching %s' % (entry_type, search_string))
   else:
-    client.DeleteEntryList(entries, entry_type,
-                delete_default=googlecl.CONFIG.getboolean('GENERAL',
-                                                          'delete_by_default'))
+    client.DeleteEntryList(entries, entry_type, options.prompt)
 
 
 def _run_list(client, options, args):

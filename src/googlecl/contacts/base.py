@@ -206,8 +206,7 @@ def _run_add(client, options, args):
 def _run_delete(client, options, args):
   titles_list = googlecl.build_titles_list(options.title, args)
   entries = client.GetContacts(titles_list)
-  client.DeleteEntryList(entries, 'contact',
-                  googlecl.CONFIG.getboolean('GENERAL', 'delete_by_default'))
+  client.DeleteEntryList(entries, 'contact', options.prompt)
 
 
 def _run_add_groups(client, options, args):
@@ -220,8 +219,7 @@ def _run_add_groups(client, options, args):
 def _run_delete_groups(client, options, args):
   titles_list = googlecl.build_titles_list(options.title, args)
   entries = client.GetGroups(titles_list)
-  client.DeleteEntryList(entries, 'group',
-                  googlecl.CONFIG.getboolean('GENERAL', 'delete_by_default'))
+  client.DeleteEntryList(entries, 'group', options.prompt)
 
 
 def _run_list_groups(client, options, args):
