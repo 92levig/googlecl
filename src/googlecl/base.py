@@ -348,7 +348,7 @@ class BaseCL(object):
       will be caught, and the original operation attempted again, if enough
       retries remain (set by self.max_retries)
     """
-    try_forever = self.max_retries >= 0
+    try_forever = self.max_retries <= 0
     attempts_remaining = self.max_retries
     err = None
     while try_forever or attempts_remaining:
