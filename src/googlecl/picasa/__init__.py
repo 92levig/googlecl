@@ -25,6 +25,11 @@ SECTION_HEADER = service_name.upper()
 LOG = logging.getLogger(LOGGER_NAME)
 
 
+def make_download_url(url):
+  """Makes the given URL for a picasa image point to the download."""
+  return url[:url.rfind('/')+1]+'d'+url[url.rfind('/'):]
+
+
 def _map_access_string(access_string, default_value='private'):
   if not access_string:
     return default_value
@@ -127,6 +132,12 @@ class PhotoEntryToStringWrapper(googlecl.base.BaseEntryToStringWrapper):
     """
     return self.entry.exif.time.text
   when = time
+
+  # Overload from base.EntryToStringWrapper to use make_download_url
+  @property
+  def url_download(self):
+    """URL to the original uploaded image, suitable for downloading from."""
+    return make_download_url(self.url_direct)
 
 
 class AlbumEntryToStringWrapper(googlecl.base.BaseEntryToStringWrapper):

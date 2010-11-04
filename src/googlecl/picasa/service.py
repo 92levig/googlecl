@@ -151,8 +151,7 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
         LOG.debug('photo_or_video.media:\n' + photo_or_video.media)
         return None
       elif wanted_content.medium == 'image':
-        url = photo_or_video.content.src
-        url = url[:url.rfind('/')+1]+'d'+url[url.rfind('/'):]
+        url = googlecl.picasa.make_download_url(photo_or_video.content.src)
         mimetype = photo_or_video.content.type
         extension = mimetype.split('/')[1]
       else:

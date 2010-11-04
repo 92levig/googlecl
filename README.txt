@@ -203,6 +203,7 @@ Picasa:
   ** 'make' - make of the camera used.
   ** 'model' - model of the camera used.
   ** 'time', 'when' - time the photo was taken (as millisecond timestamp).
+  ** 'url-download' - link directly to download an image.
   * Albums (picasa list-albums)
   ** 'access', 'visibility' - visibility setting on the album.
   ** 'location', 'where' - location text of the album properties.
