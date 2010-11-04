@@ -12,10 +12,10 @@ declare -a commands
 function blogger {
   echo 'This is my post from a file\nIt contains a few line breaks, but not much else.' > test_post.txt
   commands[0]='blogger post --tags delete test_post.txt'
-  commands[1]='blogger list title,author'
+  commands[1]='blogger list --fields title,author'
   commands[2]='blogger post -n CL_post_test "This is my post from a command line"'
   commands[3]='blogger tag CL_post_ delete'
-  rm test_post.txt
+  commands[4]='blogger delete CL_post_test test_post ^New post$ --yes'
 }
 
 function calendar {
@@ -24,6 +24,8 @@ function calendar {
   commands[2]='calendar add "test event today at 3" --reminder 1h'
   commands[3]='calendar today'
   commands[4]='calendar list --date 2010-10-10'
+  commands[5]='calendar delete --date 10/10/10 test --yes'
+  commands[6]='calendar delete --date today@3 test'
 }
 
 function contacts {
@@ -34,36 +36,51 @@ function contacts {
   commands[3]='contacts list contacts'      # Assumes that "fields" is specified in config file
   commands[4]='contacts add-groups test_group'
   commands[5]='contacts list-groups'
-  rm contacts.csv
+  commands[6]='contacts delete-groups test_group --yes'
+  commands[7]='contacts delete test[0-9]?_?'
 }
 
 function docs {
   echo -e 'This is a document that I am about to upload.' > test_doc.txt
   commands[0]='docs upload test_doc.txt'
   commands[1]='docs get test_doc test_download.txt'
-  commands[2]='docs list title,url-direct --delimiter ": "'
-  commands[3]='docs edit test_doc'
+  commands[2]='docs list --fields title,url-direct --delimiter ": "'
+  commands[3]='docs edit test_doc --editor vim'
+  commands[4]='docs delete test_doc'
+}
+
+function finance {
+  commands[0]='finance create my_empty_pfl USD'
+  commands[1]='finance create-pos my_empty_pfl MSFT'
+  commands[2]='finance create-txn my_empty_pfl MSFT Sell'
+  commands[3]='finance list'
+  commands[4]='finance list-pos --title=.*'
+  commands[5]='finance list-txn --title=.* --ticker=NASDAQ:MSFT'
+  commands[6]='finance delete-txn'
+  commands[7]='finance delete-pos'
+  commands[8]='finance delete my_empty'
 }
 
 function picasa {
-  commands[0]='picasa create test_album --tags "test, Disney World, florida, vacation" ~/Photos/Disney/dscn2111.jpg'
+  commands[0]='picasa create test_album --tags "test, Disney World, florida, vacation" ~/testphotos/IMG_9882.JPG'
   commands[1]='picasa create test_album2'
   commands[2]='picasa list title,url-site -q test'
   commands[3]='picasa list-albums'
   commands[4]='picasa delete "nosuchalbumexists"'
-  commands[5]='picasa delete delete_album'
-  commands[6]='picasa get "Disney trip" .'
-  commands[7]='picasa post -n "Disney trip" --tags "Disney World, florida, vacation" ~/Photos/Disney/dscn212*.jpg'
-  commands[8]='picasa tag "nosuchalbumexists" -t tag1,tag2'
-  commands[9]='picasa tag "Disney trip" -t tag1,tag2'
+  commands[5]='picasa get "test_album" .'
+  commands[6]='picasa post -n "test_album" --tags "Disney World, florida, vacation" ~/testphotos/IMG_9883.JPG'
+  commands[7]='picasa tag "nosuchalbumexists" -t tag1,tag2'
+  commands[8]='picasa tag "test_album" -t --,tag1,tag2'
+  commands[9]='picasa delete test_album'
 }
 
 function youtube {
-  commands[0]='youtube post ~/testclips/fighting_cats4.wmv -n "New test cat movie" -s "More cats on youtube" Education --tags test,cats'
+  commands[0]='youtube post ~/testclips/fighting_cats4.mp4 -n "New test cat movie" -s "More cats on youtube" Education --tags test,cats'
   commands[1]='youtube list'
   commands[2]='youtube tag cat optionless_tag'
   commands[3]='youtube tag -n "D_N_E" -t wontgothrough'
   commands[4]='youtube post ~/D_N_E -n failure -c Education'
+  commands[5]='youtube delete New'
 }
 
 function goog_help {
@@ -100,6 +117,9 @@ do
   fi
   if [ $task == docs ]; then
     docs
+  fi
+  if [ $task == finance ]; then
+    finance
   fi
   if [ $task == picasa ]; then
     picasa
