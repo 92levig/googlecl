@@ -362,7 +362,8 @@ def import_service(service):
   LOG.debug('Your pythonpath: ' + str(os.environ.get('PYTHONPATH')))
   try:
     # Not sure why the fromlist keyword argument became necessary...
-    package = __import__('googlecl.' + service, fromlist=['SECTION_HEADER'])
+    package = __import__('googlecl.' + service,
+                         fromlist=['SECTION_HEADER', 'TASKS'])
   except ImportError, err:
     LOG.error(err.args[0])
     LOG.error('Did you specify the service correctly? Must be one of ' +
@@ -383,7 +384,7 @@ def import_service(service):
       service_module = __import__('googlecl.' + service + '.service',
                                   globals(), locals(), -1)
   return (service_module.SERVICE_CLASS,
-          service_module.TASKS,
+          package.TASKS,
           package.SECTION_HEADER)
 
 
@@ -676,7 +677,7 @@ def setup_logger(options):
     LOG.debug('Gdata will be imported from ' + gdata.__file__)
 
 
-def setup_parser():
+def setup_parser(loading_usage):
   """Set up the parser.
 
   Returns:
@@ -713,15 +714,13 @@ def setup_parser():
            '\n'
            '\t$ google docs get my_doc .\n'
            'is interpreted as "$ google docs get --title=my_doc --dest=.\n'
-           '(folder is NOT set, since the title option is satisfied first.)\n\n')
+           '(folder is NOT set, since the title option is satisfied first.)\n\n'
+           )
 
-  # XXX: If we're going to bother doing an __import__ of all the modules, we
-  # might as well reuse the one the user actually wants to use.
-  for service in AVAILABLE_SERVICES:
-    service_module = __import__('googlecl.' + service + '.service',
-                                globals(), locals(), -1)
-    if service_module:
-      usage += get_task_help(service, service_module.TASKS) + '\n'
+  if loading_usage:
+    for service in AVAILABLE_SERVICES:
+      service_package = __import__('googlecl.' + service, fromlist=['TASKS'])
+      usage += get_task_help(service, service_package.TASKS) + '\n'
 
   parser = optparse.OptionParser(usage=usage, version='%prog ' + VERSION)
   parser.add_option('--access', dest='access',
@@ -857,7 +856,8 @@ def verify_email(given_account, authorized_account):
 
 def main():
   """Entry point for GoogleCL script."""
-  parser = setup_parser()
+  loading_usage = '--help' in sys.argv
+  parser = setup_parser(loading_usage)
   (options, args) = parser.parse_args()
   setup_logger(options)
   if not googlecl.load_preferences(options.config):

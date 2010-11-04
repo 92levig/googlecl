@@ -249,7 +249,10 @@ def load_preferences(path=None):
   """
   def set_options():
     """Set the most basic options in the config file."""
-    import googlecl
+    import googlecl.docs
+    import googlecl.contacts
+    import googlecl.calendar
+    import googlecl.youtube
     import getpass
     import socket
     # These may be useful to define at the module level, but for now,

@@ -50,15 +50,12 @@ List transactions:
 
 __author__ = 'bartosh@gmail.com (Ed Bartosh)'
 
-import sys
-import os
-import inspect
 import logging
 import datetime
 
 import googlecl
 import googlecl.calendar.date
-from googlecl.base import BaseCL, Task
+from googlecl.base import BaseCL
 from googlecl.service import BaseServiceCL
 from googlecl.finance import SECTION_HEADER
 
@@ -84,6 +81,23 @@ class FinanceServiceCL(FinanceService, BaseServiceCL):
     FinanceService.__init__(self)
     BaseServiceCL.__init__(self, SECTION_HEADER)
     self.max_results = None
+
+  def create_portfolio(self, title, currency):
+    """Creates a portfolio.
+
+    Args:
+      title: Title to give the portfolio.
+      currency: Currency associated with the portfolio (e.g. USD)
+    """
+    pfl = PortfolioEntry(
+      portfolio_data=PortfolioData(currency_code=currency))
+    pfl.portfolio_title = title
+    try:
+      self.AddPortfolio(pfl)
+    except RequestError, err:
+      LOG.error('Failed to create portfolio: %s' % err[0]['body'])
+
+  CreatePortfolio = create_portfolio
 
   def is_token_valid(self, test_uri='/data/feed/api/user/default'):
     """Check that the token being used is valid."""
@@ -187,272 +201,6 @@ class FinanceServiceCL(FinanceService, BaseServiceCL):
 
 
 SERVICE_CLASS = FinanceServiceCL
-
-class BaseFormatter(object):
-  """Base class for formatters."""
-
-  def __init__(self, avail_fields, fields, sep=','):
-    """Init formatter
-    Args:
-      avail_fields: list of tuples [(field_name, format_spec), ...] for all
-                    possible fields
-      fields: string, list of <sep>-separated requested fields names.
-      sep: string, separator, comma by default
-    """
-    if fields:
-      self.fields = fields.split(sep)
-    else:
-      self.fields = [item[0] for item in avail_fields]
-
-    self.avail_fields = avail_fields
-    avail_dict = dict(avail_fields)
-    self.format = ' '.join(avail_dict[name] for name in self.fields)
-
-  @property
-  def header(self):
-    """Make output header.
-    Uses names of available fields as column headers. replaces
-    '_' with ' ' and capitalizes them. Utilizes the same format as
-    used for body lines: self.format
-
-    Returns: string, header.
-    """
-    return self.format % \
-        dict([(item[0], item[0].replace('_', ' ').capitalize()) \
-                for item in self.avail_fields])
-
-  def get_line(self, entry):
-    """Get formatted entry. Abstract method.
-    Args:
-      entry: entry object
-    Returns:
-      string, formatted entry.
-    """
-    raise NotImplementedError("Abstract method %s.%s called" % \
-                                (self.__class__.__name__,
-                                 inspect.stack()[0][3] ))
-
-  def output(self, entries, stream=sys.stdout):
-    """Output list of entries to the output stream.
-
-    Args:
-      entries: list of entries.
-      stream: output stream.
-    """
-
-    if self.header:
-      stream.write(self.header + os.linesep)
-    for entry in entries:
-      stream.write(self.get_line(entry) + os.linesep)
-
-class PortfolioFormatter(BaseFormatter):
-  avail_fields = [('id', '%(id)3s'), ('title', '%(title)-15s'),
-                  ('curr', '%(curr)-4s'),
-                  ('gain', '%(gain)-10s'),
-                  ('gain_persent', '%(gain_persent)-14s'),
-                  ('cost_basis', '%(cost_basis)-10s'),
-                  ('days_gain', '%(days_gain)-10s'),
-                  ('market_value', '%(market_value)-10s')]
-
-  def __init__(self, fields):
-    super(self.__class__, self).__init__(self.avail_fields, fields)
-
-  def get_line(self, entry):
-    data =  entry.portfolio_data
-    return self.format % \
-      {'id': entry.portfolio_id, 'title': entry.portfolio_title,
-       'curr': data.currency_code,
-       'gain': data.gain and data.gain.money[0].amount,
-       'gain_persent': '%-14.2f' % (float(data.gain_percentage) * 100,),
-       'cost_basis': data.cost_basis and data.cost_basis.money[0].amount,
-       'days_gain': data.days_gain and data.days_gain.money[0].amount,
-       'market_value': data.market_value and data.market_value.money[0].amount
-      }
-
-class PositionFormatter(BaseFormatter):
-  avail_fields = [('ticker', '%(ticker)-14s'), ('shares', '%(shares)-10s'),
-                  ('gain', '%(gain)-10s'),
-                  ('gain_persent', '%(gain_persent)-14s'),
-                  ('cost_basis', '%(cost_basis)-10s'),
-                  ('days_gain', '%(days_gain)-10s'),
-                  ('market_value', '%(market_value)-10s')]
-
-  def __init__(self, fields):
-    super(self.__class__, self).__init__(self.avail_fields, fields)
-
-  def get_line(self, entry):
-    data =  entry.position_data
-    return self.format % \
-      {'ticker': entry.ticker_id, 'shares': data.shares,
-       'gain': data.gain and data.gain.money[0].amount,
-       'gain_persent': '%-14.2f' % (float(data.gain_percentage) * 100,),
-       'cost_basis': data.cost_basis and data.cost_basis.money[0].amount,
-       'days_gain': data.days_gain and data.days_gain.money[0].amount,
-       'market_value': data.market_value and data.market_value.money[0].amount
-      }
-
-class TransactionFormatter(BaseFormatter):
-  avail_fields = [('id', '%(id)-3s'), ('type', '%(type)-12s'),
-                  ('shares', '%(shares)-10s'), ('price', '%(price)-10s'),
-                  ('commission', '%(commission)-10s'),
-                  ('date', '%(date)-10s'), ('notes', '%(notes)-30s')]
-
-  def __init__(self, fields):
-    super(self.__class__, self).__init__(self.avail_fields, fields)
-
-  def get_line(self, entry):
-    data =  entry.transaction_data
-    if data.date:
-      data.date = data.date[:10] # stip isoformat tail
-    return self.format % \
-      {'id': entry.transaction_id, 'type': data.type, 'shares': data.shares,
-       'price': data.price.money[0].amount,
-       'commission': data.commission.money[0].amount,
-       'date': data.date or '', 'notes': data.notes or ''}
-
-#===============================================================================
-# Each of the following _run_* functions execute a particular task.
-#
-# Keyword arguments:
-#  client: Client to the service being used.
-#  options: Contains all attributes required to perform the task
-#  args: Additional arguments passed in on the command line, may or may not be
-#        required
-#===============================================================================
-
-# Portfolio-related tasks
-def _run_create(client, options, args):
-  pfl = PortfolioEntry(
-    portfolio_data=PortfolioData(currency_code=options.currency))
-  pfl.portfolio_title = options.title
-  try:
-    client.AddPortfolio(pfl)
-  except RequestError, err:
-    LOG.error('Failed to create portfolio: %s' % err[0]['body'])
-
-def _run_delete(client, options, args):
-  entries = client.get_portfolio_entries(options.title, positions=True)
-  if entries:
-    client.DeleteEntryList(entries, 'portfolio', True)
-
-def _run_list(client, options, args):
-  entries = client.get_portfolio_entries(returns=True)
-  if entries:
-    PortfolioFormatter(options.fields).output(entries)
-  else:
-    LOG.info('No portfolios found')
-
-# Position-related tasks
-def _run_create_position(client, options, args):
-  # Quote from Developer's Guide:
-  #   You can't directly create, update, or delete position entries;
-  #   positions are derived from transactions.
-  #   Therefore, to create or modify a position, send appropriate
-  #   transactions on that position.
-  pfl = client.get_portfolio(options.title, positions=True)
-  if pfl:
-    # create empty transaction
-    err = client.create_transaction(pfl, "Buy", options.ticker)
-    if err:
-      LOG.error("Failed to create position: %s" % err)
-
-def _run_delete_positions(client, options, args):
-  pfl = client.get_portfolio(options.title, positions=True)
-  if pfl:
-    if not pfl.positions:
-      LOG.info('No positions found in this portfolio')
-    else:
-      try:
-        if options.ticker:
-          positions = [client.GetPosition(portfolio_id=pfl.portfolio_id,
-                                          ticker_id=options.ticker,
-                                          query=PositionQuery())]
-        else:
-          positions = client.GetPositionFeed(portfolio_entry=pfl).entry
-
-        client.DeleteEntryList(positions, 'position', True,
-                 callback=lambda pos: client.DeletePosition(position_entry=pos))
-      except RequestError, err:
-        LOG.error("Failed to delete position: %s" % err[0]['body'])
-
-def _run_list_positions(client, options, args):
-  pfl = client.get_portfolio(options.title, returns=True, positions=True)
-  if pfl:
-    if pfl.positions:
-      PositionFormatter(options.fields).output(pfl.positions)
-    else:
-      LOG.info('No positions found in this portfolio')
-
-# Transaction-related tasks
-def _run_create_transaction(client,  options, args):
-  pfl = client.get_portfolio(options.title)
-  if pfl:
-    err = client.create_transaction(pfl, options.ttype, options.ticker,
-                                      options.shares, options.price,
-                                      options.currency, options.commission,
-                                      options.date, options.notes)
-    if err:
-      LOG.error("Failed to create transaction: %s" % err)
-
-def _run_delete_transactions(client,  options, args):
-  pfl = client.get_portfolio(options.title)
-  if pfl:
-    try:
-      if options.txnid:
-        transactions = [client.GetTransaction(portfolio_id=pfl.portfolio_id,
-                                              ticker_id=options.ticker,
-                                              transaction_id=options.txnid)]
-      else:
-        transactions = client.GetTransactionFeed(portfolio_id=pfl.portfolio_id,
-                                                 ticker_id=options.ticker).entry
-      client.DeleteEntryList(transactions, 'transaction', True)
-    except RequestError, err:
-      LOG.error("Failed to delete transaction[s]: %s" % err[0]['body'])
-
-def _run_list_transactions(client,  options,  args):
-  pfl = client.get_portfolio(options.title)
-  if pfl:
-    try:
-      transactions = client.GetTransactionFeed(
-        portfolio_id=pfl.portfolio_id,
-        ticker_id=options.ticker).entry
-    except RequestError, err:
-      LOG.error("Failed to get transactions: %s" % err[0]['body'])
-    else:
-      TransactionFormatter(options.fields).output(transactions)
-
-TASKS = {'create': Task('Create a portfolio',
-                        callback=_run_create,
-                        required=['title', 'currency']),
-         'delete': Task('Delete portfolios',
-                        callback=_run_delete,
-                        required = 'title'),
-         'list':   Task('List portfolios',
-                        callback=_run_list,
-                        optional=['fields']),
-         'create-pos': Task('Create position',
-                            callback=_run_create_position,
-                            required = ['title', 'ticker']),
-         'delete-pos': Task('Delete positions',
-                            callback=_run_delete_positions,
-                            required = ['title'],
-                            optional = ['ticker']),
-         'list-pos':  Task('List positions',
-                           callback=_run_list_positions,
-                           required = 'title'),
-         'create-txn': Task('Create transaction',
-                            callback=_run_create_transaction,
-                            required = ['title', 'ticker', 'ttype'],
-                            optional = ['shares', 'price', 'date',
-                                 'commission', 'currency', 'notes']),
-         'list-txn': Task('List transactions',
-                          callback=_run_list_transactions,
-                          required = ['title', 'ticker']),
-         'delete-txn': Task('Delete transactions',
-                            callback=_run_delete_transactions,
-                            required = ['title', 'ticker'],
-                            optional=['txnid']),
-}
 
 # Local Variables:
 # mode: python

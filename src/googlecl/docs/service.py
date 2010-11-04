@@ -115,7 +115,7 @@ class DocsServiceCL(gdata.docs.service.DocsService,
       folder_entry = gdata.docs.DocumentListEntry()
       folder_entry.title = atom.Title(text=title)
       folder_entry.category.append(_make_kind_category(
-                                               googlecl.docs.base.FOLDER_LABEL))
+                                               googlecl.docs.FOLDER_LABEL))
       folder_entry = self.Post(folder_entry, uri,
                                converter=gdata.docs.DocumentListEntryFromString)
       return folder_entry
@@ -329,14 +329,14 @@ class DocsServiceCL(gdata.docs.service.DocsService,
         # Cover the supported filetypes in gdata-2.0.10 even though
         # they aren't listed in gdata 1.2.4... see what happens.
         if extension.lower() in ['csv', 'tsv', 'tab', 'ods', 'xls', 'xlsx']:
-          category = _make_kind_category(googlecl.docs.base.SPREADSHEET_LABEL)
+          category = _make_kind_category(googlecl.docs.SPREADSHEET_LABEL)
         elif extension.lower() in ['ppt', 'pps']:
-          category = _make_kind_category(googlecl.docs.base.PRESENTATION_LABEL)
+          category = _make_kind_category(googlecl.docs.PRESENTATION_LABEL)
         elif extension.lower() in ['pdf']:
-          category = _make_kind_category(googlecl.docs.base.PDF_LABEL)
+          category = _make_kind_category(googlecl.docs.PDF_LABEL)
         # Treat everything else as a document
         else:
-          category = _make_kind_category(googlecl.docs.base.DOCUMENT_LABEL)
+          category = _make_kind_category(googlecl.docs.DOCUMENT_LABEL)
         entry.category.append(category)
         # To support uploading to folders for earlier
         # versions of the API, expose the lower-level Post
@@ -365,6 +365,3 @@ def _make_kind_category(label):
   documents_namespace = 'http://schemas.google.com/docs/2007'
   return atom.Category(scheme=gdata.docs.service.DATA_KIND_SCHEME,
                        term=documents_namespace + '#' + label, label=label)
-
-
-TASKS = googlecl.docs.base.TASKS

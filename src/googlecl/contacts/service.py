@@ -109,6 +109,3 @@ class ContactsServiceCL(gdata.contacts.service.ContactsService,
 
 
 SERVICE_CLASS = ContactsServiceCL
-
-
-TASKS = googlecl.contacts.base.TASKS

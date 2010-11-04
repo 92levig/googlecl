@@ -344,6 +344,3 @@ class DocsClientCL(gdata.docs.client.DocsClient,
 
 
 SERVICE_CLASS = DocsClientCL
-
-
-TASKS = googlecl.docs.base.TASKS
