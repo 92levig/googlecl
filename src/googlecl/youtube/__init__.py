@@ -80,6 +80,16 @@ class VideoEntryToStringWrapper(googlecl.base.BaseEntryToStringWrapper):
       # or self.entry data structure...
       return 'public/unlisted'
 
+  @property
+  def tags(self):
+    """Tags / keywords or labels."""
+    tags_text = self.entry.media.keywords.text
+    tags_text = tags_text.replace(', ', ',')
+    tags_list = tags_text.split(',')
+    return self.intra_property_delimiter.join(tags_list)
+  labels = tags
+  keywords = tags
+
 
 #===============================================================================
 # Each of the following _run_* functions execute a particular task.

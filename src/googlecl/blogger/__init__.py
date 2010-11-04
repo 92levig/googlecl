@@ -51,7 +51,11 @@ class BloggerEntryToStringWrapper(googlecl.base.BaseEntryToStringWrapper):
     text_extractor = lambda entry: getattr(getattr(entry, 'name'), 'text')
     return self._join(self.entry.author, text_extractor=text_extractor)
 
-
+  @property
+  def tags(self):
+    return self.intra_property_delimiter.join(
+                            [c.term for c in self.entry.category if c.term])
+  labels = tags
 #===============================================================================
 # Each of the following _run_* functions execute a particular task.
 #

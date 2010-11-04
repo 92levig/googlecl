@@ -51,6 +51,8 @@ def _map_access_string(access_string, default_value='private'):
 
 
 class PhotoEntryToStringWrapper(googlecl.base.BaseEntryToStringWrapper):
+  caption = googlecl.base.BaseEntryToStringWrapper.summary
+
   @property
   def distance(self):
     """The distance to the subject."""
@@ -121,6 +123,16 @@ class PhotoEntryToStringWrapper(googlecl.base.BaseEntryToStringWrapper):
   def model(self):
     """The model of the camera used."""
     return self.entry.exif.model.text
+
+  @property
+  def tags(self):
+    """Tags / keywords or labels."""
+    tags_text = self.entry.media.keywords.text
+    tags_text = tags_text.replace(', ', ',')
+    tags_list = tags_text.split(',')
+    return self.intra_property_delimiter.join(tags_list)
+  labels = tags
+  keywords = tags
 
   @property
   def time(self):

@@ -157,9 +157,8 @@ will output those fields, in that order, with ": " as a delimiter. Valid values 
 
 Common (all services):
 
-*Note:* These are enabled for all services, but the service may not have a definition for it. For example, Docs does not support tags.
+*Note:* These are enabled for all services, but the service may not have a definition for it. For example, Docs does not support summaries.
   * 'summary' - summary text. Includes Picasa captions.
-  * 'tags', 'labels', 'keywords' - tags / keywords / labels
   * 'title', 'name' - displayed title or name.
   * 'url' - treated as 'url-direct' or 'url-site' depending on setting in preferences file. See the note at the end of this section.
   * 'url-site' - url of the site associated with the resource.
@@ -169,6 +168,7 @@ Common (all services):
 Blogger:
   * 'access' - access level of the post (either 'public' or 'draft')
   * 'author' - author of the post
+  * 'tags', 'labels', - tags or labels on the post.
 
 Calendar:
   * 'when' - when an event takes place.
@@ -192,6 +192,7 @@ Contacts:
 
 Picasa:
   * Photos (picasa list)
+  ** 'caption', 'summary' - photo caption
   ** 'distance' - distance between camera and target.
   ** 'ev' - exposure value.
   ** 'exposure' - exposure time.
@@ -202,6 +203,7 @@ Picasa:
   ** 'iso' - iso equivalent value used.
   ** 'make' - make of the camera used.
   ** 'model' - model of the camera used.
+  ** 'tags' - tags on the photo.
   ** 'time', 'when' - time the photo was taken (as millisecond timestamp).
   ** 'url-download' - link directly to download an image.
   * Albums (picasa list-albums)
@@ -214,6 +216,7 @@ YouTube:
   * 'minutes', 'time', 'length', 'duration' - length of the video, in MM:SS format. (Note that if you specify ':' as a delimiter, it will be MM SS).
   * 'seconds' - length of the video in seconds.
   * 'status' - status of the video. This is still an uncertain feature.
+  * 'tags' - tags on the video.
 
 The difference between 'url-site' and 'url-direct' is best exemplified by a picasa photo: 'url-site' gives a link to the photo in the user's album, 'url-direct' gives a link to the image url. If 'url-direct' is specified but is not applicable, 'url-site' is placed in its stead, and vice-versa.
 

@@ -569,18 +569,6 @@ class BaseEntryToStringWrapper(object):
   description = summary
 
   @property
-  def tags(self):
-    """Tags / keywords or labels."""
-    try:
-      return self.entry.media.description.keywords.text
-    except AttributeError:
-      # Blogger uses categories.
-      return self.intra_property_delimiter.join(
-                                [c.term for c in self.entry.category if c.term])
-  labels = tags
-  keywords = tags
-
-  @property
   def xml(self):
     """Raw XML."""
     return str(self.entry)
