@@ -177,13 +177,13 @@ class BloggerServiceCL(gdata.service.GDataService,
             LOG.warning('Only read first %s bytes of file %s' %
                         (max_size, content_string))
         if not post_title:
-          post_title = os.path.basename(content_string).split('.')[0]
+          title = os.path.basename(content_string).split('.')[0]
       else:
         if not post_title:
-          post_title = 'New post'
+          title = 'New post'
         content = content_string
       try:
-        entry = self._upload_content(post_title,
+        entry = self._upload_content(post_title or title,
                                      content,
                                      blog_id=blog_id,
                                      is_draft=is_draft)
