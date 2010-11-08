@@ -206,12 +206,11 @@ class Date(object):
     if self.all_day:
       # If it's an all-day date, we need to boost the time by a day to make it
       # inclusive.
-      delta = datetime.timedelta(hours=24)
-      new_datetime = self.utc + delta
+      new_datetime = self.utc + datetime.timedelta(hours=24)
     else:
-      # For some unknown reason, this isn't necessary for dates that aren't all
-      # day.
-      new_datetime = self.utc
+      # The smallest unit Calendar appears to concern itself with
+      # is minutes, so add a minute to make it inclusive.
+      new_datetime = self.utc + datetime.timedelta(minutes=1)
     return new_datetime.strftime(QUERY_DATE_FORMAT)
 
   def to_query(self):
@@ -224,9 +223,8 @@ class Date(object):
     Returns:
       Seconds since the epoch as a float.
     """
-    format_string = '%Y-%m-%dT%H:%M'
     return time.mktime(time.strptime(self.utc.strftime(format_string),
-                                     format_string))
+                                     '%Y-%m-%dT%H:%M'))
 
   def to_when(self):
     """Returns datetime info formatted to Google Calendar "when" style."""
