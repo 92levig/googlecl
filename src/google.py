@@ -343,6 +343,22 @@ def get_task_help(service, tasks):
   return help
 
 
+def import_at_runtime(module):
+  """Imports a module/package.
+
+  Args:
+    module: Module/package to import
+
+  Returns:
+    Module or package.
+  """
+  # Proper use of this function seems sketchy. Docs claim that only globals() is
+  # used, but it seems that if fromlist evaluates to False or is not passed in,
+  # nothing is actually imported. Needs to be a list type (at least to play nice
+  # with Jython?) and contain a string in the list.
+  return __import__(module, globals(), fromlist=['0'])
+
+
 def import_service(service, config_file_path):
   """Import vital information about a service.
 
@@ -364,9 +380,7 @@ def import_service(service, config_file_path):
   """
   LOG.debug('Your pythonpath: ' + str(os.environ.get('PYTHONPATH')))
   try:
-    # Not sure why the fromlist keyword argument became necessary...
-    package = __import__('googlecl.' + service,
-                         fromlist=['SECTION_HEADER', 'TASKS'])
+    package = import_at_runtime('googlecl.' + service)
   except ImportError, err:
     LOG.error(err.args[0])
     LOG.error('Did you specify the service correctly? Must be one of ' +
@@ -380,15 +394,12 @@ def import_service(service, config_file_path):
                                    option_type=bool)
 
   if force_gdata_v1:
-    service_module = __import__('googlecl.' + service + '.service',
-                                globals(), locals(), -1)
+    service_module = import_at_runtime('googlecl.' + service + '.service')
   else:
     try:
-      service_module = __import__('googlecl.' + service + '.client',
-                                  globals(), locals(), -1)
+      service_module = import_at_runtime('googlecl.' + service + '.client')
     except ImportError:
-      service_module = __import__('googlecl.' + service + '.service',
-                                  globals(), locals(), -1)
+      service_module = import_at_runtime('googlecl.' + service + '.service')
   return (service_module.SERVICE_CLASS,
           package.TASKS,
           package.SECTION_HEADER,
@@ -726,7 +737,7 @@ def setup_parser(loading_usage):
 
   if loading_usage:
     for service in AVAILABLE_SERVICES:
-      service_package = __import__('googlecl.' + service, fromlist=['TASKS'])
+      service_package = import_at_runtime('googlecl.' + service)
       usage += get_task_help(service, service_package.TASKS) + '\n'
 
   parser = optparse.OptionParser(usage=usage, version='%prog ' + VERSION)
