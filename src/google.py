@@ -50,6 +50,7 @@ import optparse
 import os
 import sys
 import googlecl
+import googlecl.config
 
 # Renamed here to reduce verbosity in other sections
 safe_encode = googlecl.safe_encode
@@ -68,7 +69,8 @@ class Error():
   pass
 
 
-def authenticate(service, client, section_header, options):
+# XXX: Fix docstring
+def authenticate(service, client, options, config, section_header):
   """Set a (presumably valid) OAuth token for the client to use.
 
   The OAuth access token is retrieved by doing the following:
@@ -82,9 +84,9 @@ def authenticate(service, client, section_header, options):
     set_token = set_access_token(service, client)
     if set_token:
       LOG.debug('Successfully set token')
-      skip_auth = options.skip_auth or \
-                  googlecl.get_config_option(section_header, 'skip_auth',
-                                             default=False, option_type=bool)
+      skip_auth = (options.skip_auth or
+                   config.lazy_get(section_header, 'skip_auth',
+                                   default=False, option_type=bool))
     else:
       LOG.debug('Failed to set token!')
       skip_auth = False
@@ -99,8 +101,7 @@ def authenticate(service, client, section_header, options):
                                                   client,
                                                   options.hostid)
     if valid_token:
-      googlecl.set_missing_default(section_header, 'skip_auth',
-                                   True, options.config)
+      config.set_missing_default(section_header, 'skip_auth', True)
       return True
     else:
       LOG.debug('valid_token evaulates to false,')
@@ -249,7 +250,7 @@ def expand_as_command_line(command_string):
   return args_list
 
 
-def fill_out_options(args, service_header, task, options):
+def fill_out_options(args, service_header, task, options, config):
   """Fill out required options via config file and command line prompts.
 
   If there are any required fields missing for a task, fill them in.
@@ -269,6 +270,7 @@ def fill_out_options(args, service_header, task, options):
     task: Requirements of the task (see class googlecl.service.Task).
     options: Contains attributes that have been specified already, typically
              through options on the command line (see setup_parser()).
+    config: Configuration file parser.
 
   Returns:
     Nothing, though options may be modified to hold the required fields.
@@ -276,7 +278,7 @@ def fill_out_options(args, service_header, task, options):
   """
   def _retrieve_value(attr, service_header):
     """Retrieve value from config file or user prompt."""
-    value = googlecl.get_config_option(service_header, attr)
+    value = config.lazy_get(service_header, attr)
     if value:
       return value
     else:
@@ -290,7 +292,7 @@ def fill_out_options(args, service_header, task, options):
   LOG.debug('missing_reqs: ' + str(missing_reqs))
 
   for attr in missing_reqs:
-    value = googlecl.get_config_option(service_header, attr)
+    value = config.lazy_get(service_header, attr)
     if not value:
       if args:
         value = args.pop(0)
@@ -341,7 +343,7 @@ def get_task_help(service, tasks):
   return help
 
 
-def import_service(service):
+def import_service(service, config_file_path):
   """Import vital information about a service.
 
   The goal of this function is to allow expansion to other "service" classes
@@ -350,14 +352,15 @@ def import_service(service):
 
   Keyword arguments:
     service: Name of the service to import e.g. 'picasa', 'youtube'
+    config_file_path: Path to config file.
 
   Returns:
-    Tuple of service_class, tasks, and section header, where
+    Tuple of service_class, tasks, section header and config, where
       service_class is the class to instantiate for the service
       tasks is the dictionary mapping names to Task objects
       section_header is the name of the section in the config file that contains
                      options specific to the service.
-
+      config is a configuration file parser.
   """
   LOG.debug('Your pythonpath: ' + str(os.environ.get('PYTHONPATH')))
   try:
@@ -369,11 +372,14 @@ def import_service(service):
     LOG.error('Did you specify the service correctly? Must be one of ' +
               str(AVAILABLE_SERVICES)[1:-1])
     return (None, None, None)
-  use_v1 = googlecl.get_config_option(package.SECTION_HEADER,
-                                      'force_gdata_v1',
-                                      default=False,
-                                      option_type=bool)
-  if use_v1:
+
+  config = googlecl.config.load_configuration(config_file_path)
+  force_gdata_v1 = config.lazy_get(package.SECTION_HEADER,
+                                   'force_gdata_v1',
+                                   default=False,
+                                   option_type=bool)
+
+  if force_gdata_v1:
     service_module = __import__('googlecl.' + service + '.service',
                                 globals(), locals(), -1)
   else:
@@ -385,7 +391,8 @@ def import_service(service):
                                   globals(), locals(), -1)
   return (service_module.SERVICE_CLASS,
           package.TASKS,
-          package.SECTION_HEADER)
+          package.SECTION_HEADER,
+          config)
 
 
 def print_help(service=None, tasks=None):
@@ -538,22 +545,24 @@ def run_once(options, args):
     return
 
   if service == 'help':
-    service_class, tasks, section_header = import_service(task_name)
+    service_class, tasks, section_header, config = import_service(task_name,
+                                                                options.config)
     if tasks:
       print_help(task_name, tasks)
       return
   else:
-    service_class, tasks, section_header = import_service(service)
+    service_class, tasks, section_header, config = import_service(service,
+                                                                options.config)
   if not service_class:
     return
 
-  client = service_class()
+  client = service_class(config)
   # Activate debugging output from HTTP requests. "service" clients only!
   # "client" versions need to set self.http_client.debug in their own __init__
-  client.debug = googlecl.get_config_option(section_header,
-                                            'debug',
-                                            default=options.debug,
-                                            option_type=bool)
+  client.debug = config.lazy_get(section_header,
+                                 'debug',
+                                 default=options.debug,
+                                 option_type=bool)
   # XXX: Not the best place for this.
   if hasattr(client, 'http_client'):
     client.http_client.debug = client.debug
@@ -575,15 +584,13 @@ def run_once(options, args):
 
   # fill_out_options will read the key from file if necessary, but will not set
   # it since it will always get a non-empty value beforehand.
-  fill_out_options(args, section_header, task, options)
+  fill_out_options(args, section_header, task, options, config)
   client.email = options.user
 
   # Set missing defaults, even if the authentication step later on fails.
-  googlecl.set_missing_default(section_header, 'user',
-                               client.email, options.config)
+  config.set_missing_default(section_header, 'user', client.email)
   if options.blog:
-    googlecl.set_missing_default(section_header, 'blog',
-                                 options.blog, options.config)
+    config.set_missing_default(section_header, 'blog', options.blog)
   if options.devkey:
     client.developer_key = options.devkey
     # This may save an invalid dev key -- it's up to the user to specify a
@@ -621,7 +628,7 @@ def run_once(options, args):
           LOG.debug(safe_encode('Option ' + attr_name + ': ' + unicode(attr)))
   LOG.debug(safe_encode('args: ' + unicode(args)))
 
-  authenticated = authenticate(service, client, section_header, options)
+  authenticated = authenticate(service, client, options, config, section_header)
 
   if authenticated:
     task.run(client, options, args)
@@ -860,10 +867,6 @@ def main():
   parser = setup_parser(loading_usage)
   (options, args) = parser.parse_args()
   setup_logger(options)
-  if not googlecl.load_preferences(options.config):
-    if options.config:
-      LOG.warning('Could not read config file at ' + options.config)
-    return
   if not args:
     run_interactive(parser)
   else:

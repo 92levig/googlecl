@@ -49,10 +49,10 @@ class ContactsServiceCL(gdata.contacts.service.ContactsService,
 
   """
 
-  def __init__(self):
+  def __init__(self, config):
     """Constructor."""
     gdata.contacts.service.ContactsService.__init__(self)
-    googlecl.service.BaseServiceCL.__init__(self, SECTION_HEADER)
+    googlecl.service.BaseServiceCL.__init__(self, SECTION_HEADER, config)
 
   def parse_contact_string(self, contact_string):
     """Add contact(s).

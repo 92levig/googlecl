@@ -79,10 +79,10 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
 
   """
 
-  def __init__(self):
+  def __init__(self, config):
     """Constructor."""
     gdata.calendar.service.CalendarService.__init__(self)
-    googlecl.service.BaseServiceCL.__init__(self, SECTION_HEADER)
+    googlecl.service.BaseServiceCL.__init__(self, SECTION_HEADER, config)
 
   def _batch_delete_recur(self, event, cal_user,
                           start_date=None, end_date=None):

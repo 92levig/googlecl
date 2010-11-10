@@ -32,9 +32,10 @@ class BaseClientCL(googlecl.base.BaseCL):
 
   """Extension of gdata.GDataService specific to GoogleCL."""
 
-  def __init__(self, section, request_error_class=gdata.client.RequestError,
+  def __init__(self, section, config,
+               request_error_class=gdata.client.RequestError,
                *args, **kwargs):
-    super(BaseClientCL, self).__init__(section, request_error_class,
+    super(BaseClientCL, self).__init__(section, config, request_error_class,
                                        *args, **kwargs)
     # Used for automatic retries of requests that fail due to 302 errors.
     # See BaseCL.retry_operation.

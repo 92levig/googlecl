@@ -58,10 +58,10 @@ class DocsServiceCL(gdata.docs.service.DocsService,
 
   """
 
-  def __init__(self):
+  def __init__(self, config):
     """Constructor."""
     gdata.docs.service.DocsService.__init__(self, source='GoogleCL')
-    googlecl.service.BaseServiceCL.__init__(self, SECTION_HEADER)
+    googlecl.service.BaseServiceCL.__init__(self, SECTION_HEADER, config)
     # 302 Moved Temporarily errors began cropping up for new style docs
     # during export. Using https solves the problem, so set ssl True here.
     self.ssl = True
@@ -85,7 +85,7 @@ class DocsServiceCL(gdata.docs.service.DocsService,
                                          'reason': server_response.reason,
                                          'body': response_body}
     if googlecl.docs.base.can_export(uri) and\
-       googlecl.get_config_option(SECTION_HEADER, 'decode_utf_8', False, bool):
+       self.config.lazy_get(SECTION_HEADER, 'decode_utf_8', False, bool):
       try:
         file_string = response_body.decode('utf-8-sig')
       except UnicodeError, err:

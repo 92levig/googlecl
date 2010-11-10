@@ -239,8 +239,8 @@ class CalendarEntryToStringWrapper(googlecl.base.BaseEntryToStringWrapper):
   def when(self):
     """When event takes place."""
     start_date, end_date, freq = get_datetimes(self.entry)
-    print_format = googlecl.get_config_option(SECTION_HEADER,
-                                              'date_print_format')
+    print_format = googlecl.CONFIG.lazy_get(SECTION_HEADER,
+                                            'date_print_format')
     start_text = time.strftime(print_format, start_date)
     end_text = time.strftime(print_format, end_date)
     value = start_text + ' - ' + end_text

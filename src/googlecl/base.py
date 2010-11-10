@@ -44,34 +44,43 @@ class BaseCL(object):
   # Should be one of gdata.service.RequestError or gdata.client.RequestError
   request_error = None
 
-  def __init__(self, section, request_error_class):
-    """Set some basic attributes common to all instances."""
+  def __init__(self, section, config, request_error_class):
+    """Set some basic attributes common to all instances.
+
+    Args:
+      section: Section of the config file that options will be found under.
+      config: Configuration parser.
+      request_error_class: Exception class raised when a request fails.
+    """
     self.request_error = request_error_class
     large_max_results = 10000
     # Because each new xxxServiceCL class should use the more specific
     # superclass's __init__ function, don't define one here.
     self.source = 'GoogleCL'
     self.client_id = 'GoogleCL'
+    self.config = config
 
     # Some new attributes, not inherited.
-    self.use_regex = googlecl.get_config_option(section, 'regex',
-                                                default=True, option_type=bool)
-    self.cap_results = googlecl.get_config_option(section,
-                                                  'cap_results',
-                                                  default=False,
-                                                  option_type=bool)
-    self.max_results = googlecl.get_config_option(section,
-                                                  'max_results',
-                                                  default=large_max_results,
-                                                  option_type=int)
-    self.max_retries = googlecl.get_config_option(section,
-                                                  'max_retries',
-                                                  default=1,
-                                                  option_type=int)
-    self.retry_delay = googlecl.get_config_option(section,
-                                                  'retry_delay',
-                                                  default=0,
-                                                  option_type=float)
+    self.use_regex = self.config.lazy_get(section,
+                                          'regex',
+                                          default=True,
+                                          option_type=bool)
+    self.cap_results = self.config.lazy_get(section,
+                                            'cap_results',
+                                            default=False,
+                                            option_type=bool)
+    self.max_results = self.config.lazy_get(section,
+                                            'max_results',
+                                            default=large_max_results,
+                                            option_type=int)
+    self.max_retries = self.config.lazy_get(section,
+                                            'max_retries',
+                                            default=1,
+                                            option_type=int)
+    self.retry_delay = self.config.lazy_get(section,
+                                            'retry_delay',
+                                            default=0,
+                                            option_type=float)
 
     try:
       service_name = self.auth_service
@@ -496,7 +505,8 @@ class BaseEntryToStringWrapper(object):
   """Wraps GDataEntries to easily get human-readable data."""
   def __init__(self, gdata_entry,
                intra_property_delimiter='',
-               label_delimiter=' '):
+               label_delimiter=' ',
+               default_url_field='site'):
     """Constructor.
 
     Keyword arguments:
@@ -514,6 +524,7 @@ class BaseEntryToStringWrapper(object):
     self.entry = gdata_entry
     self.intra_property_delimiter = intra_property_delimiter
     self.label_delimiter = label_delimiter
+    self.default_url_field = default_url_field
 
   @property
   def debug(self):
@@ -529,7 +540,7 @@ class BaseEntryToStringWrapper(object):
   @property
   def url(self):
     """url_direct or url_site, depending on url_field defined in config."""
-    return self._url(googlecl.get_config_option('GENERAL', 'url_field'))
+    return self._url(self.default_url_field)
 
   @property
   def url_direct(self):
@@ -647,11 +658,7 @@ def compile_entry_string(wrapped_entry, attribute_list, delimiter,
     newline_replacer: String to replace newlines with. Default ' '. Set to
                       NoneType to leave newlines in place.
   """
-  import sys
-
   return_string = ''
-  missing_field_value = missing_field_value or googlecl.CONFIG.get('GENERAL',
-                                                          'missing_field_value')
   if not delimiter:
     delimiter = ','
   if delimiter.strip() == ',':

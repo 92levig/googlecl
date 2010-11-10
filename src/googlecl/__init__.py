@@ -17,12 +17,11 @@
 from __future__ import with_statement
 
 __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
-import ConfigParser
 import logging
 import os
 import re
+import googlecl.config.parser
 
-CONFIG = ConfigParser.ConfigParser()
 SUBDIR_NAME = 'googlecl'
 DEFAULT_GOOGLECL_DIR = os.path.expanduser(os.path.join('~', '.googlecl'))
 HISTORY_FILENAME = 'history'
@@ -96,68 +95,16 @@ def build_titles_list(title, args):
   return titles_list
 
 
-def get_config_option(section, option, default=None, option_type=None):
-  """Return option from config file.
-
-  Tries to retrieve <option> from the given section. If that fails, tries to
-  retrieve the same option from the GENERAL section. If that fails,
-  returns value of "default" parameter.
-
-  Keyword arguments:
-    section: Name of the section to initially try to retrieve the option from.
-    option: Name of the option to retrieve.
-    default: Value to return if the option does not exist in a searched section.
-    option_type: Conversion function to use on the string, or None to leave as
-          string. For example, if you want an integer value returned, this
-          should be set to int. This is not applied to the "default" parameter.
-
-  Returns:
-    Value of the option if it exists in the prefs file, or value of "default"
-    if option does not exist.
-
-  """
-  try:
-    try:
-      value = CONFIG.get(section, option)
-    except ConfigParser.NoSectionError:
-      value = CONFIG.get('GENERAL', option)
-    except ConfigParser.NoOptionError:
-      value = CONFIG.get('GENERAL', option)
-    if option_type:
-      # bool() function doesn't actually do what we wanted, so intercept it and
-      # replace with comparison
-      if option_type == bool:
-        return value.lower() == 'true'
-      else:
-        return option_type(value)
-    else:
-      return value
-  except ConfigParser.NoOptionError:
-    return default
-
-
-def get_config_path(filename='config',
-                    default_directories=None,
-                    create_missing_dir=False):
-  """Get the full path to the configuration file.
-
-  See _get_xdg_path()
-
-  """
-  return _get_xdg_path(filename, 'CONFIG', default_directories,
-                       create_missing_dir)
-
-
 def get_data_path(filename,
                   default_directories=None,
                   create_missing_dir=False):
   """Get the full path to the history file.
 
-  See _get_xdg_path()
+  See googlecl.get_xdg_path()
 
   """
-  return _get_xdg_path(filename, 'DATA', default_directories,
-                       create_missing_dir)
+  return get_xdg_path(filename, 'DATA', default_directories,
+                      create_missing_dir)
 
 
 def get_extension_from_path(path):
@@ -169,8 +116,8 @@ def get_extension_from_path(path):
     return None
 
 
-def _get_xdg_path(filename, data_type, default_directories=None,
-                  create_missing_dir=False):
+def get_xdg_path(filename, data_type, default_directories=None,
+                 create_missing_dir=False):
   """Get the full path to a file using XDG file layout spec.
 
   Follows XDG Base Directory Specification.
@@ -238,81 +185,6 @@ def _get_xdg_path(filename, data_type, default_directories=None,
       LOG.error(err)
       return ''
   return os.path.join(default_dir, filename)
-
-
-def load_preferences(path=None):
-  """Load preferences / configuration file.
-
-  Keyword arguments:
-    path: Path to the configuration file. Default None for the default location.
-
-  """
-  def set_options():
-    """Set the most basic options in the config file."""
-    import googlecl.docs
-    import googlecl.contacts
-    import googlecl.calendar
-    import googlecl.youtube
-    import getpass
-    import socket
-    # These may be useful to define at the module level, but for now,
-    # keep them here.
-    # REMEMBER: updating these means you need to update the CONFIG readme.
-    default_hostid = getpass.getuser() + '@' +  socket.gethostname()
-    _youtube = {'max_results': '50'}
-    _contacts = {'fields': 'name,email'}
-    _calendar = {'fields': 'title,when'}
-    _general = {'max_retries': '2',
-                'retry_delay': '0.5',
-                'regex': 'True',
-                'url_field': 'site',
-                'fields': 'title,url-site',
-                'missing_field_value': 'N/A',
-                'date_print_format': '%b %d %H:%M',
-                'cap_results': 'False',
-                'hostid': default_hostid}
-    _docs = {'document_format': 'txt',
-             'spreadsheet_format': 'xls',
-             'presentation_format': 'ppt',
-             'format': 'txt',
-             'spreadsheet_editor': 'openoffice.org',
-             'presentation_editor': 'openoffice.org'}
-    config_defaults = {googlecl.docs.SECTION_HEADER: _docs,
-                       googlecl.contacts.SECTION_HEADER: _contacts,
-                       googlecl.calendar.SECTION_HEADER: _calendar,
-                       googlecl.youtube.SECTION_HEADER: _youtube,
-                       'GENERAL': _general}
-    made_changes = False
-    for section_name in config_defaults.keys():
-      if not CONFIG.has_section(section_name):
-        CONFIG.add_section(section_name)
-      section = config_defaults[section_name]
-      missing_opts = set(section.keys()) - set(CONFIG.options(section_name))
-      if missing_opts:
-        made_changes = True
-      for opt in missing_opts:
-        CONFIG.set(section_name, opt, section[opt])
-    return made_changes
-
-  if not path:
-    path = get_config_path(create_missing_dir=True)
-    if not path:
-      LOG.error('Could not create config directory!')
-      return False
-  if not os.path.exists(path):
-    LOG.debug('Did not find config / preferences file at ' + path +
-              '... making new one.')
-  else:
-    try:
-      CONFIG.read(path)
-    except ConfigParser.ParsingError, err:
-      LOG.error(err)
-      return False
-  made_changes = set_options()
-  if made_changes:
-    with open(path, 'w') as config_file:
-      CONFIG.write(config_file)
-  return True
 
 
 def _move_failed_token_file(token_path):
@@ -465,36 +337,6 @@ def safe_decode(string, current_encoding='utf-8', errors='strict'):
   else:
     # Got something elese, probably an int or bool or the like.
     return unicode(string)
-
-
-def set_missing_default(section, option, value, config_path=None):
-  """Set the option for a section if not defined already.
-
-  Keyword arguments:
-    section: Title of the section to set the option in.
-    option: Option to set.
-    value: Value to give the option.
-    config_path: Path to the configuration file.
-                 Default None to use the default path defined in this module.
-
-  """
-  existing_value = ''
-  if type(value) not in [unicode, str]:
-    value = str(value)
-  try:
-    existing_value = CONFIG.get(section, option)
-  except ConfigParser.NoSectionError:
-    CONFIG.add_section(section)
-  except ConfigParser.NoOptionError:
-    # If there's no such option, that's fine. We'll fix that in a sec.
-    pass
-  if not existing_value:
-    if not config_path:
-      config_path = get_config_path()
-    if os.path.exists(config_path):
-      CONFIG.set(section, option, value)
-      with open(config_path, 'w') as config_file:
-        CONFIG.write(config_file)
 
 
 def write_access_token(service, user, token):

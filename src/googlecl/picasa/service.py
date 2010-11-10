@@ -69,11 +69,12 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
 
   """
 
-  def __init__(self):
+  def __init__(self, config):
     """Constructor."""
     PhotosService.__init__(self)
     googlecl.service.BaseServiceCL.__init__(self,
-                                            googlecl.picasa.SECTION_HEADER)
+                                            googlecl.picasa.SECTION_HEADER,
+                                            config)
 
   def build_entry_list(self, user='default', titles=None, query=None,
                        force_photos=False, photo_title=None):

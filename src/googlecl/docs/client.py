@@ -53,10 +53,10 @@ class DocsClientCL(gdata.docs.client.DocsClient,
 
   """
 
-  def __init__(self):
+  def __init__(self, config):
     """Constructor."""
     gdata.docs.client.DocsClient.__init__(self, source='GoogleCL')
-    googlecl.client.BaseClientCL.__init__(self, section=SECTION_HEADER)
+    googlecl.client.BaseClientCL.__init__(self, SECTION_HEADER, config)
 
   def _create_folder(self, title, folder_or_uri):
     """Wrapper function to mesh with DocsBaseCL.upload_docs()."""
@@ -82,7 +82,7 @@ class DocsClientCL(gdata.docs.client.DocsClient,
     """
     response_string = self.get_file_content(uri, auth_token=auth_token)
     if googlecl.docs.base.can_export(uri) and\
-       googlecl.get_config_option(SECTION_HEADER, 'decode_utf_8', False, bool):
+       self.config.lazy_get(SECTION_HEADER, 'decode_utf_8', False, bool):
       try:
         file_string = response_string.decode('utf-8-sig')
       except UnicodeError, err:

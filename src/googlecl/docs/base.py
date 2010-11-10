@@ -129,9 +129,9 @@ class DocsBaseCL(object):
 
     command_args = shlex.split(safe_encode(editor)) + [path]
     subprocess.call(command_args)
-    impatient_editors = googlecl.get_config_option(SECTION_HEADER,
-                                                   'impatient_editors',
-                                                   default='')
+    impatient_editors = self.config.lazy_get(SECTION_HEADER,
+                                             'impatient_editors',
+                                             default='')
     if impatient_editors:
       impatient_editors = impatient_editors.split(',')
       if command_args[0] in impatient_editors:
@@ -203,7 +203,8 @@ class DocsBaseCL(object):
       # which will set an undesired entry_file_ext for
       # unconverted downloads
       if not file_ext and can_export(entry):
-        entry_file_ext = get_extension_from_doctype(get_document_type(entry))
+        entry_file_ext = get_extension_from_doctype(get_document_type(entry),
+                                                    self.config)
       else:
         entry_file_ext = file_ext
       if entry_file_ext:

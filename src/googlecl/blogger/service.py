@@ -40,12 +40,12 @@ class BloggerServiceCL(gdata.service.GDataService,
 
   """
 
-  def __init__(self):
+  def __init__(self, config):
     """Constructor."""
     gdata.service.GDataService.__init__(self, service='blogger',
                                         server='www.blogger.com',
                                         account_type='GOOGLE')
-    googlecl.service.BaseServiceCL.__init__(self, SECTION_HEADER)
+    googlecl.service.BaseServiceCL.__init__(self, SECTION_HEADER, config)
 
   def _upload_content(self, post_title, content, blog_id=None, is_draft=False):
     """Uploads content.

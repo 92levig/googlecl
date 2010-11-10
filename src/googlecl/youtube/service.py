@@ -38,10 +38,10 @@ class YouTubeServiceCL(YouTubeService, googlecl.service.BaseServiceCL):
 
   """
 
-  def __init__(self):
+  def __init__(self, config):
     """Constructor."""
     YouTubeService.__init__(self)
-    googlecl.service.BaseServiceCL.__init__(self, SECTION_HEADER)
+    googlecl.service.BaseServiceCL.__init__(self, SECTION_HEADER, config)
 
   def categorize_videos(self, video_entries, category):
     """Change the categories of a list of videos to a single category.

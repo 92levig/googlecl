@@ -29,9 +29,11 @@ class BaseServiceCL(googlecl.base.BaseCL):
 
   """Extension of gdata.GDataService specific to GoogleCL."""
 
-  def __init__(self, section, request_error_class=gdata.service.RequestError,
+  def __init__(self, section, config,
+               request_error_class=gdata.service.RequestError,
                *args, **kwargs):
     super(BaseServiceCL, self).__init__(section,
+                                        config,
                                         request_error_class,
                                         *args,
                                         **kwargs)

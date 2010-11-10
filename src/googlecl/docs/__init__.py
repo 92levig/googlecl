@@ -56,19 +56,19 @@ def get_document_type(entry):
     return None
 
 
-def get_extension_from_doctype(doctype_label):
+def get_extension_from_doctype(doctype_label, config_parser):
   """Return file extension based on document type and preferences file."""
   LOG.debug('In get_extension_from_doctype, doctype_label: ' +
              str(doctype_label))
   try:
     if doctype_label == SPREADSHEET_LABEL:
-      return googlecl.CONFIG.get(SECTION_HEADER, 'spreadsheet_format')
+      return config_parser.get(SECTION_HEADER, 'spreadsheet_format')
     elif doctype_label == DOCUMENT_LABEL:
-      return googlecl.CONFIG.get(SECTION_HEADER, 'document_format')
+      return config_parser.get(SECTION_HEADER, 'document_format')
     elif doctype_label == PDF_LABEL:
       return 'pdf'
     elif doctype_label == PRESENTATION_LABEL:
-      return googlecl.CONFIG.get(SECTION_HEADER, 'presentation_format')
+      return config_parser.get(SECTION_HEADER, 'presentation_format')
     else:
       raise UnknownDoctype(doctype_label)
   except ConfigParser.NoOptionError, err:
@@ -78,13 +78,13 @@ def get_extension_from_doctype(doctype_label):
       LOG.error(err)
 
   try:
-    return googlecl.CONFIG.get(SECTION_HEADER, 'format')
+    return config_parser.get(SECTION_HEADER, 'format')
   except ConfigParser.NoOptionError, err:
     LOG.error(err)
   return None
 
 
-def get_editor(doctype_label):
+def get_editor(doctype_label, config_parser):
   """Return editor for file based on entry type and preferences file.
 
   Editor is determined in an order of preference:
@@ -103,13 +103,13 @@ def get_editor(doctype_label):
   LOG.debug('In get_editor, doctype_label: ' + str(doctype_label))
   try:
     if doctype_label == SPREADSHEET_LABEL:
-      return googlecl.CONFIG.get(SECTION_HEADER, 'spreadsheet_editor')
+      return config_parser.get(SECTION_HEADER, 'spreadsheet_editor')
     elif doctype_label == DOCUMENT_LABEL:
-      return googlecl.CONFIG.get(SECTION_HEADER, 'document_editor')
+      return config_parser.get(SECTION_HEADER, 'document_editor')
     elif doctype_label == PDF_LABEL:
-      return googlecl.CONFIG.get(SECTION_HEADER, 'pdf_editor')
+      return config_parser.get(SECTION_HEADER, 'pdf_editor')
     elif doctype_label == PRESENTATION_LABEL:
-      return googlecl.CONFIG.get(SECTION_HEADER, 'presentation_editor')
+      return config_parser.get(SECTION_HEADER, 'presentation_editor')
     else:
       raise UnknownDoctype(doctype_label)
   except ConfigParser.NoOptionError, err:
@@ -119,7 +119,7 @@ def get_editor(doctype_label):
       LOG.error(err)
 
   try:
-    return googlecl.CONFIG.get(SECTION_HEADER, 'editor')
+    return config_parser.get(SECTION_HEADER, 'editor')
   except ConfigParser.NoOptionError, err:
     LOG.error(err)
   return os.getenv('EDITOR')
@@ -197,8 +197,8 @@ def _run_edit(client, options, args):
     # specify one.
     LOG.debug('No matching folders found! Will create them.')
   format_ext = options.format or \
-               get_extension_from_doctype(doc_type)
-  editor = options.editor or get_editor(doc_type)
+               get_extension_from_doctype(doc_type, client.config)
+  editor = options.editor or get_editor(doc_type, client.config)
   if not editor:
     LOG.error('No editor defined!')
     LOG.info('Define an "editor" option in your config file, set the ' +
