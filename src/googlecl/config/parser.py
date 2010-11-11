@@ -11,8 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Enhanced configuration file parser."""
+
+from __future__ import with_statement
 
 import logging
 import os.path
