@@ -21,6 +21,7 @@ from __future__ import with_statement
 __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import atom
 import gdata
+import gdata.blogger.service
 import logging
 import os
 import googlecl.base
@@ -31,7 +32,7 @@ from googlecl.blogger import SECTION_HEADER
 LOG = logging.getLogger(googlecl.blogger.LOGGER_NAME)
 
 
-class BloggerServiceCL(gdata.service.GDataService,
+class BloggerServiceCL(gdata.blogger.service.BloggerService,
                        googlecl.service.BaseServiceCL):
 
   """Command-line-friendly service for the Blogger API.
@@ -42,9 +43,7 @@ class BloggerServiceCL(gdata.service.GDataService,
 
   def __init__(self, config):
     """Constructor."""
-    gdata.service.GDataService.__init__(self, service='blogger',
-                                        server='www.blogger.com',
-                                        account_type='GOOGLE')
+    gdata.blogger.service.BloggerService.__init__(self, account_type='GOOGLE')
     googlecl.service.BaseServiceCL.__init__(self, SECTION_HEADER, config)
 
   def _upload_content(self, post_title, content, blog_id=None, is_draft=False):
@@ -130,6 +129,7 @@ class BloggerServiceCL(gdata.service.GDataService,
     """
     scheme = 'http://www.blogger.com/atom/ns#'
     remove_set, add_set, replace_tags = googlecl.base.generate_tag_sets(tags)
+    successes = []
     for post in post_entries:
       # No point removing tags if we're replacing all of them.
       if remove_set and not replace_tags:
@@ -147,11 +147,12 @@ class BloggerServiceCL(gdata.service.GDataService,
         new_tags = [atom.Category(term=tag, scheme=scheme) for tag in add_set]
         post.category.extend(new_tags)
 
-      self.Put(post, post.GetEditLink().href)
+      successes.append(self.UpdatePost(post))
 
   LabelPosts = label_posts
 
-  def upload_posts(self, content_list, blog_title, post_title, is_draft):
+  def upload_posts(self, content_list, blog_title=None, post_title=None,
+                   is_draft=False):
     """Uploads posts.
 
     Args:
