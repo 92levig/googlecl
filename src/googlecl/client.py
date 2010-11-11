@@ -59,14 +59,13 @@ class BaseClientCL(googlecl.base.BaseCL):
     self.original_operation = self.original_request
     return self.retry_operation(*args, **kwargs)
 
-  def request_access(self, domain, hostid, scopes=None):
+  def request_access(self, domain, display_name, scopes=None, browser=None):
     """Do all the steps involved with getting an OAuth access token.
 
     Keyword arguments:
       domain: Domain to request access for.
               (Sets the hd query parameter for the authorization step).
-      hostid: string Descriptor for the machine doing the requesting.
-              e.g. 'username@host'
+      display_name: Descriptor for the machine doing the requesting.
       scopes: String or list of strings describing scopes to request
               access to. If None, tries to access self.auth_scopes
 
@@ -74,8 +73,6 @@ class BaseClientCL(googlecl.base.BaseCL):
       True if access token was succesfully retrieved and set, otherwise False.
 
     """
-    import ConfigParser
-    import webbrowser
     import urllib
     import time
     # XXX: Not sure if get_oauth_token() will accept a list of mixed strings and
@@ -92,17 +89,13 @@ class BaseClientCL(googlecl.base.BaseCL):
     scopes.extend(['https://www.googleapis.com/auth/userinfo#email'])
     LOG.debug('Scopes being requested: ' + str(scopes))
 
-    display_name = 'GoogleCL %s' % hostid
+    print 'browser: %s' % browser
+
     url = gdata.gauth.REQUEST_TOKEN_URL + '?xoauth_displayname=' +\
           urllib.quote(display_name)
     try:
       # Installed applications do not have a pre-registration and so follow
       # directions for unregistered applications
-
-      # No idea where this is actually documented, but next='oob' will
-      # redirect the user to a confirmation page that provides
-      # the oauth_verifier. This seems the only way to get it for
-      # installed apps?
       request_token = self.get_oauth_token(scopes, next='oob',
                                            consumer_key='anonymous',
                                            consumer_secret='anonymous',
@@ -116,16 +109,13 @@ class BaseClientCL(googlecl.base.BaseCL):
       return False
     auth_url = request_token.generate_authorization_url(
                                                       google_apps_domain=domain)
-    try:
+    if browser:
       try:
-        browser_str = googlecl.CONFIG.get('GENERAL', 'auth_browser')
-      except ConfigParser.NoOptionError:
-        browser = webbrowser.get()
-      else:
-        browser = webbrowser.get(browser_str)
-      browser.open(str(auth_url))
-    except (webbrowser.Error, OSError), err:
-      LOG.info('Failed to launch web browser: ' + str(err))
+        browser.open(auth_url)
+      except Exception, err:
+        # Blanket catch of Exception is a bad idea, but don't want to pass in
+        # error to look for.
+        LOG.error('Failed to launch web browser: ' + unicode(err))
     print 'Please log in and/or grant access at ' + str(auth_url)
     # Try to keep that damn "Created new window in existing browser session."
     # message away from raw_input call.

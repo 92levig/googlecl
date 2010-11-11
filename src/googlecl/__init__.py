@@ -95,18 +95,6 @@ def build_titles_list(title, args):
   return titles_list
 
 
-def get_data_path(filename,
-                  default_directories=None,
-                  create_missing_dir=False):
-  """Get the full path to the history file.
-
-  See googlecl.get_xdg_path()
-
-  """
-  return get_xdg_path(filename, 'DATA', default_directories,
-                      create_missing_dir)
-
-
 def get_extension_from_path(path):
   """Return the extension of a file."""
   match = FILE_EXT_PATTERN.match(path)
@@ -114,6 +102,17 @@ def get_extension_from_path(path):
     return match.group(1)
   else:
     return None
+
+
+def get_data_path(filename,
+                  default_directories=None,
+                  create_missing_dir=False):
+  """Get the full path to the history file.
+
+  See googlecl.get_xdg_path()
+  """
+  return get_xdg_path(filename, 'DATA', default_directories,
+                      create_missing_dir)
 
 
 def get_xdg_path(filename, data_type, default_directories=None,
@@ -187,51 +186,6 @@ def get_xdg_path(filename, data_type, default_directories=None,
   return os.path.join(default_dir, filename)
 
 
-def _move_failed_token_file(token_path):
-  new_path = token_path + '.failed'
-  LOG.debug('Moving ' + token_path + ' to ' + new_path)
-  if os.path.isfile(new_path):
-    LOG.debug(new_path + ' already exists. Deleting it.')
-    try:
-      os.remove(new_path)
-    except EnvironmentError, err:
-      LOG.debug('Cannot remove old failed token file: ' + str(err))
-  try:
-    os.rename(token_path, new_path)
-  except EnvironmentError, err:
-    LOG.debug('Cannot rename token file to ' + new_path + ': ' + str(err))
-
-
-def read_access_token(service, user):
-  """Try to read an authorization token from a file.
-
-  Keyword arguments:
-    service: Service the token is for. E.g. 'picasa', 'docs', 'blogger'.
-    user: Username / email the token is associated with.
-
-  Returns:
-    The access token, if it exists. If there is no access token,
-    return NoneType.
-
-  """
-  import pickle
-  token_path = get_data_path(TOKENS_FILENAME_FORMAT % user)
-  if os.path.exists(token_path):
-    with open(token_path, 'rb') as token_file:
-      try:
-        token_dict = pickle.load(token_file)
-      except ImportError:
-        return None
-    try:
-      token = token_dict[service.lower()]
-    except KeyError:
-      return None
-    else:
-      return token
-  else:
-    return None
-
-
 def read_devkey():
   """Return the cached YouTube developer's key."""
   key_path = get_data_path(DEVKEY_FILENAME)
@@ -240,40 +194,6 @@ def read_devkey():
     with open(key_path, 'r') as key_file:
       devkey = key_file.read().strip()
   return devkey
-
-
-def remove_access_token(service, user):
-  """Remove an auth token for a particular user and service."""
-  import pickle
-  token_path = get_data_path(TOKENS_FILENAME_FORMAT % user)
-  success = False
-  file_invalid = False
-  if os.path.exists(token_path):
-    with open(token_path, 'r+') as token_file:
-      try:
-        token_dict = pickle.load(token_file)
-      except ImportError, err:
-        LOG.error(err)
-        LOG.info('You probably have been using different versions of gdata.')
-        _move_failed_token_file(token_path)
-        return False
-
-      try:
-        del token_dict[service.lower()]
-      except KeyError:
-        LOG.debug('No token for ' + service)
-      else:
-        try:
-          pickle.dump(token_dict, token_file)
-        except EnvironmentError, err:
-          # IOError (extends enverror) shouldn't happen, but I've seen 
-	  # IOError Errno 0 pop up on Windows XP with Python 2.5.
-          LOG.error(err)
-          if err.errno == 0:
-            _move_failed_token_file(token_path)
-        else:
-          success = True
-  return success
 
 
 def safe_encode(string, target_encoding=TERMINAL_ENCODING,
@@ -337,48 +257,6 @@ def safe_decode(string, current_encoding='utf-8', errors='strict'):
   else:
     # Got something elese, probably an int or bool or the like.
     return unicode(string)
-
-
-def write_access_token(service, user, token):
-  """Write an authorization token to a file.
-
-  Keyword arguments:
-    service: Service the token is for. E.g. 'picasa', 'docs', 'blogger'.
-    user: Username / email the token is associated with.
-
-  """
-  import pickle
-  import stat
-  token_path = get_data_path(TOKENS_FILENAME_FORMAT % user,
-                             create_missing_dir=True)
-  LOG.debug('Writing access token to ' + token_path)
-  if os.path.exists(token_path):
-    with open(token_path, 'rb') as token_file:
-      try:
-        token_dict = pickle.load(token_file)
-      except (KeyError, IndexError), err:
-        LOG.error(err)
-        LOG.error('Failed to load token_file (may be corrupted?)')
-        file_invalid = True
-      except ImportError, err:
-        LOG.error(err)
-        LOG.info('You probably have been using different versions of gdata.')
-        file_invalid = True
-      else:
-        file_invalid = False
-    if file_invalid:
-      _move_failed_token_file(token_path)
-      token_dict = {}
-  else:
-    token_dict = {}
-  token_dict[service] = token
-  if token_path:
-    with open(token_path, 'wb') as token_file:
-      # Ensure only the owner of the file has read/write permission
-      os.chmod(token_path, stat.S_IRUSR | stat.S_IWUSR)
-      pickle.dump(token_dict, token_file)
-  else:
-    LOG.debug('Cannot save access token!')
 
 
 def write_devkey(devkey):

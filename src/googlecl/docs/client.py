@@ -252,15 +252,17 @@ class DocsClientCL(gdata.docs.client.DocsClient,
                                          content_type=content_type)
     self.Update(doc_entry, media_source=mediasource)
 
-  def request_access(self, domain, node, scopes=None):
+  def request_access(self, domain, display_name, scopes=None, browser=None):
     """Request access as in BaseClientCL, but specify scopes."""
     # When people use docs (writely), they expect access to
     # spreadsheets as well (wise).
     if not scopes:
       scopes = gdata.gauth.AUTH_SCOPES['writely'] +\
                gdata.gauth.AUTH_SCOPES['wise']
-    return googlecl.client.BaseClientCL.request_access(self, domain, node,
-                                                       scopes=scopes)
+    return googlecl.client.BaseClientCL.request_access(self, domain,
+                                                       display_name,
+                                                       scopes=scopes,
+                                                       browser=None)
 
   RequestAccess = request_access
 

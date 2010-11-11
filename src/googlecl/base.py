@@ -334,7 +334,7 @@ class BaseCL(object):
 
   IsTokenValid = is_token_valid
 
-  def request_access(self, domain, hostid, scopes=None):
+  def request_access(self, domain, display_name, scopes=None, browser=None):
     raise NotImplementedError('request_access must be defined!')
   RequestAccess = request_access
 

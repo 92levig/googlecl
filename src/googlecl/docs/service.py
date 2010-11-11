@@ -253,15 +253,17 @@ class DocsServiceCL(gdata.docs.service.DocsService,
                                     content_type=content_type)
     self.Put(mediasource, doc_entry.GetEditMediaLink().href)
 
-  def request_access(self, domain, node, scopes=None):
+  def request_access(self, domain, display_name, scopes=None, browser=None):
     """Request access as in BaseServiceCL, but specify scopes."""
     # When people use docs (writely), they expect access to
     # spreadsheets as well (wise).
     if not scopes:
       scopes = gdata.service.CLIENT_LOGIN_SCOPES['writely'] +\
                gdata.service.CLIENT_LOGIN_SCOPES['wise']
-    return googlecl.service.BaseServiceCL.request_access(self, domain, node,
-                                                         scopes=scopes)
+    return googlecl.service.BaseServiceCL.request_access(self, domain,
+                                                         display_name,
+                                                         scopes=scopes,
+                                                         browser=browser)
 
   RequestAccess = request_access
 

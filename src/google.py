@@ -49,7 +49,9 @@ import logging
 import optparse
 import os
 import sys
+import webbrowser
 import googlecl
+import googlecl.authentication
 import googlecl.config
 
 # Renamed here to reduce verbosity in other sections
@@ -69,19 +71,23 @@ class Error():
   pass
 
 
-# XXX: Fix docstring
-def authenticate(service, client, options, config, section_header):
+def authenticate(auth_manager, options, config, section_header):
   """Set a (presumably valid) OAuth token for the client to use.
 
-  The OAuth access token is retrieved by doing the following:
-  1) Try to read an access token from file.
-  2) If the token was read, and options."""
+  Args:
+    auth_manager: Object handling the authentication process.
+    options: Parsed command line options.
+    config: Configuration file parser.
+    section_header: Section header to look in for the configuration file.
 
+  Returns:
+    True if authenticated, False otherwise.
+  """
   # Only try to set the access token if we're not forced to authenticate.
   # XXX: logic in here is iffy. Don't bother checking access token if it's not
   # set
   if not options.force_auth:
-    set_token = set_access_token(service, client)
+    set_token = auth_manager.set_access_token()
     if set_token:
       LOG.debug('Successfully set token')
       skip_auth = (options.skip_auth or
@@ -95,11 +101,21 @@ def authenticate(service, client, options, config, section_header):
     skip_auth = False
 
   if options.force_auth or not skip_auth:
-    valid_token = check_access_token(service, client)
+    valid_token = auth_manager.check_access_token()
     if not valid_token:
-      valid_token = retrieve_and_set_access_token(service,
-                                                  client,
-                                                  options.hostid)
+      display_name = auth_manager.get_display_name(options.hostid)
+      browser_str = config.lazy_get(section_header, 'auth_browser',
+                                    default=None)
+      if browser_str:
+        if browser_str.lower() == 'disabled':
+          browser = None
+        else:
+          browser = webbrowser.get(browser_str)
+      else:
+        browser = webbrowser.get()
+
+      valid_token = auth_manager.retrieve_and_set_access_token(display_name,
+                                                               browser)
     if valid_token:
       config.set_missing_default(section_header, 'skip_auth', True)
       return True
@@ -109,38 +125,6 @@ def authenticate(service, client, options, config, section_header):
   else:
     # Already set an access token and we're not being forced to authenticate
     return True
-
-
-def check_access_token(service_name, client):
-  """Check that the set access token is valid, remove it if not.
-
-  Args:
-    service_name: str Name of the Google service being accessed.
-    client: BaseCL instance doing the accessing.
-
-  Returns:
-    True if the token is valid, False otherwise. False will be returned
-    whether or not the token was successfully removed with
-    googlecl.remove_access_token().
-
-  """
-  try:
-    token_valid = client.IsTokenValid()
-  except AttributeError, err:
-    # Attribute errors crop up when using different gdata libraries
-    # but the same token.
-    token_valid = False
-    LOG.debug('Caught AttributeError: ' + str(err))
-  if token_valid:
-    LOG.debug('Token valid!')
-    return True
-  else:
-    removed = googlecl.remove_access_token(service_name, client.email)
-    if removed:
-      LOG.debug('Removed invalid token')
-    else:
-      LOG.debug('Failed to remove invalid token')
-    return False
 
 
 # I don't know if this and shlex.split() can replace expand_as_command_line
@@ -311,28 +295,6 @@ def fill_out_options(args, service_header, task, options, config):
       options.devkey = key_file.read(max_file_size).strip()
 
 
-def get_hd_domain(username, default_domain='default'):
-  """Return the domain associated with an email address.
-
-  Intended for use with the OAuth hd parameter for Google.
-
-  Keyword arguments:
-    username: Username to parse.
-    default_domain: Domain to set if '@suchandsuch.huh' is not part of the
-                    username. Defaults to 'default' to specify a regular
-                    Google account.
-
-  Returns:
-    String of the domain associated with username.
-
-  """
-  name, at_sign, domain = username.partition('@')
-  # If user specifies gmail.com, it confuses the hd parameter (thanks, bartosh!)
-  if domain == 'gmail.com' or domain == 'googlemail.com':
-    return 'default'
-  return domain or default_domain
-
-
 def get_task_help(service, tasks):
   help = 'Available tasks for service ' + service + \
          ': ' + str(tasks.keys())[1:-1] + '\n'
@@ -431,43 +393,6 @@ def print_help(service=None, tasks=None):
     print '  Or, just "quit" to quit.'
   else:
     print get_task_help(service, tasks)
-
-
-def retrieve_and_set_access_token(service_name, client, hostid):
-  """Request a new access token from Google, set it upon retrieval.
-
-  The token will not be written to file if it was granted for an account
-  other than the one specified by client.email. Instead, a False value will
-  be returned.
-
-  Args:
-    service_name: str Name of the Google service being accessed.
-    client: BaseCL instance doing the accessing.
-    hostid: str Identifier for the host machine. Used for token request.
-
-  Returns:
-    True if the token was retrieved and written to file. False otherwise.
-
-  """
-  domain = get_hd_domain(client.email)
-  if client.RequestAccess(domain, hostid):
-    authorized_account = client.get_email()
-    # Only write the token if it's for the right user.
-    if verify_email(client.email, authorized_account):
-      # token is saved in client.auth_token for GDClient,
-      # client.current_token for GDataService.
-      googlecl.write_access_token(service_name,
-                                  client.email,
-                                  client.auth_token or client.current_token)
-      return True
-    else:
-      LOG.error('You specified account ' + client.email +
-                ' but granted access for ' + authorized_account + '.' +
-                ' Please log out of ' + authorized_account +
-                ' and grant access with ' + client.email + '.')
-  else:
-    LOG.error('Failed to get valid access token!')
-  return False
 
 
 def run_interactive(parser):
@@ -639,37 +564,13 @@ def run_once(options, args):
           LOG.debug(safe_encode('Option ' + attr_name + ': ' + unicode(attr)))
   LOG.debug(safe_encode('args: ' + unicode(args)))
 
-  authenticated = authenticate(service, client, options, config, section_header)
+  auth_manager = googlecl.authentication.AuthenticationManager(service, client)
+  authenticated = authenticate(auth_manager, options, config, section_header)
 
   if authenticated:
     task.run(client, options, args)
   else:
     LOG.debug('Authentication failed, exiting run_once')
-
-
-def set_access_token(service_name, client):
-  """Read an access token from file and set it to be used by the client.
-
-  Args:
-    service_name: str Name of the Google service being accessed.
-    client: BaseCL instance doing the accessing.
-
-  Returns:
-    True if the token was read and set, False otherwise.
-
-  """
-  try:
-    token = googlecl.read_access_token(service_name, client.email)
-  except (KeyError, IndexError):
-    LOG.warning('Token file appears to be corrupted. Not using.')
-  else:
-    if token:
-      LOG.debug('Loaded token from file')
-      client.SetOAuthToken(token)
-      return True
-    else:
-      LOG.debug('read_access_token evaluated to False')
-  return False
 
 
 def setup_logger(options):
@@ -849,27 +750,6 @@ def setup_parser(loading_usage):
                     action='store_false', default=True,
                     help='Answer "yes" to all prompts')
   return parser
-
-
-def verify_email(given_account, authorized_account):
-  """Make sure user didn't clickfest his/her way into a mistake.
-
-  Keyword arguments:
-    given_account: String of account specified by the user to GoogleCL,
-                   probably by options.user. If domain is not included,
-                   assumed to be 'gmail.com'
-    authorized_account: Account returned by client.get_email(). Must
-                        include domain!
-
-  Returns:
-    True if given_account and authorized_account match, False otherwise.
-
-  """
-  if authorized_account.find('@') == -1:
-    raise Exception('authorized_account must include domain!')
-  if given_account.find('@') == -1:
-    given_account += '@gmail.com'
-  return given_account == authorized_account
 
 
 def main():

@@ -73,26 +73,27 @@ class BaseServiceCL(googlecl.base.BaseCL):
     self.original_operation = self.original_put
     return self.retry_operation(*args, **kwargs)
 
-  def request_access(self, domain, hostid, scopes=None):
+  def request_access(self, domain, display_name, scopes=None, browser=None):
     """Do all the steps involved with getting an OAuth access token.
 
     Keyword arguments:
       domain: Domain to request access for.
-              (Sets the hd query parameter for the authorization step).
+          (Sets the hd query parameter for the authorization step).
+      display_name: Descriptor for the machine doing the requesting.
       scopes: String or list/tuple of strings describing scopes to request
-              access to. Default None for default scope of service.
+          access to. Default None for default scope of service.
+      browser: Browser to use to open authentication request url. Default None
+          for no browser launch, and just displaying the url.
+
     Returns:
       True if access token was succesfully retrieved and set, otherwise False.
 
     """
-    import ConfigParser
-    import webbrowser
     # Installed applications do not have a pre-registration and so follow
     # directions for unregistered applications
     self.SetOAuthInputParameters(gdata.auth.OAuthSignatureMethod.HMAC_SHA1,
                                  consumer_key='anonymous',
                                  consumer_secret='anonymous')
-    display_name = 'GoogleCL %s' % hostid
     fetch_params = {'xoauth_displayname':display_name}
     # First and third if statements taken from
     # gdata.service.GDataService.FetchOAuthRequestToken.
@@ -119,16 +120,13 @@ class BaseServiceCL(googlecl.base.BaseCL):
     auth_params = {'hd': domain}
     auth_url = self.GenerateOAuthAuthorizationURL(request_token=request_token,
                                                   extra_params=auth_params)
-    try:
+    if browser:
       try:
-        browser_str = googlecl.CONFIG.get('GENERAL', 'auth_browser')
-      except ConfigParser.NoOptionError:
-        browser = webbrowser.get()
-      else:
-        browser = webbrowser.get(browser_str)
-      browser.open(auth_url)
-    except (webbrowser.Error, OSError), err:
-      LOG.info('Failed to launch web browser: ' + str(err))
+        browser.open(auth_url)
+      except Exception, err:
+        # Blanket catch of Exception is a bad idea, but don't want to pass in
+        # error to look for.
+        LOG.error('Failed to launch web browser: ' + unicode(err))
     message = 'Please log in and/or grant access via your browser at ' +\
               auth_url + ' then hit enter.'
     raw_input(message)
