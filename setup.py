@@ -23,6 +23,7 @@ import shutil
 packages =['googlecl',
            'googlecl.blogger',
            'googlecl.calendar',
+           'googlecl.config',
            'googlecl.contacts',
            'googlecl.docs',
            'googlecl.picasa',
