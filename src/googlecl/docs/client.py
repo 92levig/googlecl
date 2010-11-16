@@ -262,7 +262,7 @@ class DocsClientCL(gdata.docs.client.DocsClient,
     return googlecl.client.BaseClientCL.request_access(self, domain,
                                                        display_name,
                                                        scopes=scopes,
-                                                       browser=None)
+                                                       browser=browser)
 
   RequestAccess = request_access
 

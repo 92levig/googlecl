@@ -68,6 +68,7 @@ class BaseClientCL(googlecl.base.BaseCL):
       display_name: Descriptor for the machine doing the requesting.
       scopes: String or list of strings describing scopes to request
               access to. If None, tries to access self.auth_scopes
+      browser: Browser object for opening a URL, or None to just print the url.
 
     Returns:
       True if access token was succesfully retrieved and set, otherwise False.
@@ -89,8 +90,6 @@ class BaseClientCL(googlecl.base.BaseCL):
     scopes.extend(['https://www.googleapis.com/auth/userinfo#email'])
     LOG.debug('Scopes being requested: ' + str(scopes))
 
-    print 'browser: %s' % browser
-
     url = gdata.gauth.REQUEST_TOKEN_URL + '?xoauth_displayname=' +\
           urllib.quote(display_name)
     try:
@@ -109,14 +108,14 @@ class BaseClientCL(googlecl.base.BaseCL):
       return False
     auth_url = request_token.generate_authorization_url(
                                                       google_apps_domain=domain)
-    if browser:
+    if browser is not None:
       try:
-        browser.open(auth_url)
+        browser.open(str(auth_url))
       except Exception, err:
         # Blanket catch of Exception is a bad idea, but don't want to pass in
         # error to look for.
         LOG.error('Failed to launch web browser: ' + unicode(err))
-    print 'Please log in and/or grant access at ' + str(auth_url)
+    print 'Please log in and/or grant access at %s' % auth_url
     # Try to keep that damn "Created new window in existing browser session."
     # message away from raw_input call.
     time.sleep(2)

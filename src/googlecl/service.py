@@ -120,15 +120,15 @@ class BaseServiceCL(googlecl.base.BaseCL):
     auth_params = {'hd': domain}
     auth_url = self.GenerateOAuthAuthorizationURL(request_token=request_token,
                                                   extra_params=auth_params)
-    if browser:
+    if browser is not None:
       try:
-        browser.open(auth_url)
+        browser.open(str(auth_url))
       except Exception, err:
         # Blanket catch of Exception is a bad idea, but don't want to pass in
         # error to look for.
         LOG.error('Failed to launch web browser: ' + unicode(err))
-    message = 'Please log in and/or grant access via your browser at ' +\
-              auth_url + ' then hit enter.'
+    message = ('Please log in and/or grant access via your browser at %s '
+               'then hit enter.' % auth_url)
     raw_input(message)
     # This upgrades the token, and if successful, sets the access token
     try:
