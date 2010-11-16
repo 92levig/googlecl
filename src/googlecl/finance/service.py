@@ -76,10 +76,10 @@ class FinanceServiceCL(FinanceService, BaseServiceCL):
 
   """
 
-  def __init__(self):
+  def __init__(self, config):
     """Constructor."""
     FinanceService.__init__(self)
-    BaseServiceCL.__init__(self, SECTION_HEADER)
+    BaseServiceCL.__init__(self, SECTION_HEADER, config)
     self.max_results = None
 
   def create_portfolio(self, title, currency):
@@ -144,12 +144,57 @@ class FinanceServiceCL(FinanceService, BaseServiceCL):
     """
 
     entries = self.get_portfolio_entries(title=title, returns=returns,
-                                     positions=positions, multiple=False)
+                                         positions=positions, multiple=False)
     if entries:
       return entries[0]
     else:
       LOG.info('Portfolio "%s" not found' % title)
       return None
+
+  def get_positions(self, portfolio_title, ticker_id=None,
+                    include_returns=False):
+    """Get positions in a portfolio.
+
+    Args:
+      portfolio_title: Title of the portfolio.
+      ticker_id: Ticker, e.g. "NYSE:GLD"
+      include_returns: Include returns in the portfolio data. Default False.
+
+    Returns:
+      List of positions in the portfolio, or empty list if no positions found
+      matching the criteria.
+    """
+    # XXX:Would be nice to differentiate between positions.  Right now, just get
+    # all of them.
+    pfl = self.get_portfolio(portfolio_title, returns=include_returns,
+                               positions=True)
+    if not pfl:
+      LOG.debug('No portfolio to get positions from!')
+      return []
+    if not pfl.positions:
+      LOG.debug('No positions found in this portfolio.')
+      return []
+
+    if ticker_id is not None:
+      positions = [self.GetPosition(portfolio_id=pfl.portfolio_id,
+                                      ticker_id=ticker_id)]
+    else:
+      positions = self.GetPositionFeed(portfolio_entry=pfl).entry
+    return positions
+
+  def get_transactions(self, portfolio_title, ticker_id, transaction_id=None):
+    pfl = self.get_portfolio(portfolio_title)
+    if not pfl:
+      LOG.debug('No portfolio to get transactions from!')
+      return []
+    if transaction_id:
+      transactions = [self.GetTransaction(portfolio_id=pfl.portfolio_id,
+                                            ticker_id=ticker_id,
+                                            transaction_id=transaction_id)]
+    else:
+      transactions = self.GetTransactionFeed(portfolio_id=pfl.portfolio_id,
+                                             ticker_id=ticker_id).entry
+    return transactions
 
   def create_transaction(self, pfl, ttype, ticker, shares=None, price=None,
                          currency=None, commission=None, date='', notes=None):

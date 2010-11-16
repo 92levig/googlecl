@@ -148,6 +148,7 @@ class TransactionFormatter(BaseFormatter):
        'commission': data.commission.money[0].amount,
        'date': data.date or '', 'notes': data.notes or ''}
 
+
 #===============================================================================
 # Each of the following _run_* functions execute a particular task.
 #
@@ -157,15 +158,16 @@ class TransactionFormatter(BaseFormatter):
 #  args: Additional arguments passed in on the command line, may or may not be
 #        required
 #===============================================================================
-
 # Portfolio-related tasks
 def _run_create(client, options, args):
   client.CreatePortfolio(options.title, options.currency)
+
 
 def _run_delete(client, options, args):
   entries = client.get_portfolio_entries(options.title, positions=True)
   if entries:
     client.DeleteEntryList(entries, 'portfolio', True)
+
 
 def _run_list(client, options, args):
   entries = client.get_portfolio_entries(returns=True)
@@ -173,6 +175,7 @@ def _run_list(client, options, args):
     PortfolioFormatter(options.fields).output(entries)
   else:
     LOG.info('No portfolios found')
+
 
 # Position-related tasks
 def _run_create_position(client, options, args):
@@ -188,104 +191,80 @@ def _run_create_position(client, options, args):
     if err:
       LOG.error("Failed to create position: %s" % err)
 
-def _run_delete_positions(client, options, args):
-  pfl = client.get_portfolio(options.title, positions=True)
-  if pfl:
-    if not pfl.positions:
-      LOG.info('No positions found in this portfolio')
-    else:
-      try:
-        if options.ticker:
-          positions = [client.GetPosition(portfolio_id=pfl.portfolio_id,
-                                          ticker_id=options.ticker,
-                                          query=PositionQuery())]
-        else:
-          positions = client.GetPositionFeed(portfolio_entry=pfl).entry
 
-        client.DeleteEntryList(positions, 'position', True,
+def _run_delete_positions(client, options, args):
+  positions = client.get_positions(portfolio_title=options.title,
+                                   ticker_id=options.ticker)
+  client.DeleteEntryList(positions, 'position', options.prompt,
                  callback=lambda pos: client.DeletePosition(position_entry=pos))
-      except client.request_error, err:
-        LOG.error("Failed to delete position: %s" % err[0]['body'])
+
 
 def _run_list_positions(client, options, args):
-  pfl = client.get_portfolio(options.title, returns=True, positions=True)
-  if pfl:
-    if pfl.positions:
-      PositionFormatter(options.fields).output(pfl.positions)
-    else:
-      LOG.info('No positions found in this portfolio')
+  positions = client.get_positions(options.title, options.ticker,
+                                   include_returns=True)
+  if positions:
+    PositionFormatter(options.fields).output(positions)
+  else:
+    LOG.info('No positions found in this portfolio')
+
 
 # Transaction-related tasks
-def _run_create_transaction(client,  options, args):
+def _run_create_transaction(client, options, args):
   pfl = client.get_portfolio(options.title)
   if pfl:
     err = client.create_transaction(pfl, options.ttype, options.ticker,
-                                      options.shares, options.price,
-                                      options.currency, options.commission,
-                                      options.date, options.notes)
+                                    options.shares, options.price,
+                                    options.currency, options.commission,
+                                    options.date, options.notes)
     if err:
       LOG.error("Failed to create transaction: %s" % err)
 
-def _run_delete_transactions(client,  options, args):
-  pfl = client.get_portfolio(options.title)
-  if pfl:
-    try:
-      if options.txnid:
-        transactions = [client.GetTransaction(portfolio_id=pfl.portfolio_id,
-                                              ticker_id=options.ticker,
-                                              transaction_id=options.txnid)]
-      else:
-        transactions = client.GetTransactionFeed(portfolio_id=pfl.portfolio_id,
-                                                 ticker_id=options.ticker).entry
 
-      client.DeleteEntryList(transactions, 'transaction', True)
-    except client.request_error, err:
-      LOG.error("Failed to delete transaction[s]: %s" % err[0]['body'])
-  else:
-    LOG.info(safe_encode(u'Did not find portfolio with title %s' %
-                         options.title))
+def _run_delete_transactions(client, options, args):
+  transactions = client.get_transactions(portfolio_title=options.title,
+                                         ticker_id=options.ticker,
+                                         transaction_id=options.txnid)
+  client.DeleteEntryList(transactions, 'transaction', options.prompt)
 
-def _run_list_transactions(client,  options,  args):
-  pfl = client.get_portfolio(options.title)
-  if pfl:
-    try:
-      transactions = client.GetTransactionFeed(
-        portfolio_id=pfl.portfolio_id,
-        ticker_id=options.ticker).entry
-    except client.request_error, err:
-      LOG.error("Failed to get transactions: %s" % err[0]['body'])
-    else:
-      TransactionFormatter(options.fields).output(transactions)
+
+def _run_list_transactions(client, options, args):
+  transactions = client.get_transactions(portfolio_title=options.title,
+                                         ticker_id=options.ticker,
+                                         transaction_id=options.txnid)
+  TransactionFormatter(options.fields).output(transactions)
+
 
 TASKS = {'create': Task('Create a portfolio',
                         callback=_run_create,
                         required=['title', 'currency']),
          'delete': Task('Delete portfolios',
                         callback=_run_delete,
-                        required = 'title'),
+                        required=['title']),
          'list':   Task('List portfolios',
                         callback=_run_list,
                         optional=['fields']),
          'create-pos': Task('Create position',
                             callback=_run_create_position,
-                            required = ['title', 'ticker']),
+                            required=['title', 'ticker']),
          'delete-pos': Task('Delete positions',
                             callback=_run_delete_positions,
-                            required = ['title'],
-                            optional = ['ticker']),
+                            required=['title'],
+                            optional=['ticker']),
          'list-pos':  Task('List positions',
                            callback=_run_list_positions,
-                           required = 'title'),
+                           required=['title'],
+                           optional=['fields']),
          'create-txn': Task('Create transaction',
                             callback=_run_create_transaction,
-                            required = ['title', 'ticker', 'ttype'],
-                            optional = ['shares', 'price', 'date',
-                                 'commission', 'currency', 'notes']),
+                            required=['title', 'ticker', 'ttype',
+                                      'shares', 'price'],
+                            optional=['shares', 'price', 'date',
+                                      'commission', 'currency', 'notes']),
          'list-txn': Task('List transactions',
                           callback=_run_list_transactions,
-                          required = ['title', 'ticker']),
+                          required=['title', 'ticker']),
          'delete-txn': Task('Delete transactions',
                             callback=_run_delete_transactions,
-                            required = ['title', 'ticker'],
+                            required=['title', 'ticker'],
                             optional=['txnid']),
 }
