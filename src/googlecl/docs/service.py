@@ -251,7 +251,7 @@ class DocsServiceCL(gdata.docs.service.DocsService,
       content_type = SUPPORTED_FILETYPES[file_ext.upper()]
     mediasource = gdata.MediaSource(file_path=path_to_new_content,
                                     content_type=content_type)
-    self.Put(mediasource, doc_entry.GetEditMediaLink().href)
+    return self.Put(mediasource, doc_entry.GetEditMediaLink().href)
 
   def request_access(self, domain, display_name, scopes=None, browser=None):
     """Request access as in BaseServiceCL, but specify scopes."""
@@ -351,7 +351,7 @@ class DocsServiceCL(gdata.docs.service.DocsService,
     else:
       LOG.info('Upload success! Direct link: ' +
                new_entry.GetAlternateLink().href)
-    return new_entry.GetAlternateLink().href
+    return new_entry
 
   UploadSingleDoc = upload_single_doc
 

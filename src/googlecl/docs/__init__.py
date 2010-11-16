@@ -45,7 +45,6 @@ def get_document_type(entry):
 
   Returns:
     A string representing the type of document.
-
   """
   data_kind_scheme = 'http://schemas.google.com/g/2005#kind'
   if entry.category:
@@ -60,28 +59,20 @@ def get_extension_from_doctype(doctype_label, config_parser):
   """Return file extension based on document type and preferences file."""
   LOG.debug('In get_extension_from_doctype, doctype_label: ' +
              str(doctype_label))
-  try:
-    if doctype_label == SPREADSHEET_LABEL:
-      return config_parser.get(SECTION_HEADER, 'spreadsheet_format')
-    elif doctype_label == DOCUMENT_LABEL:
-      return config_parser.get(SECTION_HEADER, 'document_format')
-    elif doctype_label == PDF_LABEL:
-      return 'pdf'
-    elif doctype_label == PRESENTATION_LABEL:
-      return config_parser.get(SECTION_HEADER, 'presentation_format')
-    else:
-      raise UnknownDoctype(doctype_label)
-  except ConfigParser.NoOptionError, err:
-    LOG.error(err)
-  except UnknownDoctype, err:
-    if doctype_label is not None:
-      LOG.error(err)
-
-  try:
-    return config_parser.get(SECTION_HEADER, 'format')
-  except ConfigParser.NoOptionError, err:
-    LOG.error(err)
-  return None
+  ext = None
+  if doctype_label == SPREADSHEET_LABEL:
+    ext = config_parser.safe_get(SECTION_HEADER, 'spreadsheet_format')
+  elif doctype_label == DOCUMENT_LABEL:
+    ext = config_parser.safe_get(SECTION_HEADER, 'document_format')
+  elif doctype_label == PDF_LABEL:
+    ext = 'pdf'
+  elif doctype_label == PRESENTATION_LABEL:
+    ext = config_parser.safe_get(SECTION_HEADER, 'presentation_format')
+  elif doctype_label is not None:
+    LOG.error('Unknown document type label: %s' % doctype_label)
+  if not ext:
+    ext = config_parser.safe_get(SECTION_HEADER, 'format')
+  return ext
 
 
 def get_editor(doctype_label, config_parser):
@@ -98,31 +89,24 @@ def get_editor(doctype_label, config_parser):
 
   Returns:
     Editor to use to edit the document.
-
   """
   LOG.debug('In get_editor, doctype_label: ' + str(doctype_label))
-  try:
-    if doctype_label == SPREADSHEET_LABEL:
-      return config_parser.get(SECTION_HEADER, 'spreadsheet_editor')
-    elif doctype_label == DOCUMENT_LABEL:
-      return config_parser.get(SECTION_HEADER, 'document_editor')
-    elif doctype_label == PDF_LABEL:
-      return config_parser.get(SECTION_HEADER, 'pdf_editor')
-    elif doctype_label == PRESENTATION_LABEL:
-      return config_parser.get(SECTION_HEADER, 'presentation_editor')
-    else:
-      raise UnknownDoctype(doctype_label)
-  except ConfigParser.NoOptionError, err:
-    LOG.error(err)
-  except UnknownDoctype, err:
-    if doctype_label is not None:
-      LOG.error(err)
-
-  try:
-    return config_parser.get(SECTION_HEADER, 'editor')
-  except ConfigParser.NoOptionError, err:
-    LOG.error(err)
-  return os.getenv('EDITOR')
+  editor = None
+  if doctype_label == SPREADSHEET_LABEL:
+    editor = config_parser.get(SECTION_HEADER, 'spreadsheet_editor')
+  elif doctype_label == DOCUMENT_LABEL:
+    editor = config_parser.get(SECTION_HEADER, 'document_editor')
+  elif doctype_label == PDF_LABEL:
+    editor = config_parser.get(SECTION_HEADER, 'pdf_editor')
+  elif doctype_label == PRESENTATION_LABEL:
+    editor = config_parser.get(SECTION_HEADER, 'presentation_editor')
+  elif doctype_label is not None:
+    LOG.error('Unknown document type label: %s' % doctype_label)
+  if not editor:
+    editor = config_parser.safe_get(SECTION_HEADER, 'editor')
+  if not editor:
+    editor = os.getenv('EDITOR')
+  return editor
 
 
 #===============================================================================
@@ -165,11 +149,11 @@ def _run_upload(client, options, args):
   folder_entries = client.get_folder(options.folder)
   folder_entry = client.get_single_entry(folder_entries)
   docs_list = options.src + args
-  client.upload_docs(docs_list,
-                     title=options.title,
-                     folder_entry=folder_entry,
-                     file_ext=options.format,
-                     convert=options.convert)
+  successful_docs = client.upload_docs(docs_list,
+                                       title=options.title,
+                                       folder_entry=folder_entry,
+                                       file_ext=options.format,
+                                       convert=options.convert)
 
 
 def _run_edit(client, options, args):
@@ -209,8 +193,10 @@ def _run_edit(client, options, args):
     LOG.info('Define a "format" option in your config file,' +
              ' or pass in a format with --format')
     return
-  client.edit_doc(doc_entry_or_title, editor, format_ext,
-                  folder_entry_or_path=folder_entry or options.folder)
+  doc = client.edit_doc(doc_entry_or_title, editor, format_ext,
+                        folder_entry_or_path=folder_entry or options.folder)
+  if doc is not None:
+    LOG.info('Document successfully edited! %s', doc.GetHtmlLink().href)
 
 
 def _run_delete(client, options, args):

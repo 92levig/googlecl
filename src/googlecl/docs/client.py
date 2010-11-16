@@ -250,7 +250,7 @@ class DocsClientCL(gdata.docs.client.DocsClient,
       content_type = MIMETYPES[file_ext.upper()]
     mediasource = gdata.data.MediaSource(file_path=path_to_new_content,
                                          content_type=content_type)
-    self.Update(doc_entry, media_source=mediasource)
+    return self.Update(doc_entry, media_source=mediasource)
 
   def request_access(self, domain, display_name, scopes=None, browser=None):
     """Request access as in BaseClientCL, but specify scopes."""
@@ -340,7 +340,7 @@ class DocsClientCL(gdata.docs.client.DocsClient,
     else:
       LOG.info('Upload success! Direct link: ' +
                new_entry.GetAlternateLink().href)
-    return new_entry.GetAlternateLink().href
+    return new_entry
 
   UploadSingleDoc = upload_single_doc
 

@@ -49,22 +49,6 @@ class DocsError(googlecl.base.Error):
   """Base error for Docs errors."""
   pass
 
-class UnexpectedExtension(DocsError):
-  """Found an unexpected filename extension."""
-  def __str__(self):
-    if len(self.args) == 1:
-      return 'Unexpected extension: ' + str(self.args[0])
-    else:
-      return str(self.args)
-
-class UnknownDoctype(DocsError):
-  """Document type / label is unknown."""
-  def __str__(self):
-    if len(self.args) == 1:
-      return 'Unknown document type: ' + str(self.args[0])
-    else:
-      return str(self.args)
-
 
 class DocsBaseCL(object):
 
@@ -142,10 +126,10 @@ class DocsBaseCL(object):
         raw_input('')
     if file_hash and file_hash == _md5_hash_file(path):
       LOG.info('No modifications to file, not uploading.')
-      return
+      return None
     elif not os.path.exists(path):
       LOG.info('No file written, not uploading.')
-      return
+      return None
 
     if new_doc:
       if isinstance(folder_entry_or_path, basestring):
@@ -153,15 +137,17 @@ class DocsBaseCL(object):
         self.upload_docs([base_path])
       else:
         # folder_entry_or_path is None or a GDataEntry.
-        self.upload_single_doc(path, folder_entry=folder_entry_or_path)
+        doc_entry = self.upload_single_doc(path,
+                                           folder_entry=folder_entry_or_path)
     else:
       try:
-        self._modify_entry(doc_entry_or_title, path, file_ext)
+        doc_entry = self._modify_entry(doc_entry_or_title, path, file_ext)
       except self.request_error, err:
         LOG.error(err)
         new_path = safe_move(path, '.')
         LOG.info(safe_encode('Moved edited document to ' +
                              safe_decode(new_path)))
+        return None
 
     try:
       # Good faith effort to keep the temp directory clean.
@@ -169,6 +155,7 @@ class DocsBaseCL(object):
     except OSError:
       # Only seen errors on Windows, but catch the more general OSError.
       pass
+    return doc_entry
 
   EditDoc = edit_doc
 
@@ -269,9 +256,8 @@ class DocsBaseCL(object):
 
     Returns:
       Dictionary mapping filenames to where they can be accessed online.
-
     """
-    url_locs = {}
+    doc_entries = {}
     for path in paths:
       folder_root = folder_entry
       if os.path.isdir(path):
@@ -289,18 +275,18 @@ class DocsBaseCL(object):
           folder_entries[dirpath] = fentry
           LOG.debug('Created folder ' + dirpath + ' ' + folder_name)
           for fname in filenames:
-            loc = self.upload_single_doc(os.path.join(dirpath, fname),
+            doc = self.upload_single_doc(os.path.join(dirpath, fname),
                                          folder_entry=fentry)
-            if loc:
-              url_locs[fname] = loc
+            if doc:
+              doc_entries[fname] = doc
       else:
-        loc = self.upload_single_doc(path, title=title,
+        doc = self.upload_single_doc(path, title=title,
                                      folder_entry=folder_entry,
                                      file_ext=file_ext,
                                      **kwargs)
-        if loc:
-          url_locs[os.path.basename(path)] = loc
-    return url_locs
+        if doc:
+          doc_entries[os.path.basename(path)] = doc
+    return doc_entries
 
   UploadDocs = upload_docs
 
