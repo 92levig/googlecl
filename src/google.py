@@ -49,6 +49,7 @@ import logging
 import optparse
 import os
 import sys
+import traceback
 import webbrowser
 import googlecl
 import googlecl.authentication
@@ -455,8 +456,7 @@ def run_interactive(parser):
       # Printing usage good, SystemExit bad. So catch it and do nothing.
       pass
     except BaseException:
-      from traceback import print_exc
-      print_exc()
+      traceback.print_exc()
   if 'readline' in sys.modules:
     readline.write_history_file(history_file)
 
@@ -566,10 +566,23 @@ def run_once(options, args):
   auth_manager = googlecl.authentication.AuthenticationManager(service, client)
   authenticated = authenticate(auth_manager, options, config, section_header)
 
-  if authenticated:
-    task.run(client, options, args)
-  else:
+  if not authenticated:
     LOG.debug('Authentication failed, exiting run_once')
+    return -1
+
+  run_error = None
+  try:
+    task.run(client, options, args)
+  except AttributeError, run_error:
+    err_str = safe_decode(run_error)
+    if err_str == "'OAuthToken' object has no attribute 'modify_request'":
+      LOG.info('OAuthToken error.  Try re-running with --force-auth.')
+  if run_error and LOG.isEnabledFor(logging.DEBUG):
+    # XXX: This will probably not work if googlecl gets threaded (unlikely)
+    type, value, traceback_obj = sys.exc_info()
+    LOG.debug(''.join(traceback.format_exception(type, value, traceback_obj)))
+    return -1
+  return 0
 
 
 def setup_logger(options):
