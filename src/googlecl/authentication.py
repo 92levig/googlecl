@@ -23,7 +23,7 @@ import googlecl
 TOKENS_FILENAME_FORMAT = 'access_tok_%s'
 LOG = logging.getLogger('authenticate')
 
-
+#XXX: Public-facing functions are confusing, clean up.
 class AuthenticationManager(object):
   """Handles OAuth token for a given service."""
 
@@ -157,8 +157,8 @@ class AuthenticationManager(object):
             success = True
     return success
 
-  def retrieve_and_set_access_token(self, display_name, browser_object):
-    """Requests a new access token from Google, set it upon retrieval.
+  def retrieve_access_token(self, display_name, browser_object):
+    """Requests a new access token from Google, writes it upon retrieval.
 
     The token will not be written to file if it was granted for an account
     other than the one specified by client.email. Instead, a False value will

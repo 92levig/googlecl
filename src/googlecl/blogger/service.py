@@ -24,6 +24,7 @@ import gdata
 import gdata.blogger.service
 import logging
 import os
+from googlecl import safe_encode
 import googlecl.base
 import googlecl.service
 from googlecl.blogger import SECTION_HEADER
@@ -85,7 +86,10 @@ class BloggerServiceCL(gdata.blogger.service.BloggerService,
     if blog_entry:
       return blog_entry.GetSelfLink().href.split('/')[-1]
     else:
-      LOG.error('Did not find a blog with title matching %s' % blog_title)
+      if blog_title is not None:
+        LOG.error('Did not find a blog with title matching %s', blog_title)
+      else:
+        LOG.error('No blogs found!')
       return None
 
   def is_token_valid(self, test_uri='/feeds/default/blogs'):

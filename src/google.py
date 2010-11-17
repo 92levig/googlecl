@@ -114,8 +114,7 @@ def authenticate(auth_manager, options, config, section_header):
       else:
         browser = webbrowser.get()
 
-      valid_token = auth_manager.retrieve_and_set_access_token(display_name,
-                                                               browser)
+      valid_token = auth_manager.retrieve_access_token(display_name, browser)
     if valid_token:
       config.set_missing_default(section_header, 'skip_auth', True)
       return True
@@ -347,7 +346,7 @@ def import_service(service, config_file_path):
     LOG.error(err.args[0])
     LOG.error('Did you specify the service correctly? Must be one of ' +
               str(AVAILABLE_SERVICES)[1:-1])
-    return (None, None, None)
+    return (None, None, None, None)
 
   config = googlecl.config.load_configuration(config_file_path)
   force_gdata_v1 = config.lazy_get(package.SECTION_HEADER,
