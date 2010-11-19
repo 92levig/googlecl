@@ -18,6 +18,9 @@ from __future__ import with_statement
 import logging
 import os.path
 
+LOGGER_NAME = __name__
+LOG = logging.getLogger(LOGGER_NAME)
+
 
 class ConfigParser(object):
   def __init__(self, config_parser_class):
@@ -35,10 +38,10 @@ class ConfigParser(object):
     Config file is read from config_file_path as well.
     """
     if os.path.exists(config_file_path):
-      logging.debug('Reading configuration from %s', config_file_path)
+      LOG.debug('Reading configuration from %s', config_file_path)
       self.parser.read(config_file_path)
     else:
-      logging.debug('Config file does not exist, starting with empty parser')
+      LOG.debug('Config file does not exist, starting with empty parser')
     self.path = config_file_path
 
   def ensure_basic_options(self, basic_options):

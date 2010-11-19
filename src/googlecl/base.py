@@ -24,7 +24,7 @@ import time
 safe_encode = googlecl.safe_encode
 safe_decode = googlecl.safe_decode
 
-LOG = logging.getLogger(googlecl.LOGGER_NAME)
+LOG = logging.getLogger(__name__)
 HTTP_ERROR_CODES_TO_RETRY_ON = [302, 500, 503]
 
 

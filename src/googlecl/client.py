@@ -22,7 +22,7 @@ import googlecl
 import googlecl.base
 import logging
 
-LOG = logging.getLogger(googlecl.LOGGER_NAME)
+LOG = logging.getLogger(__name__)
 
 # This class CANNOT be used unless an instance also inherits from
 # gdata.client.GDClient somehow.

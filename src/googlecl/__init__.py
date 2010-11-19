@@ -29,7 +29,7 @@ TOKENS_FILENAME_FORMAT = 'access_tok_%s'
 DEVKEY_FILENAME = 'yt_devkey'
 
 FILE_EXT_PATTERN = re.compile('.*\.([a-zA-Z0-9]{2,}$)')
-LOGGER_NAME = 'googlecl'
+LOGGER_NAME = __name__
 LOG = logging.getLogger(LOGGER_NAME)
 
 

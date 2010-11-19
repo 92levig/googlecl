@@ -22,7 +22,7 @@ import googlecl
 import googlecl.base
 import logging
 
-LOG = logging.getLogger(googlecl.LOGGER_NAME)
+LOG = logging.getLogger(__name__)
 
 
 class BaseServiceCL(googlecl.base.BaseCL):

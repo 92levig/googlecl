@@ -21,7 +21,8 @@ import stat
 import googlecl
 
 TOKENS_FILENAME_FORMAT = 'access_tok_%s'
-LOG = logging.getLogger('authenticate')
+LOGGER_NAME = __name__
+LOG = logging.getLogger(LOGGER_NAME)
 
 #XXX: Public-facing functions are confusing, clean up.
 class AuthenticationManager(object):

@@ -21,7 +21,7 @@ from googlecl.base import Task
 
 safe_encode = googlecl.safe_encode
 service_name = __name__.split('.')[-1]
-LOGGER_NAME = googlecl.LOGGER_NAME + '.' + service_name
+LOGGER_NAME = __name__
 SECTION_HEADER = service_name.upper()
 LOG = logging.getLogger(LOGGER_NAME)
 
