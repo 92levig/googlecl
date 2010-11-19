@@ -575,8 +575,10 @@ def run_once(options, args):
     task.run(client, options, args)
   except AttributeError, run_error:
     err_str = safe_decode(run_error)
-    if err_str == "'OAuthToken' object has no attribute 'modify_request'":
-      LOG.info('OAuthToken error.  Try re-running with --force-auth.')
+    if err_str.startswith("'OAuth"):
+      LOG.info('OAuth error.  Try re-running with --force-auth.')
+    else:
+      raise run_error
   if run_error and LOG.isEnabledFor(logging.DEBUG):
     # XXX: This will probably not work if googlecl gets threaded (unlikely)
     type, value, traceback_obj = sys.exc_info()
