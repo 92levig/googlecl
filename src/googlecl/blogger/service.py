@@ -21,6 +21,7 @@ from __future__ import with_statement
 __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import atom
 import gdata
+import gdata.blogger
 import gdata.blogger.service
 import logging
 import os
@@ -58,17 +59,16 @@ class BloggerServiceCL(gdata.blogger.service.BloggerService,
       is_draft: If this content is a draft post or not. (Default False)
 
     Returns:
-      Entry of post. (Returns same results as self.Post())
-
+      Entry of post. (Returns same results as self.AddPost())
     """
-    entry = gdata.GDataEntry()
+    entry = gdata.blogger.BlogPostEntry()
     entry.title = atom.Title(title_type='xhtml', text=post_title)
     entry.content = atom.Content(content_type='html', text=content)
     if is_draft:
       control = atom.Control()
       control.draft = atom.Draft(text='yes')
       entry.control = control
-    return self.Post(entry, '/feeds/' + blog_id + '/posts/default')
+    return self.AddPost(entry, blog_id)
 
   def _get_blog_id(self, blog_title=None, user_id='default'):
     """Return the blog ID of the blog that matches blog_title.
@@ -110,7 +110,6 @@ class BloggerServiceCL(gdata.blogger.service.BloggerService,
 
     Returns:
       List of posts that match parameters, or [] if none do.
-
     """
     blog_id = self._get_blog_id(blog_title, user_id)
     if blog_id:
@@ -129,7 +128,6 @@ class BloggerServiceCL(gdata.blogger.service.BloggerService,
       tags: String representation of tags in a comma separated list.
             For how tags are generated from the string,
             see googlecl.base.generate_tag_sets().
-
     """
     scheme = 'http://www.blogger.com/atom/ns#'
     remove_set, add_set, replace_tags = googlecl.base.generate_tag_sets(tags)
@@ -150,8 +148,10 @@ class BloggerServiceCL(gdata.blogger.service.BloggerService,
       if add_set:
         new_tags = [atom.Category(term=tag, scheme=scheme) for tag in add_set]
         post.category.extend(new_tags)
-
-      successes.append(self.UpdatePost(post))
+      updated_post = self.UpdatePost(post)
+      if updated_post:
+        successes.append(updated_post)
+    return successes
 
   LabelPosts = label_posts
 
@@ -196,10 +196,19 @@ class BloggerServiceCL(gdata.blogger.service.BloggerService,
         LOG.error(safe_encode('Failed to post: ' + unicode(err)))
       else:
         entry_list.append(entry)
-        LOG.info('Post created: %s' % entry.GetHtmlLink().href)
+        if entry.control and entry.control.draft.text == 'yes':
+          html_link = _build_draft_html(entry)
+        else:
+          html_link = entry.GetHtmlLink().href
+        LOG.info('Post created: %s', html_link)
     return entry_list
 
   UploadPosts = upload_posts
 
 
 SERVICE_CLASS = BloggerServiceCL
+
+
+def _build_draft_html(entry):
+  template = 'http://www.blogger.com/post-edit.g?blogID=%s&postID=%s'
+  return template % (entry.GetBlogId(), entry.GetPostId())
