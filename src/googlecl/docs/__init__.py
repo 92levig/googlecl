@@ -93,13 +93,13 @@ def get_editor(doctype_label, config_parser):
   LOG.debug('In get_editor, doctype_label: ' + str(doctype_label))
   editor = None
   if doctype_label == SPREADSHEET_LABEL:
-    editor = config_parser.get(SECTION_HEADER, 'spreadsheet_editor')
+    editor = config_parser.safe_get(SECTION_HEADER, 'spreadsheet_editor')
   elif doctype_label == DOCUMENT_LABEL:
-    editor = config_parser.get(SECTION_HEADER, 'document_editor')
+    editor = config_parser.safe_get(SECTION_HEADER, 'document_editor')
   elif doctype_label == PDF_LABEL:
-    editor = config_parser.get(SECTION_HEADER, 'pdf_editor')
+    editor = config_parser.safe_get(SECTION_HEADER, 'pdf_editor')
   elif doctype_label == PRESENTATION_LABEL:
-    editor = config_parser.get(SECTION_HEADER, 'presentation_editor')
+    editor = config_parser.safe_get(SECTION_HEADER, 'presentation_editor')
   elif doctype_label is not None:
     LOG.error('Unknown document type label: %s' % doctype_label)
   if not editor:
