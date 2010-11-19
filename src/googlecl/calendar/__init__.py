@@ -311,16 +311,17 @@ def _run_add(client, options, args):
     return
   reminder_in_minutes = convert_reminder_string(options.reminder)
   events_list = options.src + args
+  reminder_results = []
   for cal in cal_user_list:
     if options.date:
       results = client.full_add_event(events_list, cal.user, options.date,
                                       reminder_in_minutes)
-      reminder_results = []
     else:
       results = client.quick_add_event(events_list, cal.user)
-      reminder_results = client.add_reminders(cal.user,
-                                              results,
-                                              reminder_in_minutes)
+      if reminder_in_minutes is not None:
+        reminder_results = client.add_reminders(cal.user,
+                                                results,
+                                                reminder_in_minutes)
     if LOG.isEnabledFor(logging.DEBUG):
       for entry in results + reminder_results:
         LOG.debug('ID: %s, status: %s, reason: %s',
