@@ -222,7 +222,8 @@ class DocsServiceCL(gdata.docs.service.DocsService,
     """Check that the token being used is valid."""
     if not test_uri:
       docs_uri = gdata.docs.service.DocumentQuery().ToUri()
-      sheets_uri = '/feeds/spreadsheets/private/full'
+      sheets_uri = ('https://spreadsheets.google.com/feeds/spreadsheets'
+                    '/private/full')
     docs_test = googlecl.service.BaseServiceCL.IsTokenValid(self, docs_uri)
     sheets_test = googlecl.service.BaseServiceCL.IsTokenValid(self, sheets_uri)
     return docs_test and sheets_test

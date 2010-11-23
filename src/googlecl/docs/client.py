@@ -221,7 +221,8 @@ class DocsClientCL(gdata.docs.client.DocsClient,
     """Check that the token being used is valid."""
     if not test_uri:
       docs_uri = gdata.docs.client.DOCLIST_FEED_URI
-      sheets_uri = '/feeds/spreadsheets/private/full'
+      sheets_uri = ('https://spreadsheets.google.com/feeds/spreadsheets'
+                    '/private/full')
     docs_test = googlecl.client.BaseClientCL.IsTokenValid(self, docs_uri)
     sheets_test = googlecl.client.BaseClientCL.IsTokenValid(self, sheets_uri)
     return docs_test and sheets_test
