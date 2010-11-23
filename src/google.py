@@ -102,6 +102,7 @@ def authenticate(auth_manager, options, config, section_header):
     skip_auth = False
 
   if options.force_auth or not skip_auth:
+    LOG.debug('Checking access token...')
     valid_token = auth_manager.check_access_token()
     if not valid_token:
       display_name = auth_manager.get_display_name(options.hostid)
@@ -117,10 +118,11 @@ def authenticate(auth_manager, options, config, section_header):
 
       valid_token = auth_manager.retrieve_access_token(display_name, browser)
     if valid_token:
+      LOG.debug('Retrieved valid access token')
       config.set_missing_default(section_header, 'skip_auth', True)
       return True
     else:
-      LOG.debug('valid_token evaulates to false,')
+      LOG.debug('Could not retrieve valid access token')
       return False
   else:
     # Already set an access token and we're not being forced to authenticate
@@ -570,6 +572,8 @@ def run_once(options, args):
     LOG.debug('Authentication failed, exiting run_once')
     return -1
 
+  # If we've authenticated, save the config values we've been setting.
+  config.write_out_parser()
   run_error = None
   try:
     task.run(client, options, args)
