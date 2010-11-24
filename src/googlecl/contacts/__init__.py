@@ -151,8 +151,7 @@ def _run_list(client, options, args):
 
 def _run_add(client, options, args):
   new_contacts_list = options.src + args
-  for contact in new_contacts_list:
-    client.add_contact_string(contact)
+  client.add_contacts(new_contacts_list)
 
 
 def _run_delete(client, options, args):

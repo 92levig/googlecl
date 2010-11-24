@@ -54,29 +54,15 @@ class ContactsClientCL(gdata.contacts.client.ContactsClient,
     gdata.contacts.client.ContactsClient.__init__(self)
     googlecl.client.BaseClientCL.__init__(self, SECTION_HEADER, config)
 
-  def parse_contact_string(self, contact_string):
-    """Add contact(s).
+  def _add_email(self, email, contact_entry):
+    contact_entry.email.append(gdata.data.Email(address=email, label='Home'))
 
-    Keyword arguments:
-      contact_string: String representing a name/email address to add
-                      Entries should be of the form "name,email@server.com"
-                      (whitespace before/after the comma is ignored).
+  def _add_name(self, name, contact_entry):
+    contact_entry.name = gdata.data.Name()
+    contact_entry.name.full_name = gdata.data.FullName(text=name)
 
-    Returns:
-      ContactEntry with at least name and email filled in.
-
-    """
-    try:
-      name, email = contact_string.split(',')
-    except ValueError:
-      LOG.error(contact_string + ' is not a name,email pair nor a file.')
-      return
-    new_contact = gdata.contacts.data.ContactEntry()
-    new_contact.name = gdata.data.Name()
-    new_contact.name.full_name = gdata.data.FullName(text=name.strip())
-    new_contact.email.append(gdata.data.Email(address=email.strip(),
-                                              label='Home'))
-    return new_contact
+  def _get_contact_entry(self):
+    return gdata.contacts.data.ContactEntry() 
 
   def get_contacts(self, name):
     """Get all contacts that match a name."""
@@ -90,7 +76,7 @@ class ContactsClientCL(gdata.contacts.client.ContactsClient,
     """Add group."""
     new_group = gdata.contacts.data.GroupEntry()
     new_group.title = atom.data.Title(text=name)
-    self.CreateGroup(new_group)
+    return self.CreateGroup(new_group)
 
   AddGroup = add_group
 

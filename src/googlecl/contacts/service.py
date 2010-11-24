@@ -54,27 +54,14 @@ class ContactsServiceCL(gdata.contacts.service.ContactsService,
     gdata.contacts.service.ContactsService.__init__(self)
     googlecl.service.BaseServiceCL.__init__(self, SECTION_HEADER, config)
 
-  def parse_contact_string(self, contact_string):
-    """Add contact(s).
+  def _add_email(self, email, contact_entry):
+    contact_entry.email.append(gdata.contacts.Email(address=email))
 
-    Keyword arguments:
-      contact_string: String representing a name/email address to add
-                      Entries should be of the form "name,email@server.com"
-                      (whitespace before/after the comma is ignored).
+  def _add_name(self, name, contact_entry):
+    contact_entry.title = atom.Title(text=name)
 
-    Returns:
-      ContactEntry with at least name and email filled in.
-
-    """
-    try:
-      name, email = contact_string.split(',')
-    except ValueError:
-      LOG.error(contact_string + ' is not a name,email pair nor a file.')
-      return
-    new_contact = gdata.contacts.ContactEntry(title=atom.Title(
-                                                           text=name.strip()))
-    new_contact.email.append(gdata.contacts.Email(address=email.strip()))
-    return new_contact
+  def _get_contact_entry(self):
+    return gdata.contacts.ContactEntry() 
 
   def get_contacts(self, name):
     """Get all contacts that match a name."""
@@ -87,7 +74,7 @@ class ContactsServiceCL(gdata.contacts.service.ContactsService,
   def add_group(self, name):
     """Add group."""
     new_group = gdata.contacts.GroupEntry(title=atom.Title(text=name))
-    self.CreateGroup(new_group)
+    return self.CreateGroup(new_group)
 
   AddGroup = add_group
 

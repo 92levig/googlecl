@@ -26,36 +26,66 @@ List contacts:
 from __future__ import with_statement
 
 __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
-import logging
-import googlecl.contacts
 import os.path
 
-
-LOG = logging.getLogger(googlecl.contacts.LOGGER_NAME)
 
 class ContactsBaseCL(object):
   """Class inherited by either ContactsServiceCL or ContactsClientCL. """
 
-  def add_contact_string(self, string_or_csv_file):
+  def add_contacts(self, contacts):
     """Add contact(s).
 
-    Keyword arguments:
-      string_or_csv_file: String representing a name/email address to add, or
-                          a path to a csv file of such strings. Entries should
-                          be of the form "name,email@server.com" (whitespace
-                          before/after the comma is ignored).
+    Args:
+      contacts: Contact(s) to add. This is either a path to a CSV with
+          contact information, or a list of comma separated contact data.
     """
-    if os.path.exists(string_or_csv_file):
-      with open(string_or_csv_file, 'r') as contacts_csv_file:
-        for line in contacts_csv_file:
-          if line.strip():    # filter out empty lines
-            self.add_contact_string(line)
+    successes = []
+    if isinstance(contacts, basestring):
+      if os.path.exists(contacts):
+        with open(contacts, 'r') as contacts_csv_file:
+          for line in contacts_csv_file:
+            entry = self.add_single_contact(line)
+            if entry:
+              successes.append(entry)
+      else:
+        entry = self.add_single_contact(contacts)
+        if entry:
+          successes.append(entry)
     else:
-      contact_entry = self.parse_contact_string(string_or_csv_file)
-      if contact_entry:
-        try:
-          self.CreateContact(contact_entry)
-        except self.request_error, err:
-          LOG.error(err)
+      for contact in contacts:
+        entry = self.add_single_contact(contact)
+        if entry:
+          successes.append(entry)
+    return successes
 
-  AddContactString = add_contact_string
+  AddContacts = add_contacts
+
+  def add_single_contact(self, contact_string, delimiter=',',
+                         fields=('name', 'email')):
+    """Add contact.
+
+    Args:
+      contact_string: String representing fields of a contact to add.
+      delimiter: Delimiter for fields in the contact string. Default ','
+      fields: Fields contained in the contact string. Default ('name', 'email')
+
+    Returns:
+      ContactEntry with fields filled in, or None if the contact string did not
+      contain the data described by fields.
+    """
+    num_fields = len(fields)
+    values = contact_string.split(delimiter, num_fields)
+    if num_fields != len(values):
+      LOG.error('String did not have correct number of fields!')
+      LOG.debug('Expected fields %s', fields)
+      LOG.debug('Got string %s', contact_string)
+      return None
+    new_contact = self._get_contact_entry()
+    for i in range(num_fields):
+      if fields[i] == 'name':
+        self._add_name(values[i].strip(), new_contact)
+      elif fields[i] == 'email':
+        self._add_email(values[i].strip(), new_contact)
+    return self.CreateContact(new_contact)
+
+  AddSingleContact = add_single_contact
