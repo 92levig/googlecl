@@ -52,6 +52,7 @@ class DocsClientCL(gdata.docs.client.DocsClient,
   app with a command line interface.
 
   """
+  DOCLIST_FEED_URI = gdata.docs.client.DOCLIST_FEED_URI
 
   def __init__(self, config):
     """Constructor."""
@@ -62,6 +63,14 @@ class DocsClientCL(gdata.docs.client.DocsClient,
     """Wrapper function to mesh with DocsBaseCL.upload_docs()."""
     return self.create(gdata.docs.data.FOLDER_LABEL, title,
                        folder_or_uri)
+
+  def _determine_content_type(self, file_ext):
+    from gdata.docs.data import MIMETYPES
+    try:
+      return MIMETYPES[file_ext.upper()]
+    except KeyError:
+      LOG.info('No supported filetype found for extension %s', file_ext)
+      return None
 
   def _download_file(self, uri, file_path, auth_token=None, **kwargs):
     """Downloads a file, optionally decoding from UTF-8.
@@ -267,83 +276,23 @@ class DocsClientCL(gdata.docs.client.DocsClient,
 
   RequestAccess = request_access
 
-  def upload_single_doc(self, path, title=None, folder_entry=None,
-                        file_ext=None, **kwargs):
-    """Upload one file to Google Docs.
+  def _transmit_doc(self, path, entry_title, post_uri, content_type, file_ext):
+    """Upload a document.
+
+    The final step in uploading a document. The process differs between versions
+    of the gdata python client library, hence its definition here.
 
     Args:
-      path: str Path to file to upload.
-      title: str (optional) Title to give the upload. Defaults to the filename.
-      folder_entry: DocsEntry (optional) (sub)Folder to upload into.
-      file_ext: str (optional) Extension used to determine MIME type of
-                upload. If not specified, uses mimetypes module to guess it.
-      kwargs: Should contain value for 'convert', either True or False.
-              Indicates if upload should be converted. Only Apps Premier
-              users can specify False.
+      path: Path to the file to upload.
+      entry_title: Name of the document.
+      post_uri: URI to make request to.
+      content_type: MIME type of request.
+      file_ext: File extension that determined the content_type.
 
     Returns:
-      str Link to the document on Google Docs
-
+      Entry representing the document uploaded.
     """
-    import mimetypes
-    try:
-      convert = kwargs['convert']
-    except KeyError:
-      convert = True
-
-    filename = os.path.basename(path)
-    content_type = None
-    if file_ext:
-      from gdata.docs.data import MIMETYPES
-      try:
-        content_type = MIMETYPES[file_ext.upper()]
-      except KeyError:
-        LOG.info('No supported filetype found for extension ' + file_ext +
-                 ', letting mimetypes module guess mime type')
-      else:
-        title_from_filename = lambda fname: fname.rstrip('.' + file_ext)
-    if not content_type:
-      content_type = mimetypes.guess_type(path)[0]
-      if not content_type:
-        if convert:
-          content_type = 'text/plain'
-        else:
-          content_type = 'application/octet-stream'
-        LOG.debug('mimetypes could not figure out type for ' + path +
-                  ', setting to ' + content_type)
-        title_from_filename = lambda fname: fname
-      else:
-        title_from_filename = lambda fname: fname.rstrip('.' +
-                                        googlecl.get_extension_from_path(fname))
-    LOG.debug('Uploading with MIME type: ' + content_type)
-    LOG.info('Loading ' + path)
-    entry_title = title or title_from_filename(filename)
-
-    if not folder_entry:
-      post_uri = gdata.docs.client.DOCLIST_FEED_URI
-    else:
-      post_uri = folder_entry.content.src
-    if not convert:
-      post_uri += '?convert=false'
-
-    try:
-      new_entry = self.upload(path, entry_title, post_uri, content_type)
-    except gdata.client.RequestError, err:
-      LOG.error('Failed to upload ' + path + ': ' + str(err))
-      if err.args[0].find('ServiceForbiddenException') != -1:
-        if convert:
-          LOG.info('You may have to specify a format with --format. Try ' +
-                   '--format=txt')
-        else:
-          LOG.info('Only Apps Premier users can upload arbitrary file types ' +
-                   'without using the Google Docs web uploader.')
-      return None
-    else:
-      LOG.info('Upload success! Direct link: ' +
-               new_entry.GetAlternateLink().href)
-    return new_entry
-
-  UploadSingleDoc = upload_single_doc
+    return self.upload(path, entry_title, post_uri, content_type)
 
 
 SERVICE_CLASS = DocsClientCL

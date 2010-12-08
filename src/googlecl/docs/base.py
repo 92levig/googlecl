@@ -190,8 +190,9 @@ class DocsBaseCL(object):
       # which will set an undesired entry_file_ext for
       # unconverted downloads
       if not file_ext and can_export(entry):
-        entry_file_ext = get_extension_from_doctype(get_document_type(entry),
-                                                    self.config)
+        entry_file_ext = googlecl.docs.get_extension_from_doctype(
+                                         googlecl.docs.get_document_type(entry),
+                                         self.config)
       else:
         entry_file_ext = file_ext
       if entry_file_ext:
@@ -289,6 +290,83 @@ class DocsBaseCL(object):
     return doc_entries
 
   UploadDocs = upload_docs
+
+  def upload_single_doc(self, path, title=None, folder_entry=None,
+                        file_ext=None, **kwargs):
+    """Upload one file to Google Docs.
+
+    Args:
+      path: str Path to file to upload.
+      title: str (optional) Title to give the upload. Defaults to the filename.
+      folder_entry: DocsEntry (optional) (sub)Folder to upload into.
+      file_ext: str (optional) Extension used to determine MIME type of
+          upload. If not specified, uses mimetypes module to guess it.
+      kwargs: Should contain value for 'convert', either True or False.
+          Indicates if upload should be converted. Only Apps Premier users can
+          specify False.
+
+    Returns:
+      Entry corresponding to the document on Google Docs
+    """
+    filename = os.path.basename(path)
+
+    try:
+      convert = kwargs['convert']
+    except KeyError:
+      convert = True
+
+    if not file_ext:
+      file_ext = googlecl.get_extension_from_path(filename)
+      file_title = filename.split('.')[0]
+    else:
+      file_title = filename
+
+    content_type = self._determine_content_type(file_ext)
+    if not content_type:
+      LOG.debug('Could not find content type using gdata, trying mimetypes')
+      import mimetypes
+      content_type = mimetypes.guess_type(path)[0]
+      if not content_type:
+        if convert:
+          content_type = 'text/plain'
+        else:
+          content_type = 'application/octet-stream'
+        entry_title = title or filename
+      else:
+        entry_title = title or file_title
+    else:
+      entry_title = title or file_title
+
+    LOG.debug('Uploading with content type %s', content_type)
+    LOG.info('Loading %s', path)
+
+    if folder_entry:
+      post_uri = folder_entry.content.src
+    else:
+      post_uri = self.DOCLIST_FEED_URI
+    if not convert:
+      post_uri += '?convert=false'
+
+    try:
+      new_entry = self._transmit_doc(path, entry_title, post_uri, content_type,
+                                     file_ext)
+    except self.request_error, err:
+      LOG.error('Failed to upload %s: %s', path, err)
+      if (str(err).find('ServiceForbiddenException') != -1 or
+          str(err).find('Unsupported Media Type') != -1):
+        if convert:
+          LOG.info('You may have to specify a format with --format. Try ' +
+                   '--format=txt')
+        else:
+          LOG.info('Only Apps Premier users can upload arbitrary file types ' +
+                   'without using the Google Docs web uploader.')
+      return None
+    else:
+      LOG.info('Upload success! Direct link: %s',
+               new_entry.GetAlternateLink().href)
+    return new_entry
+
+  UploadSingleDoc = upload_single_doc
 
 # Read size is 128*20 for no good reason.
 # Just want to avoid reading in the whole file, and read in a multiple of 128.

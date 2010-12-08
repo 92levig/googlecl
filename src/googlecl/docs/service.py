@@ -57,6 +57,7 @@ class DocsServiceCL(gdata.docs.service.DocsService,
   app with a command line interface.
 
   """
+  DOCLIST_FEED_URI = '/feeds/documents/private/full'
 
   def __init__(self, config):
     """Constructor."""
@@ -119,6 +120,14 @@ class DocsServiceCL(gdata.docs.service.DocsService,
       folder_entry = self.Post(folder_entry, uri,
                                converter=gdata.docs.DocumentListEntryFromString)
       return folder_entry
+
+  def _determine_content_type(self, file_ext):
+    from gdata.docs.service import SUPPORTED_FILETYPES
+    try:
+      return SUPPORTED_FILETYPES[file_ext.upper()]
+    except KeyError:
+      LOG.info('No supported filetype found for extension %s', file_ext)
+      return None
 
   def export(self, entry_or_id_or_url, file_path, gid=None, extra_params=None):
     """Export old and new version docs.
@@ -268,93 +277,48 @@ class DocsServiceCL(gdata.docs.service.DocsService,
 
   RequestAccess = request_access
 
+  def _transmit_doc(self, path, entry_title, post_uri, content_type, file_ext):
+    """Upload a document.
 
-  def upload_single_doc(self, path, title=None, folder_entry=None,
-                        file_ext=None, **kwargs):
-    """Upload one file to Google Docs.
-
-    kwargs is ignored -- it contains parameters for v3 of the API.
+    The final step in uploading a document. The process differs between versions
+    of the gdata python client library, hence its definition here.
 
     Args:
-      path: str Path to file to upload.
-      title: str (optional) Title to give the upload. Defaults to the filename.
-      folder_entry: DocsEntry (optional) (sub)Folder to upload into.
-      file_ext: str (optional) Extension used to determine MIME type of
-                upload. Defaults to whatever the extension is on the path,
-                or 'txt'
+      path: Path to the file to upload.
+      entry_title: Name of the document.
+      post_uri: URI to make request to.
+      content_type: MIME type of request.
+      file_ext: File extension that determined the content_type.
 
     Returns:
-      str Link to the document on Google Docs
-
+      Entry representing the document uploaded.
     """
-    import atom
-    from gdata.docs.service import SUPPORTED_FILETYPES
-
-    if folder_entry:
-      post_uri = folder_entry.content.src
-    else:
-      post_uri = '/feeds/documents/private/full'
-    filename = os.path.basename(path)
-    if file_ext:
-      extension = file_ext
-    else:
-      extension = googlecl.get_extension_from_path(filename)
-      if not extension:
-        default_ext = 'txt'
-        LOG.info('No extension on filename! Treating as ' + default_ext)
-        extension = default_ext
-
+    media = gdata.MediaSource(file_path=path, content_type=content_type)
     try:
-      content_type = SUPPORTED_FILETYPES[extension.upper()]
-    except KeyError:
-      LOG.info('No supported filetype found for extension ' + extension)
-      content_type = 'text/plain'
-      LOG.info('Uploading as ' + content_type)
-      title_from_filename = lambda fname: fname
-    else:
-      title_from_filename = lambda fname: fname.rstrip('.' + extension)
-
-    LOG.info(safe_encode('Loading ' + safe_decode(path)))
-    try:
-      media = gdata.MediaSource(file_path=path, content_type=content_type)
-    except EnvironmentError, err:
-      LOG.error(err)
-      return None
-    entry_title = title or title_from_filename(filename)
-    try:
-      try:
-        # Upload() wasn't added until later versions of DocsService, so
-        # we may not have it.
-        new_entry = self.Upload(media, entry_title, post_uri)
-      except AttributeError:
-        entry = gdata.docs.DocumentListEntry()
-        entry.title = atom.Title(text=entry_title)
-        # Cover the supported filetypes in gdata-2.0.10 even though
-        # they aren't listed in gdata 1.2.4... see what happens.
-        if extension.lower() in ['csv', 'tsv', 'tab', 'ods', 'xls', 'xlsx']:
-          category = _make_kind_category(googlecl.docs.SPREADSHEET_LABEL)
-        elif extension.lower() in ['ppt', 'pps']:
-          category = _make_kind_category(googlecl.docs.PRESENTATION_LABEL)
-        elif extension.lower() in ['pdf']:
-          category = _make_kind_category(googlecl.docs.PDF_LABEL)
-        # Treat everything else as a document
-        else:
-          category = _make_kind_category(googlecl.docs.DOCUMENT_LABEL)
-        entry.category.append(category)
-        # To support uploading to folders for earlier
-        # versions of the API, expose the lower-level Post
-        new_entry = self.Post(entry, post_uri, media_source=media,
-                              extra_headers={'Slug': media.file_name},
-                              converter=gdata.docs.DocumentListEntryFromString)
-    except gdata.service.RequestError, err:
-      LOG.error('Failed to upload ' + path + ': ' + str(err))
-      return None
-    else:
-      LOG.info('Upload success! Direct link: ' +
-               new_entry.GetAlternateLink().href)
-    return new_entry
-
-  UploadSingleDoc = upload_single_doc
+      # Upload() wasn't added until later versions of DocsService, so
+      # we may not have it.
+      return self.Upload(media, entry_title, post_uri)
+    except AttributeError:
+      import atom
+      entry = gdata.docs.DocumentListEntry()
+      entry.title = atom.Title(text=entry_title)
+      # Cover the supported filetypes in gdata-2.0.10 even though
+      # they aren't listed in gdata 1.2.4... see what happens.
+      if file_ext.lower() in ['csv', 'tsv', 'tab', 'ods', 'xls', 'xlsx']:
+        category = _make_kind_category(googlecl.docs.SPREADSHEET_LABEL)
+      elif file_ext.lower() in ['ppt', 'pps']:
+        category = _make_kind_category(googlecl.docs.PRESENTATION_LABEL)
+      elif file_ext.lower() in ['pdf']:
+        category = _make_kind_category(googlecl.docs.PDF_LABEL)
+      # Treat everything else as a document
+      else:
+        category = _make_kind_category(googlecl.docs.DOCUMENT_LABEL)
+      entry.category.append(category)
+      # To support uploading to folders for earlier
+      # versions of the API, expose the lower-level Post
+      return self.Post(entry, post_uri, media_source=media,
+                       extra_headers={'Slug': media.file_name},
+                       converter=gdata.docs.DocumentListEntryFromString)
 
 
 SERVICE_CLASS = DocsServiceCL
