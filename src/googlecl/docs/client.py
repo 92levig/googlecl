@@ -95,7 +95,7 @@ class DocsClientCL(gdata.docs.client.DocsClient,
       try:
         file_string = response_string.decode('utf-8-sig')
       except UnicodeError, err:
-        LOG.error('Could not decode: ' + str(err))
+        LOG.debug('Could not decode: ' + str(err))
         file_string = response_string
     else:
       file_string = response_string

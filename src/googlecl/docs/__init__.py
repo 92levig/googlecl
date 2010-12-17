@@ -28,6 +28,9 @@ except ImportError:
   FOLDER_LABEL = 'folder'
   PDF_LABEL = 'pdf'
 
+# Drawing label isn't defined even in more recent gdata
+DRAWING_LABEL = 'drawing'
+
 
 service_name = __name__.split('.')[-1]
 LOGGER_NAME = __name__
@@ -68,6 +71,8 @@ def get_extension_from_doctype(doctype_label, config_parser):
     ext = 'pdf'
   elif doctype_label == PRESENTATION_LABEL:
     ext = config_parser.safe_get(SECTION_HEADER, 'presentation_format')
+  elif doctype_label == DRAWING_LABEL:
+    ext = config_parser.safe_get(SECTION_HEADER, 'drawing_format')
   elif doctype_label is not None:
     LOG.error('Unknown document type label: %s' % doctype_label)
   if not ext:

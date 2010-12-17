@@ -90,7 +90,7 @@ class DocsServiceCL(gdata.docs.service.DocsService,
       try:
         file_string = response_body.decode('utf-8-sig')
       except UnicodeError, err:
-        LOG.error('Could not decode: ' + str(err))
+        LOG.debug('Could not decode: ' + str(err))
         file_string = response_body
     else:
       file_string = response_body

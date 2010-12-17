@@ -12,6 +12,7 @@ version x.x.x
  Bugfixes
  * --editor option for Docs can take flags and options.
  * max_retries and retry_delay configuration options help combat some server errors.
+ * Enable downloading drawings.
 
 version 0.9.11
  Enhancements

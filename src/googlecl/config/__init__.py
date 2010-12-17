@@ -43,6 +43,7 @@ def _create_basic_options():
   _docs = {'document_format': 'txt',
            'spreadsheet_format': 'xls',
            'presentation_format': 'ppt',
+           'drawing_format': 'png',
            'format': 'txt',
            'spreadsheet_editor': 'openoffice.org',
            'presentation_editor': 'openoffice.org'}
