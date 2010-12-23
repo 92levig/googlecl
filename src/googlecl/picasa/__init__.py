@@ -15,7 +15,6 @@ import datetime
 import googlecl
 import googlecl.base
 import logging
-import time
 
 
 service_name = __name__.split('.')[-1]
@@ -194,23 +193,9 @@ def _run_create(client, options, args):
   # Paths to media might be in options.src, args, both, or neither.
   # But both are guaranteed to be lists.
   media_list = options.src + args
-  if options.date:
-    parser = googlecl.calendar.date.DateParser()
-    date = parser.determine_day(options.date, shift_dates=False)
-    if date:
-      timestamp = time.mktime(date.timetuple())
-      timestamp_ms = '%i' % int((timestamp * 1000))
-    else:
-      LOG.error('Could not parse date %s. (Picasa only takes day info)' %
-                date)
-      timestamp_ms = ''
-  else:
-    timestamp_ms = ''
 
-  access = googlecl.picasa._map_access_string(options.access)
-  album = client.InsertAlbum(title=options.title, summary=options.summary,
-                             access=access,
-                             timestamp=timestamp_ms)
+  album = client.create_album(title=options.title, summary=options.summary,
+                              access=options.access, date=options.date)
   if media_list:
     client.InsertMediaList(album, media_list=media_list,
                            tags=options.tags)

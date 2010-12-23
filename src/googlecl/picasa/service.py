@@ -22,6 +22,7 @@ __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import logging
 import os
 import urllib
+import time
 
 import gdata.photos
 from gdata.photos.service import PhotosService, GooglePhotosException
@@ -118,6 +119,39 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
       entries = album_entry
 
     return entries
+
+  def create_album(self, title, summary, access, date):
+    """Create photo album
+
+    Args:
+      title: Title of the album.
+      summary: Summary or description of the album.
+      access: Access level string. See the picasa package __init__ file for
+          valid values.
+      date: Date on the album, as a string.  If eveluates to False, uses today.
+
+    Returns:
+      AlbumEntry of newly created album.
+    """
+    if date:
+      parser = googlecl.calendar.date.DateParser()
+      date = parser.determine_day(date, shift_dates=False)
+      if date:
+        timestamp = time.mktime(date.timetuple())
+        timestamp_ms = '%i' % int((timestamp * 1000))
+      else:
+        LOG.error('Could not parse date %s. (Picasa only takes day info)' %
+                  date)
+        timestamp_ms = ''
+    else:
+      timestamp_ms = ''
+
+    access = googlecl.picasa._map_access_string(access)
+    return self.InsertAlbum(title=title, summary=summary,
+                            access=access,
+                            timestamp=timestamp_ms)
+
+  CreateAlbum = create_album
 
   def download_album(self, base_path, user, video_format='mp4', titles=None,
                      photo_title=None):
