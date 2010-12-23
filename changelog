@@ -8,6 +8,7 @@ version x.x.x
  * Added --photo option to specify names of photos in Picasa to operate on.
  * Added --yes option to automatically delete files, instead of asking for confirmation.
  * impatient_editors config file option can stop programs like openoffice.org from exiting immediately during docs edit command.
+ * Take input from stdin (allow piping to GoogleCL).
 
  Bugfixes
  * --editor option for Docs can take flags and options.

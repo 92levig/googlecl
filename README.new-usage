@@ -12,6 +12,22 @@ version x.x.x
   * Got rid of the following config file options: tags_prompt, delete_by_default, delete_prompt. Essentially, tags_prompt is now always False, and delete_by_default is always False (the default values for these options). delete_prompt was obsoleted by the command line argument --yes, which will answer "yes" to all "are you sure" deletion prompts.
   * url-download is now a list field for picasa photos.
   * You can disable automatic launching of the browser during authentication be setting auth_browser to "disabled" in the config file.
+	* Input can be piped into GoogleCL by inserting a "_" or "__" as a command line argument. "_" will take characters sitting on stdin and treat them as a single argument, not expanding or splitting the string. "__" will split the data. For example:
+		$ echo "These are my files" > list.txt
+
+	Entering
+		$ cat list.txt | google docs upload __
+	is equivalent to 
+		$ google docs upload These are my files
+	while
+		$ cat list.txt | google docs upload _
+	is equivalent to
+		$ google docs upload "These are my files"
+	(Note that the echo command will actually produce a newline that will be at the end of 'files' -- this is just a quick example)
+
+	You can pipe data directly to options as well, but only as single arguments. For example,
+	$ cat file | google docs upload --title __
+	Will set the title to "__" and ignore the value from "cat file"
 
 version 0.9.11
   * --force-auth and --skip-auth will let you specify if GoogleCL should verify the oauth access token it has on file for the service being used. After the first valid access token retrieved, --skip-auth is set in your config file as True. You can set this value to False to force a validation step on every run. The validation step is an authenticated request to Google to retrieve a small amount of data -- removing this step can yield a significant decrease in execution time for slow connections.

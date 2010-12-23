@@ -370,6 +370,44 @@ def import_service(service, config_file_path):
           config)
 
 
+def insert_stdin(options, args, single_arg_symbol='_', split_arg_symbol='__'):
+  """Insert stdin buffer into options or args.
+
+  Args:
+    options: Object containing values for options. Will only be searched for
+        single_arg_symbol.
+    args: List of arguments.
+    single_arg_symbol: Symbol indicating that stdin should be inserted as a
+        single argument.
+    split_arg_symbol: Symbol indicating that stdin should be inserted as a
+        list of arguments. This symbol should only appear in args.
+
+  Returns:
+    Nothing, but args and options are modified in place.
+  """
+  try:
+    i = args.index(single_arg_symbol)
+  except ValueError:
+    pass
+  else:
+    args[i] = sys.stdin.read()
+    return
+
+  try:
+    i = args.index(split_arg_symbol)
+  except ValueError:
+    pass
+  else:
+    args[i:i+1] = expand_as_command_line(sys.stdin.read())
+    return
+
+  if single_arg_symbol in options.__dict__.values():
+    for key, value in options.__dict__.iteritems():
+      if value == single_arg_symbol:
+        setattr(options, key, sys.stdin.read())
+        break
+
+
 def print_help(service=None, tasks=None):
   """Print help messages to the screen.
 
@@ -781,6 +819,8 @@ def main():
   else:
     is_windows = sys.platform == 'win32'
     args = expand_args(args, True, is_windows, is_windows)
+    insert_stdin(options, args)
+
     try:
       run_once(options, args)
     except KeyboardInterrupt:
