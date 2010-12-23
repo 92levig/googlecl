@@ -166,7 +166,7 @@ def _run_create(client, options, args):
 def _run_delete(client, options, args):
   entries = client.get_portfolio_entries(options.title, positions=True)
   if entries:
-    client.DeleteEntryList(entries, 'portfolio', True)
+    client.DeleteEntryList(entries, 'portfolio', options.prompt)
 
 
 def _run_list(client, options, args):
@@ -187,9 +187,7 @@ def _run_create_position(client, options, args):
   pfl = client.get_portfolio(options.title, positions=True)
   if pfl:
     # create empty transaction
-    err = client.create_transaction(pfl, "Buy", options.ticker)
-    if err:
-      LOG.error("Failed to create position: %s" % err)
+    client.create_transaction(pfl, "Buy", options.ticker)
 
 
 def _run_delete_positions(client, options, args):
@@ -212,12 +210,10 @@ def _run_list_positions(client, options, args):
 def _run_create_transaction(client, options, args):
   pfl = client.get_portfolio(options.title)
   if pfl:
-    err = client.create_transaction(pfl, options.ttype, options.ticker,
-                                    options.shares, options.price,
-                                    options.currency, options.commission,
-                                    options.date, options.notes)
-    if err:
-      LOG.error("Failed to create transaction: %s" % err)
+    client.create_transaction(pfl, options.ttype, options.ticker,
+                              options.shares, options.price,
+                              options.currency, options.commission,
+                              options.date, options.notes)
 
 
 def _run_delete_transactions(client, options, args):
