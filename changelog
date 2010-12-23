@@ -14,6 +14,7 @@ version x.x.x
  * --editor option for Docs can take flags and options.
  * max_retries and retry_delay configuration options help combat some server errors.
  * Enable downloading drawings.
+ * Don't save user account to config file as a default if authentication failed.
 
 version 0.9.11
  Enhancements

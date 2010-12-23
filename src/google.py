@@ -562,8 +562,6 @@ def run_once(options, args):
   fill_out_options(args, section_header, task, options, config)
   client.email = options.user
 
-  # Set missing defaults, even if the authentication step later on fails.
-  config.set_missing_default(section_header, 'user', client.email)
   if options.blog:
     config.set_missing_default(section_header, 'blog', options.blog)
   if options.devkey:
@@ -611,6 +609,8 @@ def run_once(options, args):
     return -1
 
   # If we've authenticated, save the config values we've been setting.
+  # And remember the email address that worked!
+  config.set_missing_default(section_header, 'user', client.email)
   config.write_out_parser()
   run_error = None
   try:
