@@ -64,7 +64,7 @@ function finance {
 function picasa {
   commands[0]='picasa create test_album --tags "test, Disney World, florida, vacation" ~/testphotos/IMG_9882.JPG'
   commands[1]='picasa create test_album2'
-  commands[2]='picasa list title,url-site -q test'
+  commands[2]='picasa list --fields title,url-site -q test'
   commands[3]='picasa list-albums'
   commands[4]='picasa delete "nosuchalbumexists"'
   commands[5]='picasa get "test_album" .'

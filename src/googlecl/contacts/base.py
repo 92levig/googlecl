@@ -26,7 +26,11 @@ List contacts:
 from __future__ import with_statement
 
 __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
+import logging
 import os.path
+import googlecl.contacts
+
+LOG = logging.getLogger(googlecl.contacts.LOGGER_NAME + '.base')
 
 
 class ContactsBaseCL(object):
