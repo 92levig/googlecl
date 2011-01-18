@@ -51,8 +51,8 @@ function docs {
 
 function finance {
   commands[0]='finance create my_empty_pfl USD'
-  commands[1]='finance create-pos my_empty_pfl MSFT'
-  commands[2]='finance create-txn my_empty_pfl MSFT Sell'
+  commands[1]='finance create-pos my_empty_pfl NASDAQ:MSFT'
+  commands[2]='finance create-txn my_empty_pfl NASDAQ:MSFT Sell'
   commands[3]='finance list'
   commands[4]='finance list-pos --title=.*'
   commands[5]='finance list-txn --title=.* --ticker=NASDAQ:MSFT'

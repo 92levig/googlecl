@@ -44,19 +44,14 @@ class ContactsBaseCL(object):
           contact information, or a list of comma separated contact data.
     """
     successes = []
-    if isinstance(contacts, basestring):
-      if os.path.exists(contacts):
-        with open(contacts, 'r') as contacts_csv_file:
+    for contact in contacts:
+      if os.path.exists(contact):
+        with open(contact, 'r') as contacts_csv_file:
           for line in contacts_csv_file:
             entry = self.add_single_contact(line)
             if entry:
               successes.append(entry)
       else:
-        entry = self.add_single_contact(contacts)
-        if entry:
-          successes.append(entry)
-    else:
-      for contact in contacts:
         entry = self.add_single_contact(contact)
         if entry:
           successes.append(entry)
