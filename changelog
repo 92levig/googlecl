@@ -1,4 +1,4 @@
-version x.x.x
+version 0.9.12
  Enhancements
  * Added support for Google Finance (thanks, bartosh!)
  * Improved flexibility of --date option.
