@@ -34,6 +34,7 @@ import logging
 import os
 import shlex
 import shutil
+import sys
 import googlecl
 from googlecl.docs import SECTION_HEADER
 
@@ -43,6 +44,12 @@ safe_decode = googlecl.safe_decode
 
 
 LOG = logging.getLogger(googlecl.docs.LOGGER_NAME + '.base')
+
+# For to_safe_filename
+if sys.platform == 'win32':
+  UNSAFE_FILE_CHARS = '\\/:*?"<>|'
+else:
+  UNSAFE_FILE_CHARS = '/'
 
 
 class DocsError(googlecl.base.Error):
@@ -100,9 +107,11 @@ class DocsBaseCL(object):
       base_path = os.path.join(temp_dir, base_folder)
       total_basename = os.path.join(temp_dir, folder_path)
       os.makedirs(total_basename)
-      path = os.path.join(total_basename, doc_title + '.' + file_ext)
+      path = os.path.join(total_basename,
+                          self.to_safe_filename(doc_title) + '.' + file_ext)
     else:
-      path = os.path.join(temp_dir, doc_title + '.' + file_ext)
+      path = os.path.join(temp_dir,
+                          self.to_safe_filename(doc_title) + '.' + file_ext)
       base_path = path
 
     if not new_doc:
@@ -134,7 +143,7 @@ class DocsBaseCL(object):
     if new_doc:
       if isinstance(folder_entry_or_path, basestring):
         # Let code in upload_docs handle the creation of new folder(s)
-        self.upload_docs([base_path])
+        self.upload_docs([base_path], doc_title)
       else:
         # folder_entry_or_path is None or a GDataEntry.
         doc_entry = self.upload_single_doc(path,
@@ -209,7 +218,8 @@ class DocsBaseCL(object):
 
       entry_title = safe_decode(entry.title.text)
       if os.path.isdir(base_path):
-        path = os.path.join(base_path, entry_title + extension)
+        entry_title_safe = self.to_safe_filename(entry_title)
+        path = os.path.join(base_path, entry_title_safe + extension)
       else:
         path = base_path + extension
       LOG.info(safe_encode('Downloading ' + entry_title + ' to ' + path))
@@ -230,6 +240,22 @@ class DocsBaseCL(object):
   def _modify_entry(doc_entry, path_to_new_content, file_ext):
     """Modify the file data associated with a document entry."""
     raise NotImplementedError('_modify_entry must be defined!')
+
+  def to_safe_filename(self, text):
+    """Translate string to something that can be safely used as a filename.
+
+    Behavior of this function depends on the operating system.
+
+    Args:
+      text: Text to check for invalid characters
+    Returns:
+      Parameter with unsafe characters escaped or removed.
+      Type (unicode vs string)will match that of the parameter.
+    """
+    sub = self.config.lazy_get(SECTION_HEADER, 'invalid_filename_character_sub',
+                               default='')
+    sub = safe_decode(sub)
+    return ''.join([sub if c in UNSAFE_FILE_CHARS else c for c in text])
 
   def upload_docs(self, paths, title=None, folder_entry=None,
                   file_ext=None, **kwargs):
