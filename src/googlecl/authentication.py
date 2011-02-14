@@ -44,7 +44,8 @@ class AuthenticationManager(object):
       self.tokens_path = tokens_path
     else:
       self.tokens_path = googlecl.get_data_path(TOKENS_FILENAME_FORMAT %
-                                                client.email)
+                                                client.email,
+                                                create_missing_dir=True)
 
   def check_access_token(self):
     """Checks that the client's access token is valid, remove it if not.
