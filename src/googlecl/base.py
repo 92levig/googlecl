@@ -673,10 +673,12 @@ def compile_entry_string(wrapped_entry, attribute_list, delimiter,
     except ValueError, err:
       LOG.debug(err.args[0] + ' (Did not add value for field ' + attr + ')')
     except AttributeError, err:
+      LOG.debug(err.args[0] + ' (value for field ' + attr + ')')
       try:
         # Last ditch effort to blindly grab the attribute
         val = getattr(wrapped_entry.entry, attr).text or missing_field_value
       except AttributeError:
+        LOG.debug(err.args[0] + ' (value for field ' + attr + ')')
         val = missing_field_value
     # Apparently, atom(?) doesn't always return a Unicode type when there are
     # non-latin characters, so force everything to Unicode.
