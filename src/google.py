@@ -109,12 +109,21 @@ def authenticate(auth_manager, options, config, section_header):
       browser_str = config.lazy_get(section_header, 'auth_browser',
                                     default=None)
       if browser_str:
-        if browser_str.lower() == 'disabled':
+        if browser_str.lower() == 'disabled' or browser_str.lower() == 'none':
           browser = None
         else:
-          browser = webbrowser.get(browser_str)
+          try:
+            browser = webbrowser.get(browser_str)
+          except webbrowser.Error, err:
+            LOG.warn(safe_encode(u'Could not get browser "%s": %s' %
+                                 (browser_str, err)))
+            browser = None
       else:
-        browser = webbrowser.get()
+        try:
+          browser = webbrowser.get()
+        except webbrowser.Error, err:
+          LOG.warn(safe_encode(u'Could not get default browser: %s' % err))
+          browser = None
 
       valid_token = auth_manager.retrieve_access_token(display_name, browser)
     if valid_token:
