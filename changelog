@@ -1,3 +1,8 @@
+version 0.9.13
+ Bugfixes
+ * default_encoding config option allows user to specify a default encoding other than ASCII (was a bug for some uses, namely cron jobs).
+ * Appropriate intermediate directories are created during authentication token storage.
+
 version 0.9.12
  Enhancements
  * Added support for Google Finance (thanks, bartosh!)

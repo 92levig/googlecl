@@ -33,7 +33,7 @@ LOGGER_NAME = __name__
 LOG = logging.getLogger(LOGGER_NAME)
 
 
-def determine_terminal_encoding():
+def determine_terminal_encoding(config=None):
   import sys
   in_enc = ''
   out_enc = ''
@@ -45,9 +45,15 @@ def determine_terminal_encoding():
   # Sometimes these are both defined, and hopefully they are both equal.
   # I'm not sure if they are guaranteed to be equal.
   if in_enc.lower() == out_enc.lower():
-    # If they're not defined, return the python system-wide default encoding
+    # If they're not defined, return the encoding specific in the config file,
+    # or the python system-wide default encoding (if the above is not defined)
+    # Apparently the above values aren't set when run as a cron job or piped?
     if not in_enc:
-      return_enc = sys.getdefaultencoding()
+      return_enc = None
+      if config is not None:
+        return_enc = config.safe_get('GENERAL', 'default_encoding')
+      if return_enc is None:
+        return_enc = sys.getdefaultencoding()
     else:
       return_enc = in_enc
   # If they are not equal, at least one of them must be defined.
@@ -62,6 +68,10 @@ def determine_terminal_encoding():
   return return_enc
 
 
+# Because this gets done at googlecl module load, there's no config parser
+# to pass in.
+#XXX: googlecl.config.load_configuration() currently sets this again,
+# but that's less than optimal...
 TERMINAL_ENCODING = determine_terminal_encoding()
 
 

@@ -84,4 +84,7 @@ def load_configuration(path=None):
   made_changes = config.ensure_basic_options(_create_basic_options())
   if made_changes:
     config.write_out_parser()
+  # Set the encoding again, now that the config file is loaded.
+  # (the config file may have a default encoding setting)
+  googlecl.TERMINAL_ENCODING = googlecl.determine_terminal_encoding(config)
   return config
