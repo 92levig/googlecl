@@ -4,7 +4,7 @@ google blogger post \-\-title 'foo' 'command line posting'
 
 google calendar add 'Lunch with Jim at noon tomorrow'
 
-google contacts list name,email >contacts.csv
+google contacts list \-\-title '.*' \-\-fields name,email,phone > contacts.csv
 
 google docs edit \-\-title 'Shopping list'
 
