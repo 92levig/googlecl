@@ -5,6 +5,7 @@ version 0.9.13
  * Catch previously uncaught exception when webbrowser does not find a default or specified browser.
  * Deletion of recurring calendar events does not cause AttributeError.
  * Deletion of recurring calendar events with --yes flag only deletes all events if --date is not specified.
+ * File extensions for Picasa are case insensitive.
 
 version 0.9.12
  Enhancements

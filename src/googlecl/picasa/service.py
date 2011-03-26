@@ -294,7 +294,7 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
         try:
           content_type = SUPPORTED_VIDEO_TYPES[ext]
         except KeyError:
-          content_type = 'image/' + ext
+          content_type = 'image/' + ext.lower()
       if not photo_name:
         photo_name = os.path.split(path)[1]
       try:
