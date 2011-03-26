@@ -130,7 +130,8 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
 
   AddReminders = add_reminders
 
-  def delete_recurring_events(self, events, start_date, end_date, cal_user):
+  def delete_recurring_events(self, events, start_date, end_date, cal_user,
+                              prompt):
     """Delete recurring events from a calendar.
 
     Keyword arguments:
@@ -139,6 +140,7 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
       end_date: Date specifying the end of events (inclusive). None for no end
           date.
       cal_user: "User" of the calendar to delete events from.
+      prompt: True if we should prompt before deleting events, False otherwise.
 
     """
     # option_list is a list of tuples, (prompt_string, deletion_instruction)
@@ -150,15 +152,18 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
     #     'TWIXT' -- delete events between start_date and end_date.
     #     'ON' -- delete events on the single date given.
     #     'ONAFTER' -- delete events on and after the date given.
-    option_list = [('All events in this series', 'ALL')]
+    deletion_choice = 'ALL'
+    option_list = [('All events in this series', deletion_choice)]
     if start_date and end_date:
+      deletion_choice = 'TWIXT'
       option_list.append(('Instances between %s and %s' %
-                          (start_date, end_date), 'TWIXT'))
+                          (start_date, end_date), deletion_choice))
     elif start_date or end_date:
       delete_date = (start_date or end_date)
       option_list.append(('Instances on %s' % delete_date, 'ON'))
       option_list.append(('All events on and after %s' % delete_date,
                           'ONAFTER'))
+      deletion_choice = 'ON'
     option_list.append(('Do not delete', 'NONE'))
     prompt_str = ''
     for i, option in enumerate(option_list):
@@ -167,7 +172,7 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
     # multiple times. This is assuming that recurring events have been expanded.
     events = googlecl.calendar.condense_recurring_events(events)
     for event in events:
-      if self.prompt_for_delete:
+      if prompt:
         delete_selection = -1
         while delete_selection < 0 or delete_selection > len(option_list)-1:
           msg = 'Delete "%s"?\n%s' %\
@@ -176,25 +181,26 @@ class CalendarServiceCL(gdata.calendar.service.CalendarService,
             delete_selection = int(raw_input(safe_encode(msg)))
           except ValueError:
             continue
-        option = option_list[delete_selection]
-        if option[1] == 'ALL':
-          self._delete_original_event(event, cal_user)
-        elif option[1] == 'TWIXT':
-          self._batch_delete_recur(event, cal_user,
-                                   start_date=start_date,
-                                   end_date=end_date)
-        elif option[1] == 'ON':
-          self._batch_delete_recur(event, cal_user,
-                                   start_date=delete_date,
-                                   end_date=delete_date)
-        elif option[1] == 'ONAFTER':
-          self._batch_delete_recur(event, cal_user,
-                                   start_date=delete_date)
-        elif option[1] != 'NONE':
-          raise CalendarError('Got unexpected batch deletion command!')
+        deletion_choice = option_list[delete_selection][1]
 
-      else:
+      # deletion_choice has either been picked by the prompt, or is the default
+      # value. The default value is determined by the date info passed in,
+      # and should be the "least destructive" option.
+      if deletion_choice == 'ALL':
         self._delete_original_event(event, cal_user)
+      elif deletion_choice == 'TWIXT':
+        self._batch_delete_recur(event, cal_user,
+                                 start_date=start_date,
+                                 end_date=end_date)
+      elif deletion_choice == 'ON':
+        self._batch_delete_recur(event, cal_user,
+                                 start_date=delete_date,
+                                 end_date=delete_date)
+      elif deletion_choice == 'ONAFTER':
+        self._batch_delete_recur(event, cal_user,
+                                 start_date=delete_date)
+      elif deletion_choice != 'NONE':
+        raise CalendarError('Got unexpected batch deletion command!')
 
   DeleteRecurringEvents = delete_recurring_events
 

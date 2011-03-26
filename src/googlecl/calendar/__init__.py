@@ -366,10 +366,10 @@ def _run_delete(client, options, args):
       if date_range.specified_as_range:
         # if the user specified a date that was a range...
         client.delete_recurring_events(recurring_events, date_range.start,
-                                       date_range.end, cal.user)
+                                       date_range.end, cal.user, options.prompt)
       else:
         client.delete_recurring_events(recurring_events, date_range.start,
-                                       None, cal.user)
+                                       None, cal.user, options.prompt)
     if not (single_events or recurring_events):
       LOG.warning('No events found that match your options!')
 
