@@ -1,5 +1,8 @@
 This document is a quick-guide on getting up to speed with the new version of GoogleCL.
 
+version 0.9.13
+  * Bugfixes only. Booooooring.
+
 version 0.9.12
   * --access will take a variety of text to set access levels on the following items during creation:
       Blogger posts

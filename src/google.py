@@ -60,7 +60,7 @@ safe_encode = googlecl.safe_encode
 safe_decode = googlecl.safe_decode
 
 
-VERSION = '0.9.12'
+VERSION = '0.9.13'
 
 AVAILABLE_SERVICES = ['picasa', 'blogger', 'youtube', 'docs', 'contacts',
                       'calendar', 'finance']
