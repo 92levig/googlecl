@@ -451,7 +451,8 @@ def run_interactive(parser):
     parser: Object capable of parsing a list of arguments via parse_args.
 
   """
-  history_file = googlecl.get_data_path(googlecl.HISTORY_FILENAME)
+  history_file = googlecl.get_data_path(googlecl.HISTORY_FILENAME,
+                                        create_missing_dir=True)
   try:
     import readline
     try:
