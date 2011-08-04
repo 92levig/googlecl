@@ -30,6 +30,10 @@ class ConfigParser(object):
       config_parser: Class that acts as a configuration file parser.
     """
     self.parser = config_parser_class()
+    try: # Because default ConfigParser converts to lower case
+      self.parser.optionxform = str
+    except:
+      pass
     self.path = None
 
   def associate(self, config_file_path):

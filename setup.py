@@ -28,7 +28,8 @@ packages =['googlecl',
            'googlecl.docs',
            'googlecl.picasa',
            'googlecl.youtube',
-           'googlecl.finance']
+           'googlecl.finance',
+           'googlecl.discovery']
 
 SCRIPT_TO_INSTALL = 'src/google'
 SCRIPT_TO_RENAME = 'src/google.py'

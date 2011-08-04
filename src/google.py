@@ -54,11 +54,14 @@ import webbrowser
 import googlecl
 import googlecl.authentication
 import googlecl.config
-
+try: # Fails if Discovery stuff is unavailable
+ from googlecl.discovery import DiscoveryManager
+ apis = True
+except:
+ apis = False
 # Renamed here to reduce verbosity in other sections
 safe_encode = googlecl.safe_encode
 safe_decode = googlecl.safe_decode
-
 
 VERSION = '0.9.13'
 
@@ -66,6 +69,8 @@ AVAILABLE_SERVICES = ['picasa', 'blogger', 'youtube', 'docs', 'contacts',
                       'calendar', 'finance']
 LOG = logging.getLogger(googlecl.LOGGER_NAME)
 
+discovery = None
+AVAILABLE_APIS = None
 
 class Error():
   """Base error for this module."""
@@ -218,14 +223,26 @@ def expand_as_command_line(command_string):
   args_list = []
   while token_list:
     tmp = token_list.pop(0)
-    start_of_quote = tmp[0] == '"'
-    # A test to see if the end of a qutoed argument has been reached
-    end_quote = lambda s: s[-1] == '"' and len(s) > 1 and s[-2] != '\\'
-    while start_of_quote and not end_quote(tmp):
+    start_of_quote = tmp[0] == '"' or tmp[0] == "'"
+    start_of_dict = tmp[0] == '{'
+    start_of_list = tmp[0] == '['
+    # A test to see if the end of a quoted argument has been reached
+    end_quote = lambda s: s[-1] == s[0] and len(s) > 1 and s[-2] != '\\'
+    end_dict = lambda s: s[-1] == '}' and len(s) > 1 and s[-2] != '\\'
+    end_list = lambda s: s[-1] == ']' and len(s) > 1 and s[-2] != '\\'
+    # Don't need to worry about nesting because of natural syntax:
+    # ["foo", ["bar"], "baz"] -> stupid to have '["bar"] ,'
+    while (start_of_quote and not end_quote(tmp)) or (start_of_dict 
+      and not end_dict(tmp)) or (start_of_list and not end_list(tmp)):
       if token_list:
         tmp += ' ' + token_list.pop(0)
       else:
-        raise Error('Encountered end of string without finding matching "')
+        if start_of_quote:
+          raise Error('Encountered end of string without finding matching "')
+        elif start_of_dict:
+          raise Error('Encountered end of string without finding matching }')
+        else:
+          raise Error('Encountered end of string without finding matching ]')
     if start_of_quote:
       # Add the resulting arg, stripping the " off
       args_list.append(tmp[1:-1])
@@ -330,7 +347,6 @@ def import_at_runtime(module):
   # nothing is actually imported. Needs to be a list type (at least to play nice
   # with Jython?) and contain a string in the list.
   return __import__(module, globals(), fromlist=['0'])
-
 
 def import_service(service, config_file_path):
   """Import vital information about a service.
@@ -438,11 +454,30 @@ def print_help(service=None, tasks=None):
     print ''
     print '  The available services are '
     print str(AVAILABLE_SERVICES)[1:-1]
+    if apis:
+     print '  and via Discovery:'
+     print str(AVAILABLE_APIS)[1:-1]
+     print '  Enter "> help more" for more detailed help.'
     print '  Enter "> help <service>" for more information on a service.'
     print '  Or, just "quit" to quit.'
   else:
     print get_task_help(service, tasks)
 
+def print_more_help():
+  """ Prints additional help """
+  print """  Additional information:
+    (For Discovery APIs)
+  Enter "> help <service> <fields>" for additional info
+  You may also add a '-v' or '--verbose' tag for even more detailed information.
+
+  Enter "> refresh apis" to update the Discovery APIs list
+  This will allow you to use the latest APIs by default.
+  Older APIs may be used by calling '> <service> <version> <etc>'
+
+  You may add more APIs by providing the path to their Discovery document in the
+  config file, under the parameter 'local_apis'
+
+  Global config values may be viewed and edited with "> edit config" """
 
 def run_interactive(parser):
   """Run an interactive shell for the google commands.
@@ -483,8 +518,12 @@ def run_interactive(parser):
         except Error, err:
           LOG.error(err)
           continue
-        (options, args) = parser.parse_args(args_list)
-        setup_logger(options)
+        if args_list[0] in AVAILABLE_SERVICES or (args_list[0] == 'help' and
+          (len(args_list) == 1 or args_list[1] in AVAILABLE_SERVICES)):
+          (options, args) = parser.parse_args(args_list)
+          setup_logger(options)
+        else:
+          (options, args) = (None, args_list)
         run_once(options, args)
     except (KeyboardInterrupt, ValueError), err:
       # It would be nice if we could simply unregister or reset the
@@ -493,6 +532,8 @@ def run_interactive(parser):
       # potentially raise a ValueError about I/O operation.
       if isinstance(err, ValueError) and \
          str(err).find('I/O operation on closed file') == -1:
+        print "Error: " + str(err)
+        LOG.error(err)
         raise err
       print ''
       print 'Quit via keyboard interrupt'
@@ -519,6 +560,19 @@ def run_once(options, args):
     args: Arguments to GoogleCL, also as returned by optparse.
 
   """
+  global discovery
+
+  # Should probably change to not grab email from calendar - any suggestions?
+  if apis and not discovery and not (args[0] in AVAILABLE_SERVICES or args[0] == 'help'
+    and len(args)>1 and args[1] in AVAILABLE_SERVICES):
+    service_class, tasks, section_header, config = import_service('calendar',
+                                                                  None)
+    email = config.lazy_get(section_header, 'user')
+    discovery = DiscoveryManager(email)
+    global AVAILABLE_APIS
+    AVAILABLE_APIS = discovery.apis_list()
+
+  init_args = args[:]
   try:
     service = args.pop(0)
     task_name = args.pop(0)
@@ -529,18 +583,49 @@ def run_once(options, args):
       LOG.error('Must specify at least a service and a task!')
     return
 
-  if service == 'help':
-    service_class, tasks, section_header, config = import_service(task_name,
-                                                                options.config)
-    if tasks:
-      print_help(task_name, tasks)
-      return
-  else:
-    service_class, tasks, section_header, config = import_service(service,
-                                                                options.config)
-  if not service_class:
+  if apis and service == 'refresh' and task_name == 'apis':
+    discovery.docManager.load(force=True)
+    AVAILABLE_APIS = discovery.apis_list()
     return
 
+  if apis and service == 'edit' and task_name == 'config':
+    import subprocess
+    subprocess.call((discovery.dataManager.editor, 
+                   googlecl.config.get_config_path()))
+    return
+
+  if service == 'help' and task_name == 'more':
+    print_more_help()
+    return
+  
+  # Detects is not GData is provided a version number or the path is too long
+  conflict = (task_name[0] == 'v' and task_name[1].isdigit()) or (service == 'help' and args)
+  # Prioritizes using existing GData APIs over Discovery.
+  # May have to change if/when those are brought over to Discovery...
+  if service == 'help':
+    if task_name in AVAILABLE_SERVICES and not conflict:
+      service_class, tasks, section_header, config = import_service(task_name,
+                                                                options.config)
+      if tasks:
+        print_help(task_name, tasks)
+        return
+    else:
+      if apis and task_name in AVAILABLE_APIS:
+        discovery.run(init_args)
+      else:
+        LOG.error('Did not recognize service.')
+      return
+  elif service in AVAILABLE_SERVICES and not conflict:
+      service_class, tasks, section_header, config = import_service(service,
+                                                                options.config)
+  else:
+    if apis and service in AVAILABLE_APIS:
+      discovery.run(init_args)
+    else:
+      LOG.error('Did not recognize service.')
+    return
+  if not service_class:
+    return
   client = service_class(config)
   # Activate debugging output from HTTP requests. "service" clients only!
   # "client" versions need to set self.http_client.debug in their own __init__
@@ -817,11 +902,11 @@ def setup_parser(loading_usage):
                     help='Answer "yes" to all prompts')
   return parser
 
-
 def main():
   """Entry point for GoogleCL script."""
   loading_usage = '--help' in sys.argv
   parser = setup_parser(loading_usage)
+  parser.disable_interspersed_args()
   (options, args) = parser.parse_args()
   setup_logger(options)
   if not args:
