@@ -906,7 +906,6 @@ def main():
   """Entry point for GoogleCL script."""
   loading_usage = '--help' in sys.argv
   parser = setup_parser(loading_usage)
-  parser.disable_interspersed_args()
   (options, args) = parser.parse_args()
   setup_logger(options)
   if not args:
