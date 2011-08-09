@@ -612,6 +612,10 @@ def run_once(options, args):
     else:
       if apis and task_name in AVAILABLE_APIS:
         discovery.run(init_args)
+      elif not apis:
+        LOG.error('Did not recognize service.')
+        LOG.error('If you wanted a Discovery service, make sure you have')
+        LOG.error('google-api-python-client installed.')
       else:
         LOG.error('Did not recognize service.')
       return
@@ -621,6 +625,10 @@ def run_once(options, args):
   else:
     if apis and service in AVAILABLE_APIS:
       discovery.run(init_args)
+    elif not apis:
+      LOG.error('Did not recognize service.')
+      LOG.error('If you wanted a Discovery service, make sure you have')
+      LOG.error('google-api-python-client installed.')
     else:
       LOG.error('Did not recognize service.')
     return
@@ -906,7 +914,12 @@ def main():
   """Entry point for GoogleCL script."""
   loading_usage = '--help' in sys.argv
   parser = setup_parser(loading_usage)
-  (options, args) = parser.parse_args()
+  if len(sys.argv) > 1 and sys.argv[1] in AVAILABLE_SERVICES or (sys.argv[1] == 'help' and
+    (len(sys.argv) == 2 or sys.argv[2] in AVAILABLE_SERVICES)):
+    (options, args) = parser.parse_args()
+  else:
+    (options, args) = parser.parse_args([])
+    args = sys.argv[1:]
   setup_logger(options)
   if not args:
     run_interactive(parser)
