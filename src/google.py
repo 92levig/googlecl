@@ -914,8 +914,8 @@ def main():
   """Entry point for GoogleCL script."""
   loading_usage = '--help' in sys.argv
   parser = setup_parser(loading_usage)
-  if len(sys.argv) > 1 and sys.argv[1] in AVAILABLE_SERVICES or (sys.argv[1] == 'help' and
-    (len(sys.argv) == 2 or sys.argv[2] in AVAILABLE_SERVICES)):
+  if len(sys.argv) > 1 and (sys.argv[1] in AVAILABLE_SERVICES or (sys.argv[1] == 'help' and
+    (len(sys.argv) == 2 or sys.argv[2] in AVAILABLE_SERVICES))):
     (options, args) = parser.parse_args()
   else:
     (options, args) = parser.parse_args([])
