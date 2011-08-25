@@ -295,11 +295,12 @@ class PhotosServiceCL(PhotosService, googlecl.service.BaseServiceCL):
           content_type = SUPPORTED_VIDEO_TYPES[ext]
         except KeyError:
           content_type = 'image/' + ext.lower()
-      if not photo_name:
-        photo_name = os.path.split(path)[1]
+      title = photo_name
+      if not title:
+        title = os.path.split(path)[1]
       try:
         self.InsertPhotoSimple(album_url,
-                               title=photo_name,
+                               title=title,
                                summary=caption,
                                filename_or_handle=path,
                                keywords=keywords,
