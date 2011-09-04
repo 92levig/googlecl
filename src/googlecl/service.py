@@ -127,8 +127,8 @@ class BaseServiceCL(googlecl.base.BaseCL):
         # Blanket catch of Exception is a bad idea, but don't want to pass in
         # error to look for.
         LOG.error('Failed to launch web browser: ' + unicode(err))
-    message = ('Please log in and/or grant access via your browser at %s '
-               'then hit enter.' % auth_url)
+    message = ('Please log in and/or grant access via your browser at: \n%s\n\n'
+               'Then, in this terminal, hit enter.' % auth_url)
     raw_input(message)
     # This upgrades the token, and if successful, sets the access token
     try:
