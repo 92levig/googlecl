@@ -65,12 +65,51 @@ safe_decode = googlecl.safe_decode
 
 VERSION = '0.9.13'
 
-AVAILABLE_SERVICES = ['picasa', 'blogger', 'youtube', 'docs', 'contacts',
-                      'calendar', 'finance']
+AVAILABLE_SERVICES = ['help', 'picasa', 'blogger', 'youtube', 'docs',
+                      'contacts', 'calendar', 'finance']
 LOG = logging.getLogger(googlecl.LOGGER_NAME)
 
 discovery = None
 AVAILABLE_APIS = None
+
+class NonFatalOptionParser(optparse.OptionParser):
+  def error(self, message):
+    self.error_message = message
+
+  def bailout(self, message):
+    print self.usage, "\n\n", "FATAL ERROR:\n", message, "\n"
+    exit(1)
+
+  def bailout_if_necessary(self):
+    if hasattr(self, 'error_message'):
+      print self.usage, "\n\n", "FATAL ERROR:\n", self.error_message, "\n"
+      exit(1)
+
+# Attempts to sanely parse the command line, considering both the legacy gdata
+# services and the new discovery services which aren't known at runtime.
+def parse_command_line(parser, original_args):
+  (options, args) = parser.parse_args(original_args)
+
+  # If the discovery API is available and we're using it, then it needs to do
+  # its own argument parsing.
+
+  # If there's no discovery API, then any argument errors are fatal.
+  if not apis:
+    if len(args) > 0 and args[0] not in AVAILABLE_SERVICES:
+      parser.bailout("Discovery API unavailable.  Services limited to:" +
+                     ", ".join(AVAILABLE_SERVICES) + "\nUnknown service: " + args[0])
+
+    parser.bailout_if_necessary()
+
+  # Even if there is a discovery API, if you asked for a non-discovery service,
+  # argument errors are fatal.
+  if len(args) > 0:
+    if args[0] in AVAILABLE_SERVICES:
+      parser.bailout_if_necessary()
+    else:
+      args = original_args
+
+  return (options, args)
 
 class Error():
   """Base error for this module."""
@@ -518,13 +557,10 @@ def run_interactive(parser):
         except Error, err:
           LOG.error(err)
           continue
-        if args_list[0] in AVAILABLE_SERVICES or (args_list[0] == 'help' and
-          (len(args_list) == 1 or args_list[1] in AVAILABLE_SERVICES)):
-          (options, args) = parser.parse_args(args_list)
-          setup_logger(options)
-        else:
-          (options, args) = (None, args_list)
+
+        (options, args) = parse_command_line(parser, args_list)
         run_once(options, args)
+
     except (KeyboardInterrupt, ValueError), err:
       # It would be nice if we could simply unregister or reset the
       # signal handler defined in the initial if __name__ block.
@@ -562,15 +598,20 @@ def run_once(options, args):
   """
   global discovery
 
-  # Should probably change to not grab email from calendar - any suggestions?
-  if apis and not discovery and not (args[0] in AVAILABLE_SERVICES or args[0] == 'help'
-    and len(args)>1 and args[1] in AVAILABLE_SERVICES):
-    service_class, tasks, section_header, config = import_service('calendar',
-                                                                  None)
-    email = config.lazy_get(section_header, 'user')
-    discovery = DiscoveryManager(email)
-    global AVAILABLE_APIS
-    AVAILABLE_APIS = discovery.apis_list()
+  # If we haven't gotten the list of discovery APIs yet, and they're asking for
+  # a discovery API, figure out their email address and then get a list of
+  # APIs.
+  if apis and not discovery:
+    if (args[0] not in AVAILABLE_SERVICES) or (args[0] == 'help' and
+        len(args)>1 and args[1] not in AVAILABLE_SERVICES):
+      # Is there a better approach than using the calendar API to get the email
+      # address?
+      service_class, tasks, section_header, config = import_service('calendar',
+                                                                    None)
+      email = config.lazy_get(section_header, 'user')
+      discovery = DiscoveryManager(email)
+      global AVAILABLE_APIS
+      AVAILABLE_APIS = discovery.apis_list()
 
   init_args = args[:]
   try:
@@ -590,14 +631,14 @@ def run_once(options, args):
 
   if apis and service == 'edit' and task_name == 'config':
     import subprocess
-    subprocess.call((discovery.dataManager.editor, 
+    subprocess.call((discovery.dataManager.editor,
                    googlecl.config.get_config_path()))
     return
 
   if service == 'help' and task_name == 'more':
     print_more_help()
     return
-  
+
   # Detects is not GData is provided a version number or the path is too long
   conflict = (task_name[0] == 'v' and task_name[1].isdigit()) or (service == 'help' and args)
   # Prioritizes using existing GData APIs over Discovery.
@@ -769,7 +810,8 @@ def setup_parser(loading_usage):
   #  -i ../man/examples.help2man  ./google > google.1'
   # then 'man ./google.1' and make sure the generated manpage still looks
   # reasonable.  Then save it to man/google.1
-  usage = ('Usage: %prog ' + available_services + ' TASK [options]\n'
+  usage = ('Usage: ' + sys.argv[0] + ' ' + available_services +
+           ' TASK [options]\n'
            '\n'
            'This program provides command-line access to\n'
            '(some) google services via their gdata APIs.\n'
@@ -797,10 +839,12 @@ def setup_parser(loading_usage):
 
   if loading_usage:
     for service in AVAILABLE_SERVICES:
+      if service == 'help':
+        continue
       service_package = import_at_runtime('googlecl.' + service)
       usage += get_task_help(service, service_package.TASKS) + '\n'
 
-  parser = optparse.OptionParser(usage=usage, version='%prog ' + VERSION)
+  parser = NonFatalOptionParser(usage=usage, version=sys.argv[0] + VERSION)
   parser.add_option('--access', dest='access',
                     help='Specify access/visibility level of an upload')
   parser.add_option('--blog', dest='blog',
@@ -914,12 +958,9 @@ def main():
   """Entry point for GoogleCL script."""
   loading_usage = '--help' in sys.argv
   parser = setup_parser(loading_usage)
-  if len(sys.argv) > 1 and (sys.argv[1] in AVAILABLE_SERVICES or (sys.argv[1] == 'help' and
-    (len(sys.argv) == 2 or sys.argv[2] in AVAILABLE_SERVICES))):
-    (options, args) = parser.parse_args()
-  else:
-    (options, args) = parser.parse_args([])
-    args = sys.argv[1:]
+
+  (options, args) = parse_command_line(parser, sys.argv[1:])
+
   setup_logger(options)
   if not args:
     run_interactive(parser)
