@@ -602,8 +602,10 @@ def run_once(options, args):
   # a discovery API, figure out their email address and then get a list of
   # APIs.
   if apis and not discovery:
-    if (args[0] not in AVAILABLE_SERVICES) or (args[0] == 'help' and
-        len(args)>1 and args[1] not in AVAILABLE_SERVICES):
+    if (args[0] not in AVAILABLE_SERVICES) or \
+       (args[0] == 'help' and len(args) == 1) or \
+       (args[0] == 'help' and len(args)>1 and \
+        args[1] not in AVAILABLE_SERVICES):
       # Is there a better approach than using the calendar API to get the email
       # address?
       service_class, tasks, section_header, config = import_service('calendar',
