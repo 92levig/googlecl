@@ -93,7 +93,6 @@ prompt_quit() {
 }
 
 trap prompt_quit INT
-clear
 
 if [ ${#@} -eq 1 ] && [ $@ == all ]; then
   TASKS=( blogger calendar contacts docs picasa youtube )

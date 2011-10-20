@@ -15,8 +15,8 @@
 
 """Subfunction for the Google command line tool, GoogleCL.
 
-This function handles the authentication and storage of 
-credentials for the services which use OAuth2 
+This function handles the authentication and storage of
+credentials for the services which use OAuth2
 """
 
 import httplib2
@@ -52,7 +52,9 @@ def authenticate(email, servicename, doc, http, client_id,
   storage = Storage(tokens_path)
   credentials = storage.get()
   if credentials is None or credentials.invalid or force_auth:
-    storage.put(None)
+    # Works with google-api-python-client-1.0beta2, but not with
+    # beta4.  They're working on a way to allow deleting credentials.
+    #storage.put(None)
     desiredcred = ""
     for arg in doc['auth']['oauth2']['scopes']:
       desiredcred = desiredcred + arg + ' '
