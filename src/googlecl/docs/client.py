@@ -52,8 +52,8 @@ class DocsClientCL(gdata.docs.client.DocsClient,
   app with a command line interface.
 
   """
-  DOCLIST_FEED_URI = gdata.docs.client.DOCLIST_FEED_URI
-
+  DOCLIST_FEED_URI = '/feeds/default/private/full' 
+  
   def __init__(self, config):
     """Constructor."""
     gdata.docs.client.DocsClient.__init__(self, source='GoogleCL')
