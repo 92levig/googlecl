@@ -380,12 +380,14 @@ class DocsBaseCL(object):
       LOG.error('Failed to upload %s: %s', path, err)
       if (str(err).find('ServiceForbiddenException') != -1 or
           str(err).find('Unsupported Media Type') != -1):
+        # Attempt to catch older gdata users and warn them when they try to upload
+        # unsupported file types
+        print "\n\nYour version of python-gdata may not support this action. " 
+        print "Please see the wiki page for more details: "
+        print "http://code.google.com/p/googlecl/wiki/UploadingGoogleDocs\n\n"
         if convert:
           LOG.info('You may have to specify a format with --format. Try ' +
                    '--format=txt')
-        else:
-          LOG.info('Only Apps Premier users can upload arbitrary file types ' +
-                   'without using the Google Docs web uploader.')
       return None
     else:
       LOG.info('Upload success! Direct link: %s',

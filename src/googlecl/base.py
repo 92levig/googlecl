@@ -219,7 +219,16 @@ class BaseCL(object):
       if not feed:
         feed = self.GetFeed(uri)
     except self.request_error, err:
-      LOG.error('Failed to get entries: ' + str(err))
+      error_string = str(err)
+      LOG.error('Failed to get entries: ' + error_string)
+
+      # Attempt to catch older gdata users and warn them when they try to upload
+      # unsupported file types
+      if "403.4 SSL required" in error_string:
+        print "\n\nIf you are trying upload to Google Docs, your version of "
+        print "python-gdata may not support this action. Please see this wiki page "
+        print "for more details:" 
+        print "http://code.google.com/p/googlecl/wiki/UploadingGoogleDocs\n\n"
       return []
     all_entries = feed.entry
     if feed.GetNextLink():

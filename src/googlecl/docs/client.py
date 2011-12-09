@@ -37,7 +37,7 @@ import googlecl
 import googlecl.client
 from googlecl.docs import SECTION_HEADER
 import googlecl.docs.base
-
+import atom.data
 
 LOG = logging.getLogger(googlecl.docs.LOGGER_NAME + '.client')
 
@@ -292,7 +292,35 @@ class DocsClientCL(gdata.docs.client.DocsClient,
     Returns:
       Entry representing the document uploaded.
     """
-    return self.upload(path, entry_title, post_uri, content_type)
+    
+    # GoogleCL that uses gdata-2.0.0 through 2.0.4 won't ever see this code.
+    # If it uses gdata-2.0.5 through 2.0.7, it would otherwise give an error 
+    # about a resumable uploader that it doesn't have. This avoids that error.
+    # If it uses gdata-2.0.8, 2.0.9, or 2.0.11 it can't upload docs due to an SSL error.
+    # If it uses gdata-2.0.10, 2.0.12, 2.0.13, 2.0.14 this should allow it to 
+    # upload all allowable file types.
+    
+    if hasattr(gdata.client,"ResumableUploader"):
+      f = open(path)
+      file_size = os.path.getsize(f.name)
+      uploader = gdata.client.ResumableUploader(
+          self, f, content_type, file_size, chunk_size=1048576,
+          desired_class=gdata.docs.data.DocsEntry)
 
-
+      # Set metadata for our upload.  
+      entry = gdata.docs.data.DocsEntry(title=atom.data.Title(text=entry_title))
+      new_entry = uploader.UploadFile('/feeds/upload/create-session/default/private/full', entry=entry)
+      # These might be useful for a verbose debug statement:
+      # print 'Document uploaded: ' + new_entry.title.text
+      # print 'Quota used: %s' % new_entry.quota_bytes_used.text
+      f.close()
+        
+      return new_entry
+      
+    else:
+      # If we have reached this point, we must be in gdata-2.0.5 through 2.0.7
+      # The upload is guaranteed to fail, so the self.upload call is here to
+      # return whatever the caller wanted.
+      return self.upload(path, entry_title, post_uri, content_type)
+      
 SERVICE_CLASS = DocsClientCL
