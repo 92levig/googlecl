@@ -53,6 +53,33 @@ class DocsClientCL(gdata.docs.client.DocsClient,
 
   """
   DOCLIST_FEED_URI = '/feeds/default/private/full' 
+
+  # File extension/mimetype pairs of common format.
+  # These seem to have disappeared in python-gdata 2.0.15 and 2.0.16, so here 
+  # they are given explicitly.
+  MIMETYPES = {
+    'CSV': 'text/csv',
+    'TSV': 'text/tab-separated-values',
+    'TAB': 'text/tab-separated-values',
+    'DOC': 'application/msword',
+    'DOCX': ('application/vnd.openxmlformats-officedocument.'
+             'wordprocessingml.document'),
+    'ODS': 'application/x-vnd.oasis.opendocument.spreadsheet',
+    'ODT': 'application/vnd.oasis.opendocument.text',
+    'RTF': 'application/rtf',
+    'SXW': 'application/vnd.sun.xml.writer',
+    'TXT': 'text/plain',
+    'XLS': 'application/vnd.ms-excel',
+    'XLSX': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'PDF': 'application/pdf',
+    'PNG': 'image/png',
+    'PPT': 'application/vnd.ms-powerpoint',
+    'PPS': 'application/vnd.ms-powerpoint',
+    'HTM': 'text/html',
+    'HTML': 'text/html',
+    'ZIP': 'application/zip',
+    'SWF': 'application/x-shockwave-flash'
+  }
   
   def __init__(self, config):
     """Constructor."""
@@ -65,9 +92,8 @@ class DocsClientCL(gdata.docs.client.DocsClient,
                        folder_or_uri)
 
   def _determine_content_type(self, file_ext):
-    from gdata.docs.data import MIMETYPES
     try:
-      return MIMETYPES[file_ext.upper()]
+      return DocsClientCL.MIMETYPES[file_ext.upper()]
     except KeyError:
       LOG.info('No supported filetype found for extension %s', file_ext)
       return None
@@ -111,7 +137,7 @@ class DocsClientCL(gdata.docs.client.DocsClient,
     issue
 
     Args:
-      entry_or_id_or_url: gdata.docs.data.DocsEntry or string representing a
+      entry_or_id_or_url: gdata.data.GDEntry or string representing a
           resource id or URL to download the document from (such as the content
           src link).
       file_path: str The full path to save the file to.  The export
@@ -305,10 +331,10 @@ class DocsClientCL(gdata.docs.client.DocsClient,
       file_size = os.path.getsize(f.name)
       uploader = gdata.client.ResumableUploader(
           self, f, content_type, file_size, chunk_size=1048576,
-          desired_class=gdata.docs.data.DocsEntry)
+          desired_class=gdata.data.GDEntry)
 
       # Set metadata for our upload.  
-      entry = gdata.docs.data.DocsEntry(title=atom.data.Title(text=entry_title))
+      entry = gdata.data.GDEntry(title=atom.data.Title(text=entry_title))
       new_entry = uploader.UploadFile('/feeds/upload/create-session/default/private/full', entry=entry)
       # These might be useful for a verbose debug statement:
       # print 'Document uploaded: ' + new_entry.title.text

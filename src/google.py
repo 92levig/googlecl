@@ -641,7 +641,7 @@ def run_once(options, args):
     print_more_help()
     return
 
-  # Detects is not GData is provided a version number or the path is too long
+  # Detects if GData is not provided a version number or the path is too long
   conflict = (task_name[0] == 'v' and task_name[1].isdigit()) or (service == 'help' and args)
   # Prioritizes using existing GData APIs over Discovery.
   # May have to change if/when those are brought over to Discovery...
