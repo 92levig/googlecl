@@ -1,3 +1,14 @@
+version 0.9.14
+r550 through 593
+Bugfixes
+* Fixed bug in command line parsing, added message if Discovery can't be used.
+* Fixed interactive bug
+
+Enhancements
+* Added info on ImportError caused by missing gdata library.
+* Added Discovery support
+
+
 version 0.9.13
  Bugfixes
  * default_encoding config option allows user to specify a default encoding other than ASCII (was a bug for some uses, namely cron jobs).
