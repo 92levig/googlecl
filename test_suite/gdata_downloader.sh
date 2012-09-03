@@ -3,8 +3,8 @@
 # This program downloads all versions of python-gdata and unpacks them.
 cd "$(dirname $0)"
 base_directory="$(pwd)"
-compressed_tarball_directory=$base_directory/gdata_tarballs/compressed
-unpacked_tarball_directory=$base_directory/gdata_tarballs/unpacked
+compressed_tarball_directory="$base_directory/gdata_tarballs/compressed"
+unpacked_tarball_directory="$base_directory/gdata_tarballs/unpacked"
 
 if [[ -d $compressed_tarball_directory ]] ; then  
   echo

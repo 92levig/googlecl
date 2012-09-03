@@ -6,8 +6,8 @@
 
 cd "$(dirname $0)"
 base_directory="$(pwd)"
-tarball_directory=$base_directory/gdata_tarballs/unpacked
-install_directory=$base_directory/gdata_installs
+tarball_directory="$base_directory/gdata_tarballs/unpacked"
+install_directory="$base_directory/gdata_installs"
 
 if [[ -d $tarball_directory ]] ; then  
   echo
@@ -29,15 +29,15 @@ do
   echo $i
   cd $tarball_directory/gdata-2.0.$i
   pwd
-  target=$install_directory/gdata-2.0.$i
+  target="$install_directory/gdata-2.0.$i"
   if [[ -d $target ]] ; then
     continue  
   fi
   mkdir -p $target
   echo $target
    
-  export PYTHONPATH=$target
+  export PYTHONPATH="$target"
   echo $PYTHONPATH    
 
-  python setup.py install --home=$target
+  python setup.py install --home="$target"
 done    
