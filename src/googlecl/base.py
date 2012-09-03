@@ -227,7 +227,7 @@ class BaseCL(object):
       if "403.4 SSL required" in error_string:
         print "\n\nIf you are trying upload to Google Docs, your version of "
         print "python-gdata may not support this action. Please see this wiki page "
-        print "for more details:" 
+        print "for more details:"
         print "http://code.google.com/p/googlecl/wiki/UploadingGoogleDocs\n\n"
       return []
     all_entries = feed.entry

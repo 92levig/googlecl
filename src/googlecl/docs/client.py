@@ -52,10 +52,13 @@ class DocsClientCL(gdata.docs.client.DocsClient,
   app with a command line interface.
 
   """
-  DOCLIST_FEED_URI = '/feeds/default/private/full' 
+
+  # Versions 2.0.5-2.0.14 of python gdata included a DOCLIST_FEED_URI variable,
+  # but 2.0.15 removed it, so we hard code it here.
+  DOCLIST_FEED_URI = '/feeds/default/private/full'
 
   # File extension/mimetype pairs of common format.
-  # These seem to have disappeared in python-gdata 2.0.15 and 2.0.16, so here 
+  # These seem to have disappeared in python-gdata 2.0.15 and 2.0.16, so here
   # they are given explicitly.
   MIMETYPES = {
     'CSV': 'text/csv',
@@ -80,11 +83,19 @@ class DocsClientCL(gdata.docs.client.DocsClient,
     'ZIP': 'application/zip',
     'SWF': 'application/x-shockwave-flash'
   }
-  
+
   def __init__(self, config):
     """Constructor."""
     gdata.docs.client.DocsClient.__init__(self, source='GoogleCL')
     googlecl.client.BaseClientCL.__init__(self, SECTION_HEADER, config)
+
+  # Python gdata 2.0.15 drastically changed the API, including renaming
+  # gdata.docs.data.DocList to ResourceFeed.
+  def _doclist_class(self):
+    if (hasattr(gdata.docs.data, 'ResourceFeed')):
+      return gdata.docs.data.ResourceFeed
+    else:
+      return gdata.docs.data.DocList
 
   def _create_folder(self, title, folder_or_uri):
     """Wrapper function to mesh with DocsBaseCL.upload_docs()."""
@@ -195,11 +206,12 @@ class DocsClientCL(gdata.docs.client.DocsClient,
         # folder.content.src is the uri to query for documents in that folder.
         entries.extend(self.GetEntries(folder.content.src,
                                        titles,
-                                       desired_class=gdata.docs.data.DocList))
+                                       desired_class=self._doclist_class))
     else:
-      entries = self.GetEntries(gdata.docs.client.DOCLIST_FEED_URI,
+      entries = self.GetEntries(DocsClientCL.DOCLIST_FEED_URI,
                                 titles,
-                                desired_class=gdata.docs.data.DocList)
+                                desired_class=self._doclist_class())
+
     return entries
 
   def get_single_doc(self, title=None, folder_entry_list=None):
@@ -218,7 +230,7 @@ class DocsClientCL(gdata.docs.client.DocsClient,
       if len(folder_entry_list) == 1:
         return self.GetSingleEntry(folder_entry_list[0].content.src,
                                    title,
-                                   desired_class=gdata.docs.data.DocList)
+                                   desired_class=self._doclist_class())
       else:
         entries = self.get_doclist(title, folder_entry_list)
         # Technically don't need the desired_class for this call
@@ -227,7 +239,7 @@ class DocsClientCL(gdata.docs.client.DocsClient,
     else:
       return self.GetSingleEntry(gdata.docs.client.DOCLIST_FEED_URI,
                                  title,
-                                 desired_class=gdata.docs.data.DocList)
+                                 desired_class=self._doclist_class())
 
   GetSingleDoc = get_single_doc
 

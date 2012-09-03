@@ -370,6 +370,7 @@ class DocsBaseCL(object):
       post_uri = folder_entry.content.src
     else:
       post_uri = self.DOCLIST_FEED_URI
+
     if not convert:
       post_uri += '?convert=false'
 
@@ -382,7 +383,7 @@ class DocsBaseCL(object):
           str(err).find('Unsupported Media Type') != -1):
         # Attempt to catch older gdata users and warn them when they try to upload
         # unsupported file types
-        print "\n\nYour version of python-gdata may not support this action. " 
+        print "\n\nYour version of python-gdata may not support this action. "
         print "Please see the wiki page for more details: "
         print "http://code.google.com/p/googlecl/wiki/UploadingGoogleDocs\n\n"
         if convert:
