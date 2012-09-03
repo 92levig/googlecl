@@ -115,7 +115,12 @@ class DocsBaseCL(object):
       base_path = path
 
     if not new_doc:
-      self.Export(doc_entry_or_title.content.src, path)
+      # This used to be the following, passing just the URL instead of the
+      # entry object (which it's guaranteed to be since not new_doc).
+      # Both client and service seem happy with it, so it was probably
+      # unnecessary to reduce it to a URL first.
+      # self.Export(doc_entry_or_title.content.src, path)
+      self.Export(doc_entry_or_title, path)
       file_hash = _md5_hash_file(path)
     else:
       file_hash = None

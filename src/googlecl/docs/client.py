@@ -32,6 +32,7 @@ __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import gdata.docs.client
 import logging
 import os
+import re
 import shutil
 import googlecl
 import googlecl.client
@@ -56,6 +57,9 @@ class DocsClientCL(gdata.docs.client.DocsClient,
   # Versions 2.0.5-2.0.14 of python gdata included a DOCLIST_FEED_URI variable,
   # but 2.0.15 removed it, so we hard code it here.
   DOCLIST_FEED_URI = '/feeds/default/private/full'
+
+  # Another casualty in 2.0.15.
+  FILE_EXT_PATTERN = re.compile('.*\.([a-zA-Z]{3,}$)')
 
   # File extension/mimetype pairs of common format.
   # These seem to have disappeared in python-gdata 2.0.15 and 2.0.16, so here
@@ -126,7 +130,12 @@ class DocsClientCL(gdata.docs.client.DocsClient,
       RequestError: on error response from server.
 
     """
-    response_string = self.get_file_content(uri, auth_token=auth_token)
+    # More undocumented changes in python gdata 2.0.15
+    if hasattr(self, 'get_file_content'):
+      response_string = self.get_file_content(uri, auth_token=auth_token)
+    else:
+      response_string = self._get_content(uri, None);
+
     if googlecl.docs.base.can_export(uri) and\
        self.config.lazy_get(SECTION_HEADER, 'decode_utf_8', False, bool):
       try:
@@ -140,7 +149,7 @@ class DocsClientCL(gdata.docs.client.DocsClient,
       download_file.write(file_string)
       download_file.flush()
 
-  def export(self, entry_or_id_or_url, file_path, gid=None, auth_token=None,
+  def export(self, entry, file_path, gid=None, auth_token=None,
              **kwargs):
     """Exports a document from the Document List in a different format.
 
@@ -148,9 +157,12 @@ class DocsClientCL(gdata.docs.client.DocsClient,
     issue
 
     Args:
-      entry_or_id_or_url: gdata.data.GDEntry or string representing a
+      entry: An entry object specifying the document to be exported.
+          Formerly, this was entry_or_id_or_url: a
+          gdata.data.GDEntry or string representing a
           resource id or URL to download the document from (such as the content
-          src link).
+          src link).  But that wreaks havoc in python gdata >2.0.15, and it was
+          easy to ensure we only call with an actual Entry.
       file_path: str The full path to save the file to.  The export
           format is inferred from the the file extension.
       gid: str (optional) grid id for downloading a single grid of a
@@ -166,7 +178,7 @@ class DocsClientCL(gdata.docs.client.DocsClient,
     """
     extra_params = {}
 
-    match = gdata.docs.data.FILE_EXT_PATTERN.match(file_path)
+    match = DocsClientCL.FILE_EXT_PATTERN.match(file_path)
     if match:
       export_format = match.group(1)
       # Hack for apps-api-issues Issue 2294
@@ -180,8 +192,19 @@ class DocsClientCL(gdata.docs.client.DocsClient,
     if gid is not None:
       extra_params['gid'] = gid
 
-    self.download(entry_or_id_or_url, file_path, extra_params,
-                  auth_token=auth_token, **kwargs)
+    if not hasattr(entry, 'content'):
+      LOG.fatal("This shouldn't happen.  Export called with invalid entry")
+
+    # Sigh, more changes in python gdata 2.0.15. Has download_resource but not
+    # download.
+    if hasattr(self, 'download'):
+      self.download(entry, file_path, extra_params,
+                    auth_token=auth_token, **kwargs)
+    elif hasattr(self, 'download_resource'):
+      self.download_resource(entry, file_path, extra_params,
+                             **kwargs)
+    else:
+      LOG.fatal("Something is screwed up with python gdata.")
 
   Export = export
 
@@ -237,7 +260,7 @@ class DocsClientCL(gdata.docs.client.DocsClient,
         # because we have the entries.
         return self.GetSingleEntry(entries, title)
     else:
-      return self.GetSingleEntry(gdata.docs.client.DOCLIST_FEED_URI,
+      return self.GetSingleEntry(DocsClientCL.DOCLIST_FEED_URI,
                                  title,
                                  desired_class=self._doclist_class())
 
@@ -254,7 +277,7 @@ class DocsClientCL(gdata.docs.client.DocsClient,
 
     """
     if title:
-      uri = gdata.docs.client.DOCLIST_FEED_URI + '-/folder'
+      uri = DocsClientCL.DOCLIST_FEED_URI + '-/folder'
       folder_entries = self.GetEntries(uri, title)
       if not folder_entries:
         LOG.warning('No folder found that matches ' + title)
@@ -267,7 +290,7 @@ class DocsClientCL(gdata.docs.client.DocsClient,
   def is_token_valid(self, test_uri=None):
     """Check that the token being used is valid."""
     if not test_uri:
-      docs_uri = gdata.docs.client.DOCLIST_FEED_URI
+      docs_uri = DocsClientCL.DOCLIST_FEED_URI
       sheets_uri = ('https://spreadsheets.google.com/feeds/spreadsheets'
                     '/private/full')
     docs_test = googlecl.client.BaseClientCL.IsTokenValid(self, docs_uri)
@@ -286,16 +309,15 @@ class DocsClientCL(gdata.docs.client.DocsClient,
                 (e.g. 'txt', 'doc')
 
     """
-    from gdata.docs.data import MIMETYPES
     try:
-      content_type = MIMETYPES[file_ext.upper()]
+      content_type = DocsClientCL.MIMETYPES[file_ext.upper()]
     except KeyError:
       print 'Could not find mimetype for ' + file_ext
-      while file_ext not in MIMETYPES.keys():
+      while file_ext not in DocsClientCL.MIMETYPES.keys():
         file_ext = raw_input('Please enter one of ' +
-                                MIMETYPES.keys() +
+                                DocsClientCL.MIMETYPES.keys() +
                                 ' to determine the content type to upload as.')
-      content_type = MIMETYPES[file_ext.upper()]
+      content_type = DocsClientCL.MIMETYPES[file_ext.upper()]
     mediasource = gdata.data.MediaSource(file_path=path_to_new_content,
                                          content_type=content_type)
     return self.Update(doc_entry, media_source=mediasource)
@@ -330,14 +352,14 @@ class DocsClientCL(gdata.docs.client.DocsClient,
     Returns:
       Entry representing the document uploaded.
     """
-    
+
     # GoogleCL that uses gdata-2.0.0 through 2.0.4 won't ever see this code.
-    # If it uses gdata-2.0.5 through 2.0.7, it would otherwise give an error 
+    # If it uses gdata-2.0.5 through 2.0.7, it would otherwise give an error
     # about a resumable uploader that it doesn't have. This avoids that error.
     # If it uses gdata-2.0.8, 2.0.9, or 2.0.11 it can't upload docs due to an SSL error.
-    # If it uses gdata-2.0.10, 2.0.12, 2.0.13, 2.0.14 this should allow it to 
+    # If it uses gdata-2.0.10, 2.0.12, or later, this should allow it to
     # upload all allowable file types.
-    
+
     if hasattr(gdata.client,"ResumableUploader"):
       f = open(path)
       file_size = os.path.getsize(f.name)
@@ -345,20 +367,20 @@ class DocsClientCL(gdata.docs.client.DocsClient,
           self, f, content_type, file_size, chunk_size=1048576,
           desired_class=gdata.data.GDEntry)
 
-      # Set metadata for our upload.  
+      # Set metadata for our upload.
       entry = gdata.data.GDEntry(title=atom.data.Title(text=entry_title))
       new_entry = uploader.UploadFile('/feeds/upload/create-session/default/private/full', entry=entry)
       # These might be useful for a verbose debug statement:
       # print 'Document uploaded: ' + new_entry.title.text
       # print 'Quota used: %s' % new_entry.quota_bytes_used.text
       f.close()
-        
+
       return new_entry
-      
+
     else:
       # If we have reached this point, we must be in gdata-2.0.5 through 2.0.7
       # The upload is guaranteed to fail, so the self.upload call is here to
       # return whatever the caller wanted.
       return self.upload(path, entry_title, post_uri, content_type)
-      
+
 SERVICE_CLASS = DocsClientCL

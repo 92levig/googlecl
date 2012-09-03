@@ -124,7 +124,9 @@ def get_editor(doctype_label, config_parser):
 #        required
 #===============================================================================
 def _run_get(client, options, args):
-  if not hasattr(client, 'Download'):
+  # python gdata 2.0.15 removed Download and added DownloadResource.
+  if not hasattr(client, 'Download') and \
+      not hasattr(client, 'DownloadResource'):
     LOG.error('Downloading documents is not supported for' +
               ' gdata-python-client < 2.0')
     return
@@ -167,7 +169,9 @@ def _run_edit(client, options, args):
              '"docs edit" yet')
     LOG.debug('(Ignoring ' + unicode(args) +')')
 
-  if not hasattr(client, 'Download'):
+  # python gdata 2.0.15 removed Download and added DownloadResource.
+  if not hasattr(client, 'Download') and \
+      not hasattr(client, 'DownloadResource'):
     LOG.error('Editing documents is not supported' +
               ' for gdata-python-client < 2.0')
     return
