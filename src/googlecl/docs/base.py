@@ -232,7 +232,10 @@ class DocsBaseCL(object):
         if can_export(entry):
           self.Export(entry, path)
         else:
-          self.Download(entry, path)
+          if hasattr(self, 'Download'):
+            self.Download(entry, path)
+          else:
+            self.DownloadResource(entry, path)
       except self.request_error, err:
         LOG.error(safe_encode('Download of ' + entry_title + ' failed: ' +
                               unicode(err)))
