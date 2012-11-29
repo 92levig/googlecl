@@ -1,5 +1,11 @@
 This document is a quick-guide on getting up to speed with the new version of GoogleCL.
 
+version 0.9.14
+
+  * Bugfixes
+  * Added support for Discovery API.
+  * Docs list, edit, upload, get all work for me now with python gdata 2.0.12 through 2.0.17.
+
 version 0.9.13
   * Bugfixes only. Booooooring.
 

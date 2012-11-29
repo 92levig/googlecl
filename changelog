@@ -1,13 +1,24 @@
 version 0.9.14
-r550 through 593
-Bugfixes
-* Fixed bug in command line parsing, added message if Discovery can't be used.
-* Fixed interactive bug
+r550 through 603
 
-Enhancements
-* Added info on ImportError caused by missing gdata library.
-* Added Discovery support
+ Bugfixes:
+ * Fixed bug in command line parsing, added message if Discovery can't be used.
+ * Remove bogus attempt to delete credentials that broke discovery with google-api-python-client-1.0beta4.
+ * Fixes gdata bug introduced in 2.0.15 by using the constant string referred to in all gdata versions after 2.0.4 in place of the changing variable names.
+ * Fixes problem with uploading docs. Added resumable uploader support. Docs can now be uploaded with gdata versions 2.0.10, 2.0.12, 2.0.13 and 2.0.14. Some files (.txt, for example) can still be uploaded with versions 2.0.0, 2.0.1, 2.0.2, 2.0.3, 2.0.4, but not all file types. Better error messages for users trying to upload to Google Docs with unsupported gdata versions.
+ * Fixes docs uploads for 2.0.15 and 2.0.16. This has been tested and works for gdata 2.0.0 through 2.0.4 as well as 2.0.12 through 2.0.16.
+ * Thanks to jim.lawton for pointing out the rename of DocList to ResourceFeed.  `google docs list` now works for me on python gdata 2.0.12-2.0.17.
+ * Thanks Mitya57 for pointing out this bug in downloading non-translated filetypes with python gdata 2.0.15 and later.
+ * Fixed bug in command line parsing, added message if Discovery can't be used.
+ * Fixed interactive bug
 
+ Enhancements:
+ * Added Discovery support.
+ * Made the authorization message a little tidier and more clear.
+ * Adding the gdata downloader and installer scripts.
+ * Docs list, edit, upload, get all work for me now with python gdata 2.0.12 through 2.0.17.
+ * Added info on ImportError caused by missing gdata library.
+ * Added Discovery support
 
 version 0.9.13
  Bugfixes
