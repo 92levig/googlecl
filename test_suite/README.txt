@@ -19,6 +19,8 @@ All the scripts start with some dummy command which is called with --force-auth.
 
 The tests are semi-automatical, all commands which delete something requires pressing 'y' key to accept deleting data.
 
+All tests require providing your username as the first script parameter.
+
 Docs Tests
 
 Doc tests are stored in three files:

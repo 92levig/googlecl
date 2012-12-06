@@ -229,7 +229,7 @@ class DocsClientCL(gdata.docs.client.DocsClient,
         # folder.content.src is the uri to query for documents in that folder.
         entries.extend(self.GetEntries(folder.content.src,
                                        titles,
-                                       desired_class=self._doclist_class))
+                                       desired_class=self._doclist_class()))
     else:
       entries = self.GetEntries(DocsClientCL.DOCLIST_FEED_URI,
                                 titles,
@@ -277,7 +277,7 @@ class DocsClientCL(gdata.docs.client.DocsClient,
 
     """
     if title:
-      uri = DocsClientCL.DOCLIST_FEED_URI + '-/folder'
+      uri = DocsClientCL.DOCLIST_FEED_URI + '/-/folder'
       folder_entries = self.GetEntries(uri, title)
       if not folder_entries:
         LOG.warning('No folder found that matches ' + title)
