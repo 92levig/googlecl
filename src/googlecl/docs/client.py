@@ -107,6 +107,9 @@ class DocsClientCL(gdata.docs.client.DocsClient,
                        folder_or_uri)
 
   def _determine_content_type(self, file_ext):
+    if file_ext is None:
+        LOG.info('No supported filetype found as the extension is not provided')
+        return None
     try:
       return DocsClientCL.MIMETYPES[file_ext.upper()]
     except KeyError:

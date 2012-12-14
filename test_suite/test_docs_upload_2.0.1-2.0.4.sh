@@ -34,6 +34,7 @@ base_directory="$(pwd)"
 googlecl_directory="$base_directory/../src"
 gdata_directory="$base_directory/gdata_installs"
 txt_file="$base_directory/foo.txt"
+txt_file_without_extension="$base_directory/foo"
 pdf_file="$base_directory/foo.pdf"
 test_file_name="foo"
 output_file="$base_directory/output.txt"
@@ -79,7 +80,10 @@ do
   # Test uploading text file
   python google.py docs upload $txt_file -u $auth_username
   
-  check_docs_number 1  
+  # Loading file without extension
+  python google.py docs upload $txt_file_without_extension -u $auth_username
+  
+  check_docs_number 2
   
   # Delete the uploaded file
   python google.py docs delete --title "$test_file_name" -u $auth_username

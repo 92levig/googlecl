@@ -381,7 +381,7 @@ class DocsBaseCL(object):
 
     if not convert:
       post_uri += '?convert=false'
-
+    
     try:
       new_entry = self._transmit_doc(path, entry_title, post_uri, content_type,
                                      file_ext)

@@ -124,6 +124,9 @@ class DocsServiceCL(gdata.docs.service.DocsService,
   def _determine_content_type(self, file_ext):
     from gdata.docs.service import SUPPORTED_FILETYPES
     try:
+      if file_ext is None:
+        LOG.info('No supported filetype found as the extension is not provided')
+        return None
       return SUPPORTED_FILETYPES[file_ext.upper()]
     except KeyError:
       LOG.info('No supported filetype found for extension %s', file_ext)
@@ -304,6 +307,8 @@ class DocsServiceCL(gdata.docs.service.DocsService,
       entry.title = atom.Title(text=entry_title)
       # Cover the supported filetypes in gdata-2.0.10 even though
       # they aren't listed in gdata 1.2.4... see what happens.
+      if file_ext is None:
+        file_ext = ""
       if file_ext.lower() in ['csv', 'tsv', 'tab', 'ods', 'xls', 'xlsx']:
         category = _make_kind_category(googlecl.docs.SPREADSHEET_LABEL)
       elif file_ext.lower() in ['ppt', 'pps']:
