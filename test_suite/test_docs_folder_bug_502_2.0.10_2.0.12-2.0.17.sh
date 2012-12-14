@@ -2,6 +2,11 @@
 
 . utils.sh
 
+print_warning \
+    "DOCUMENTS" \
+    "THIS TEST EXPECTS THERE IS ALREADY A FOLDER WITH DOCUMENTS ON GOOGLE DRIVE" \
+    "USAGE: ./test_docs_folder_bug__2.0.10_2.0.12-2.0.17.sh <username> <foldername>"
+
 if [[ $1 == "" ]]; then
     echo "You have to provide username as the first parameter"
     exit
@@ -49,9 +54,9 @@ do
 
   if [[ $auth_executed == "0" ]]; then
     auth_executed=1 
-    ./google docs list title,url-direct --force-auth -u $auth_username
+    python google.py docs list title,url-direct --force-auth -u $auth_username
   fi
   
-  ./google docs --folder "$folder_name" list
+  python google.py docs --folder "$folder_name" list -u $auth_username
 
 done

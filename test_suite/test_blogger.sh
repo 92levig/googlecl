@@ -2,6 +2,11 @@
 
 . utils.sh
 
+print_warning \
+    "BLOGGER" \
+    "THERE SHOULD ALREADY EXIST THE BLOG GIVEN AS THE SECOND PARAMETER" \
+    "USAGE: ./test_blogger.sh <username> <blogname>"
+    
 # This test program manages contacts.
 
 auth_username=$1
@@ -14,7 +19,7 @@ fi
 blogname=$2
 
 if [[ $2 == "" ]]; then
-    echo "You have to provide blog name as the second parameter"
+    echo "You have to provide an existing blog name as the second parameter"
     exit
 fi
 
@@ -40,12 +45,11 @@ auth_executed=0
 function check_posts_number {
 
     should_be \
-        "./google blogger list --title \"$post_title\" --blog $blogname" \
+        "python google.py blogger list --title \"$post_title\" --blog $blogname -u $auth_username" \
         $1 \
         0 \
         "blog post" \
-        "google blogger delete --title \"$post_title\" --blog $blogname"
-        
+        "export PYTHONPATH=\"$gdata_directory/gdata-2.0.1/lib/python\" && python ../src/google.py blogger delete --title \"$post_title\" --blog $blogname -u $auth_username"
 }
 
 for i in gdata-2.0.{1..17}
@@ -66,21 +70,21 @@ do
   
   if [[ $auth_executed == "0" ]]; then
     auth_executed=1 
-    ./google blogger list --blog $blogname --force-auth -u $auth_username
+    python google.py blogger list --blog $blogname --force-auth -u $auth_username
   fi
 
   check_posts_number 0
 
   # Creating new blog post.
-  ./google blogger post --title "$post_title" --blog $blogname "adlasdasd" 
+  python google.py blogger post --title "$post_title" --blog $blogname -u $auth_username "adlasdasd" 
   
   check_posts_number 1
   
   # Tagging the blog post, unfortunately there is no way to check if it worked.
-  ./google blogger tag --blog $blogname --title "$post_title" --tags "$post_tags"
+  python google.py blogger tag --blog $blogname --title "$post_title" -u $auth_username --tags "$post_tags"
   
   # Deleting the blog post.
-  ./google blogger delete --blog $blogname --title "$post_title"
+  python google.py blogger delete --blog $blogname --title "$post_title" -u $auth_username
 
   check_posts_number 0
   

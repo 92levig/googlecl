@@ -2,6 +2,11 @@
 
 . utils.sh
 
+print_warning \
+    "DOCUMENTS" \
+    "" \
+    "USAGE: ./test_docs_upload_2.0.1_2.0.4.sh <username>"
+
 if [[ $1 == "" ]]; then
     echo "You have to provide username as the first parameter"
     exit
@@ -39,13 +44,13 @@ auth_executed=0
 
 # $1 - number of expected documents
 function check_docs_number {
-
+    
     should_be \
-        "./google docs list title,url-direct --title "$test_file_name"" \
+        "python google.py docs list title,url-direct --title "$test_file_name" -u $auth_username" \
         $1 \
         0 \
         "document" \
-        "google docs delete --title \"$test_file_name\""
+        "export PYTHONPATH=\"$gdata_directory/gdata-2.0.1/lib/python\" && python ../src/google.py docs delete --title \"$test_file_name\" -u $auth_username"
         
 }
 
@@ -66,19 +71,19 @@ do
 
   if [[ $auth_executed == "0" ]]; then
     auth_executed=1 
-    ./google docs list title,url-direct --force-auth -u $auth_username
+    python google.py docs list title,url-direct --force-auth -u $auth_username
   fi
   
   check_docs_number 0
 
   # Test uploading text file
-  ./google docs upload $txt_file # --force-auth -u $auth_username
+  python google.py docs upload $txt_file -u $auth_username
   
   check_docs_number 1  
   
   # Delete the uploaded file
-  ./google docs delete --title "$test_file_name"
+  python google.py docs delete --title "$test_file_name" -u $auth_username
       
   check_docs_number 0
   
-done #>> $output_file
+done

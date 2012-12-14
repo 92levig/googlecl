@@ -37,10 +37,13 @@ The file for versions just informs that googlecl doesn't work with these version
 Blogger Tests
 
 Blogger tests are in the file test_blogger.sh.
+For running the blogger tests you need to provide the real blog name as the second parameter.
 
 Calendar Tests
 
 Calendar tests are in the file test_calendar.sh.
+
+To use the calendar tests, you need to have access to the calendar service.
 
 Contacts Tests
 

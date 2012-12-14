@@ -2,6 +2,11 @@
 
 . utils.sh
 
+print_warning \
+    "CALENDAR" \
+    "" \
+    "USAGE: ./test_contacts.sh <username>"
+
 # This test program manages contacts.
 
 auth_username=$1
@@ -32,24 +37,28 @@ auth_executed=0
 # $1 - number of expected contacts
 function check_contacts_number {
 
+    sleep 5
+   
     should_be \
-        "./google contacts list name,email --title \"$contact_title\"" \
+        "python google.py contacts list name,email --title \"$contact_title\" -u $auth_username" \
         $1 \
         0 \
         "contact" \
-        "google contacts delete --title \"$contact_title\""
+        "export PYTHONPATH=\"$gdata_directory/gdata-2.0.1/lib/python\" && python ../src/google.py contacts delete --title \"$contact_title\" -u $auth_username"
         
 }
 
 # $1 - number of expected contact groups
 function check_contact_groups_number {
 
+    sleep 5
+
     should_be \
-        "./google contacts list-groups --title \"$contact_group\"" \
+        "python google.py contacts list-groups --title \"$contact_group\" -u $auth_username" \
         $1 \
         0 \
         "contact group" \
-        "google contacts delete-groups --title \"$contact_group\""
+        "export PYTHONPATH=\"$gdata_directory/gdata-2.0.1/lib/python\" && python ../src/google.py contacts delete-groups --title \"$contact_group\" -u $auth_username"
         
 }
 
@@ -71,30 +80,30 @@ do
   
   if [[ $auth_executed == "0" ]]; then
     auth_executed=1 
-    ./google contacts list name,email --title "$contact_title" --force-auth -u $auth_username
+    python google.py contacts list name,email --title "$contact_title" --force-auth -u $auth_username
   fi
 
   check_contacts_number 0
 
   # Creating new contact
-  ./google contacts add "$contact_title, $contact_email"
-  
+  python google.py contacts add "$contact_title, $contact_email" -u $auth_username
+    
   check_contacts_number 1
   
   # Deleting the task
-  ./google contacts delete --title "$contact_title"
+  python google.py contacts delete --title "$contact_title" -u $auth_username
 
   check_contacts_number 0
   
   # Create a contact-group
   check_contact_groups_number 0
   
-  ./google contacts add-groups --title "$contact_group"
+  python google.py contacts add-groups --title "$contact_group" -u $auth_username
   
   check_contact_groups_number 1
   
-  ./google contacts delete-groups --title "$contact_group"
+  python google.py contacts delete-groups --title "$contact_group" -u $auth_username
 
   check_contact_groups_number 0  
 
-done #>> $output_file
+done

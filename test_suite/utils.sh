@@ -12,8 +12,7 @@ function should_be {
 
     #echo $1
     OUT=$(eval $1 | wc -l)
-    #echo $OUT
-    
+
     if [[ $OUT -eq $2+$3 ]]; then
         echo "Found $2 $4(s)"
     else
@@ -29,4 +28,22 @@ function should_be {
     
 }
 
+
+function print_warning {
+
+    echo 
+    echo "      WARNING, THIS TEST SCRIPT WILL BE CREATING AND DELETING DATA"
+    echo "             YOU SHOULD RUN IT ON A SPECIAL TEST ACCOUNT"
+    echo "          THIS ACCOUNT SHOULD HAVE ACCESS TO THE $1 SERVICE"
+    echo
+    echo $2
+    echo
+    echo $3
+    echo
+    echo $4
+    echo
+    
+    read -p "Press any key to proceed..."
+
+}
 

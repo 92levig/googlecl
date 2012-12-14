@@ -32,11 +32,11 @@ auth_executed=0
 function check_contacts_number {
 
     should_be \
-        "./google calendar list --date $task_search_date" \
+        "python google.py calendar list --date $task_search_date -u $auth_username" \
         $1 \
         2 \
         "calendar entry" \
-        "google calendar delete --date $task_search_date --title \".*\""
+        "export PYTHONPATH=\"$gdata_directory/gdata-2.0.1/lib/python\" && python ../src/google.py calendar delete --date $task_search_date --title \".*\" -u $auth_username"
         
 }
 
@@ -58,18 +58,18 @@ do
 
   if [[ $auth_executed == "0" ]]; then
     auth_executed=1 
-    ./google calendar list --date $task_search_date --force-auth -u $auth_username
+    python google.py calendar list --date $task_search_date --force-auth -u $auth_username
   fi
 
   # Creating new task
-  ./google calendar add "$task_title" --date $task_date 
+  python google.py calendar add "$task_title" --date $task_date -u $auth_username 
   
   # Checking if the task exists
   check_contacts_number 1
     
   # Deleting the task
-  ./google calendar delete --date $task_search_date --title "$task_title"
+  python google.py calendar delete --date $task_search_date --title "$task_title" -u $auth_username
 
   check_contacts_number 0
   
-done #>> $output_file
+done
