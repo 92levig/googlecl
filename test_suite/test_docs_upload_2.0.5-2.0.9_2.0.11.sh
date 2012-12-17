@@ -1,11 +1,5 @@
 #! /bin/bash
 
-# This test program tries to upload a txt file and a pdf file to Google Docs via 
-# googlecl with python gdata2.0.1 through gdata2.0.5. It's a good idea to run
-# a googlecl docs upload with --force-auth before running this script.
-
-# Just because the versions 10-17 supports uploading files:
-# http://code.google.com/p/googlecl/wiki/UploadingGoogleDocs
 #
 #The following versions of python-gdata do not support uploading anything to Google Docs.
 #

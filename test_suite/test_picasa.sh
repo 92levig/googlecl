@@ -8,7 +8,7 @@ print_warning \
     "USAGE: ./test_picasa.sh <username>"
     
 
-# This test program manages tasks.
+# This test program manages picasa albums and pictures.
 
 auth_username=$1
 

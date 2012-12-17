@@ -12,15 +12,7 @@ if [[ $1 == "" ]]; then
     exit
 fi
 
-# This test program tries to upload a txt file and a pdf file to Google Docs via 
-# googlecl with python gdata2.0.1 through gdata2.0.5. It's a good idea to run
-# a googlecl docs upload with --force-auth before running this script.
-
-# Just because the versions 10-17 supports uploading files:
-# http://code.google.com/p/googlecl/wiki/UploadingGoogleDocs
-#
-#The following versions of python-gdata support uploading some file types, like text files, but do not support uploading arbitrary file types (like PDFs).
-#
+# This script tests uploading and listing google documents with the googlecl application, using the following versions of gdata library.
 #2.0.0
 #2.0.1
 #2.0.2

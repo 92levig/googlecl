@@ -2,7 +2,7 @@
 
 . utils.sh
 
-# This test program manages tasks.
+# This test program manages calendar tasks.
 
 auth_username=$1
 
@@ -28,8 +28,8 @@ cd $gdata_directory
 
 auth_executed=0
 
-# $1 - number of expected contacts
-function check_contacts_number {
+# $1 - number of expected tasks
+function check_tasks_number {
 
     should_be \
         "python google.py calendar list --date $task_search_date -u $auth_username" \
@@ -65,11 +65,11 @@ do
   python google.py calendar add "$task_title" --date $task_date -u $auth_username 
   
   # Checking if the task exists
-  check_contacts_number 1
+  check_tasks_number 1
     
   # Deleting the task
   python google.py calendar delete --date $task_search_date --title "$task_title" -u $auth_username
 
-  check_contacts_number 0
+  check_tasks_number 0
   
 done

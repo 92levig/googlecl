@@ -7,7 +7,7 @@ print_warning \
     "THERE SHOULD ALREADY EXIST THE BLOG GIVEN AS THE SECOND PARAMETER" \
     "USAGE: ./test_blogger.sh <username> <blogname>"
     
-# This test program manages contacts.
+# This script tests managing blogger posts by the googlecl application.
 
 auth_username=$1
 
@@ -89,4 +89,4 @@ do
   check_posts_number 0
   
 
-done #>> $output_file
+done 

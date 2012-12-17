@@ -28,7 +28,12 @@ function should_be {
     
 }
 
-
+# Function prints warning information
+# PARAMS:
+#     $1 - name of the service
+#     $2 - additional line to print
+#     $3 - additional line to print
+#     $4 - additional line to print
 function print_warning {
 
     echo 
