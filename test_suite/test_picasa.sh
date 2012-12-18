@@ -38,6 +38,8 @@ auth_executed=0
 # $1 - number of expected albums
 function check_albums_number {
 
+    sleep 5
+
     should_be \
         "python google.py picasa list-albums --title \"$album_title\" -u $auth_username" \
         $1 \
