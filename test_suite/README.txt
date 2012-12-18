@@ -49,6 +49,9 @@ Contacts Tests
 
 Contacts tests are in the file test_contacts.sh.
 
+Sometimes the test contact is placed in 'Other Contacts' category, then the google service returns error that it cannot add another contact with the same name, however googlecl cannot list this contact and inform about the error.
+
+
 Picasa Tests
 
 Picasa tests are in the file: test_picasa.sh.
