@@ -48,7 +48,7 @@ function check_docs_number {
         $1 \
         0 \
         "document" \
-        "export PYTHONPATH=\"$gdata_directory/gdata-2.0.10/lib/python\" && python ../src/google.py docs delete --title \"$test_file_name\" -u $auth_username"
+        "export PYTHONPATH=\"$gdata_directory/gdata-2.0.10/lib/python\" && python ../src/google.py docs delete --title \"$test_file_name\" -u $auth_username --yes"
         
 }
 
@@ -87,7 +87,7 @@ do
   check_docs_number 2
   
   # Delete the uploaded file
-  python google.py docs delete --title "$test_file_name" -u $auth_username
+  python google.py docs delete --title "$test_file_name" -u $auth_username --yes
   
   check_docs_number 0
   

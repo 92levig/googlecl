@@ -43,7 +43,7 @@ function check_albums_number {
         $1 \
         0 \
         "picasa album" \
-        "export PYTHONPATH=\"$gdata_directory/gdata-2.0.1/lib/python\" && python ../src/google.py picasa delete --title \"$album_title\" -u $auth_username"
+        "export PYTHONPATH=\"$gdata_directory/gdata-2.0.1/lib/python\" && python ../src/google.py picasa delete --title \"$album_title\" -u $auth_username --yes"
         
 }
 
@@ -81,7 +81,7 @@ do
   check_albums_number 1
   
   # Deleting the album
-  python google.py picasa delete --title $album_title -u $auth_username
+  python google.py picasa delete --title $album_title -u $auth_username --yes
   
   check_albums_number 0
 

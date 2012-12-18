@@ -49,7 +49,7 @@ function check_posts_number {
         $1 \
         0 \
         "blog post" \
-        "export PYTHONPATH=\"$gdata_directory/gdata-2.0.1/lib/python\" && python ../src/google.py blogger delete --title \"$post_title\" --blog $blogname -u $auth_username"
+        "export PYTHONPATH=\"$gdata_directory/gdata-2.0.1/lib/python\" && python ../src/google.py blogger delete --title \"$post_title\" --blog $blogname -u $auth_username --yes"
 }
 
 for i in gdata-2.0.{1..17}
@@ -84,7 +84,7 @@ do
   python google.py blogger tag --blog $blogname --title "$post_title" -u $auth_username --tags "$post_tags"
   
   # Deleting the blog post.
-  python google.py blogger delete --blog $blogname --title "$post_title" -u $auth_username
+  python google.py blogger delete --blog $blogname --title "$post_title" -u $auth_username --yes
 
   check_posts_number 0
   

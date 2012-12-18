@@ -44,7 +44,7 @@ function check_contacts_number {
         $1 \
         0 \
         "contact" \
-        "export PYTHONPATH=\"$gdata_directory/gdata-2.0.1/lib/python\" && python ../src/google.py contacts delete --title \"$contact_title\" -u $auth_username"
+        "export PYTHONPATH=\"$gdata_directory/gdata-2.0.1/lib/python\" && python ../src/google.py contacts delete --title \"$contact_title\" -u $auth_username --yes"
         
 }
 
@@ -58,7 +58,7 @@ function check_contact_groups_number {
         $1 \
         0 \
         "contact group" \
-        "export PYTHONPATH=\"$gdata_directory/gdata-2.0.1/lib/python\" && python ../src/google.py contacts delete-groups --title \"$contact_group\" -u $auth_username"
+        "export PYTHONPATH=\"$gdata_directory/gdata-2.0.1/lib/python\" && python ../src/google.py contacts delete-groups --title \"$contact_group\" -u $auth_username --yes"
         
 }
 
@@ -91,7 +91,7 @@ do
   check_contacts_number 1
   
   # Deleting the task
-  python google.py contacts delete --title "$contact_title" -u $auth_username
+  python google.py contacts delete --title "$contact_title" -u $auth_username --yes
 
   check_contacts_number 0
   
@@ -102,7 +102,7 @@ do
   
   check_contact_groups_number 1
   
-  python google.py contacts delete-groups --title "$contact_group" -u $auth_username
+  python google.py contacts delete-groups --title "$contact_group" -u $auth_username --yes
 
   check_contact_groups_number 0  
 

@@ -36,7 +36,7 @@ function check_tasks_number {
         $1 \
         2 \
         "calendar entry" \
-        "export PYTHONPATH=\"$gdata_directory/gdata-2.0.1/lib/python\" && python ../src/google.py calendar delete --date $task_search_date --title \".*\" -u $auth_username"
+        "export PYTHONPATH=\"$gdata_directory/gdata-2.0.1/lib/python\" && python ../src/google.py calendar delete --date $task_search_date --title \".*\" -u $auth_username --yes"
         
 }
 
@@ -68,7 +68,7 @@ do
   check_tasks_number 1
     
   # Deleting the task
-  python google.py calendar delete --date $task_search_date --title "$task_title" -u $auth_username
+  python google.py calendar delete --date $task_search_date --title "$task_title" -u $auth_username --yes
 
   check_tasks_number 0
   
