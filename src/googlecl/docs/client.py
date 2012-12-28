@@ -138,6 +138,8 @@ class DocsClientCL(gdata.docs.client.DocsClient,
       response_string = self.get_file_content(uri, auth_token=auth_token)
     else:
       response_string = self._get_content(uri, None);
+      
+    response_string = response_string.replace("\r\n\r\n", "\r\n")
 
     if googlecl.docs.base.can_export(uri) and\
        self.config.lazy_get(SECTION_HEADER, 'decode_utf_8', False, bool):
@@ -148,6 +150,7 @@ class DocsClientCL(gdata.docs.client.DocsClient,
         file_string = response_string
     else:
       file_string = response_string
+    
     with open(file_path, 'wb') as download_file:
       download_file.write(file_string)
       download_file.flush()
