@@ -947,7 +947,9 @@ def setup_parser(loading_usage):
   parser.add_option('--txnid', dest='txnid',
                     help=("Finance only - specify transaction id"))
   parser.add_option('-u', '--user', dest='user',
-                    help='Username to log in with for the service.')
+                    help=('Username to log in with for the service. '+  
+                          'If not provided full email address (e.g. "foo"), than it is assumed to be in gmail.com domain (e.g. "foo@gmail.com"). ' +
+                          'If you want to use another domain, provide full email address like "foo@bar.com"'))
   parser.add_option('-v', '--verbose', dest='verbose',
                     action='store_true',
                     help='Print all messages.')
