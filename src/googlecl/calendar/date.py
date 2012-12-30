@@ -195,8 +195,8 @@ class Date(object):
       return self.local.strftime(basic_string_format + ' %H:%M')
 
   def to_format(self, format_string):
-    """Converts UTC data to specific format string."""
-    return self.utc.strftime(format_string)
+    """Converts local data to specific format string."""
+    return self.local.strftime(format_string)
 
   def to_inclusive_query(self):
     """Converts UTC data to query-friendly, date-inclusive string.
@@ -290,7 +290,7 @@ class DateParser(object):
     day_token, _, time_token = split_string(text, _DAY_TIME_TOKENIZERS)
     if not (day_token or time_token):
       raise ParsingError(text)
-
+    
     past_time_to_tomorrow = False
     if day_token:
       day = self.determine_day(day_token, shift_dates)
@@ -331,7 +331,7 @@ class DateParser(object):
         local_datetime = day + delta
     else:
       local_datetime = day
-
+    
     if local_datetime:
       return Date(local_datetime=local_datetime, all_day=all_day)
     else:
