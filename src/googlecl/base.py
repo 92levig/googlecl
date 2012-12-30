@@ -53,7 +53,10 @@ class BaseCL(object):
       request_error_class: Exception class raised when a request fails.
     """
     self.request_error = request_error_class
-    large_max_results = 10000
+
+    # When this field is set to 10000, then googlecl returns only 500 blog posts.
+    # When this is set to 500, then it returns the blog posts correctly.
+    large_max_results = 500
     # Because each new xxxServiceCL class should use the more specific
     # superclass's __init__ function, don't define one here.
     self.source = 'GoogleCL'
