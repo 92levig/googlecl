@@ -1,5 +1,5 @@
 version 0.9.14
-r550 through 603
+r550 through 621
 
  Bugfixes:
  * Fixed bug in command line parsing, added message if Discovery can't be used.
@@ -11,6 +11,9 @@ r550 through 603
  * Thanks Mitya57 for pointing out this bug in downloading non-translated filetypes with python gdata 2.0.15 and later.
  * Fixed bug in command line parsing, added message if Discovery can't be used.
  * Fixed interactive bug
+ * Fixed bug with getting more than 500 blog posts. 
+ * Fixed a problem with --date parameter for creating a new calendar entry
+ * Fixed bug with multiple empty lines when getting blogger document.
 
  Enhancements:
  * Added Discovery support.
@@ -19,6 +22,7 @@ r550 through 603
  * Docs list, edit, upload, get all work for me now with python gdata 2.0.12 through 2.0.17.
  * Added info on ImportError caused by missing gdata library.
  * Added Discovery support
+ * Documentation update.
 
 version 0.9.13
  Bugfixes
