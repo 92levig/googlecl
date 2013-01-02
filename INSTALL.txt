@@ -14,8 +14,8 @@ From the command line, in the directory as this file, run
 or
 
     $ python setup.py install --home=~
-(remember to set your PYTHONPATH to include your home directory if you
-do it this way)
+(remember to set your PYTHONPATH to include the lib/python/ subdirectory of
+the --home argument if you do it this way)
 
 For more detailed instructions, I recommend looking at the gdata-python-client
 INSTALL.txt file. It also has instructions on modifying PYTHONPATH.
