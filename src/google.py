@@ -46,8 +46,8 @@ from __future__ import with_statement
 try:
     import gdata
 except:
-    print "There is no gdata module installed."
-    print "Please install it before using googlecl"
+    print "Unable to find python gdata library."
+    print "See http://code.google.com/p/googlecl/wiki/Install"
     exit(5)
 
 
@@ -63,10 +63,10 @@ import googlecl
 import googlecl.authentication
 import googlecl.config
 try: # Fails if Discovery stuff is unavailable
- from googlecl.discovery import DiscoveryManager
- apis = True
+  from googlecl.discovery import DiscoveryManager
+  apis = True
 except:
- apis = False
+  apis = False
 # Renamed here to reduce verbosity in other sections
 safe_encode = googlecl.safe_encode
 safe_decode = googlecl.safe_decode
