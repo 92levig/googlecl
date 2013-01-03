@@ -43,6 +43,14 @@ Some terminology in use:
 """
 from __future__ import with_statement
 
+try:
+    import gdata
+except:
+    print "There is no gdata module installed."
+    print "Please install it before using googlecl"
+    exit(5)
+
+
 __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
 import glob
 import logging
@@ -62,6 +70,7 @@ except:
 # Renamed here to reduce verbosity in other sections
 safe_encode = googlecl.safe_encode
 safe_decode = googlecl.safe_decode
+
 
 VERSION = '0.9.14'
 
