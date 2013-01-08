@@ -17,6 +17,7 @@
 
 
 __author__ = 'tom.h.miller@gmail.com (Tom Miller)'
+import atom
 import gdata.youtube
 import logging
 import os
@@ -94,7 +95,7 @@ class YouTubeServiceCL(YouTubeService, googlecl.service.BaseServiceCL):
   IsTokenValid = is_token_valid
 
   def post_videos(self, paths, category, title=None, desc=None, tags=None,
-                 devtags=None, is_private=None):
+                 devtags=None, access=None):
     """Post video(s) to YouTube.
 
     Keyword arguments:
@@ -104,21 +105,38 @@ class YouTubeServiceCL(YouTubeService, googlecl.service.BaseServiceCL):
       desc: Video summary (Default None).
       tags: Tags of the video as a string, separated by commas (Default None).
       devtags: Developer tags for the video (Default None).
+      access: 'private' or 'unlisted', anything else = 'public'
 
     """
     from gdata.media import Group, Title, Description, Keywords, Private
     if isinstance(paths, basestring):
       paths = [paths]
-    set_private = lambda private: Private() if private else None
+
+    if access is None:
+      access = 'public'
+
+    access = access.lower()
+    private = None
+    if access == 'private':
+      private = Private()
+
     for path in paths:
       filename = os.path.basename(path).split('.')[0]
       my_media_group = Group(title=Title(text=title or filename),
                              description=Description(text=desc or 'A video'),
                              keywords=Keywords(text=tags),
                              category=build_category(category),
-                             private=set_private(is_private))
+                             private=private)
 
-      video_entry = gdata.youtube.YouTubeVideoEntry(media=my_media_group)
+      if access == 'unlisted':
+        extension_elements=[atom.ExtensionElement('accessControl',
+            namespace=gdata.media.YOUTUBE_NAMESPACE,
+            attributes={'action':'list', 'permission':'denied'})]
+        video_entry = gdata.youtube.YouTubeVideoEntry(media=my_media_group,
+            extension_elements=extension_elements)
+      else:
+        video_entry = gdata.youtube.YouTubeVideoEntry(media=my_media_group)
+
       if devtags:
         taglist = devtags.replace(', ', ',')
         taglist = taglist.split(',')

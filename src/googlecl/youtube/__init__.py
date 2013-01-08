@@ -20,22 +20,6 @@ LOGGER_NAME = __name__
 SECTION_HEADER = service_name.upper()
 
 
-def _map_access_string(access_string):
-  """Map an access string to a value YouTube will understand.
-
-  In this case, YouTube only cares about "is private" so 'public' gets mapped to
-  False, everything else to True.
-
-  Returns:
-    Boolean indicating True (is private) or False (is not private).
-  """
-  if not access_string:
-    return False
-  if access_string == 'public':
-    return False
-  return True
-
-
 class VideoEntryToStringWrapper(googlecl.base.BaseEntryToStringWrapper):
   @property
   def author(self):
@@ -62,6 +46,7 @@ class VideoEntryToStringWrapper(googlecl.base.BaseEntryToStringWrapper):
 
   @property
   def status(self):
+    print self.xml
     """Status of the video."""
     if self.entry.control:
       # Apparently the structure for video entries isn't fully fleshed out,
@@ -112,10 +97,9 @@ def _run_list(client, options, args):
 
 def _run_post(client, options, args):
   video_list = options.src + args
-  is_private = _map_access_string(options.access)
   client.PostVideos(video_list, title=options.title, desc=options.summary,
                     tags=options.tags, category=options.category,
-                    is_private=is_private)
+                    access=options.access)
 
 
 def _run_tag(client, options, args):
