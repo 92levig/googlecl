@@ -43,27 +43,27 @@ function check_videos {
         0 \
         "video" \
         "export PYTHONPATH=\"$gdata_directory/gdata-2.0.1/lib/python\" && python ../src/google.py youtube delete --title \"$video_title\" -u $auth_username --yes"
-        
+
 }
 
 for i in gdata-2.0.{1..10} gdata-2.0.{12..17}
 do
 
   echo -e '\n\n'
-  echo "-----------------------------------------------------------------------" 
-  echo "$i" 
+  echo "-----------------------------------------------------------------------"
+  echo "$i"
 
   cd $gdata_directory/$i
   pwd
-  
+
   export PYTHONPATH="$gdata_directory/$i/lib/python"
-  echo "$PYTHONPATH" 
+  echo "$PYTHONPATH"
 
   cd $googlecl_directory
-  pwd 
-  
+  pwd
+
   if [[ $auth_executed == "0" ]]; then
-    auth_executed=1 
+    auth_executed=1
     python google.py youtube list --force-auth -u $auth_username
   fi
 
@@ -71,9 +71,9 @@ do
 
   python google.py youtube post $video --title "$video_title" \
       -u $auth_username --category=Education
-    
+
   check_videos 1
-  
+
   python google.py youtube delete --title "$video_title" -u $auth_username --yes
 
   check_videos 0
