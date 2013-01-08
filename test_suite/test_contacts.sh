@@ -1,5 +1,10 @@
 #! /bin/bash
 
+# python-gdata 2.0.3 through 2.0.6 have broken contacts support, so they're
+# excluded from this test.  2.0.1 and 2.0.2 actually work, but 2.0.7 and later
+# require a different auth token, so we've excluded 2.0.1 and 2.0.2 from this
+# test for now.
+
 . utils.sh
 
 print_warning \
@@ -62,7 +67,7 @@ function check_contact_groups_number {
         
 }
 
-for i in gdata-2.0.{1..17}
+for i in gdata-2.0.{7..17}
 do
 
   echo -e '\n\n'

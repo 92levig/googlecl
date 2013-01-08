@@ -1,16 +1,27 @@
-Welcome to GoogleCL's brand new test suite!
+This semi-automatic test suite for Linux tries a variety of googlecl
+commands on a variety of different python gdata versions, since a lot
+of our bugs have historically come from changes in python gdata over time.
 
-So far, we've got the downloader and installers committed. 
-(Tip: download first, then install.) 
+- Automatically download and install (locally) all the python gdata 2.*
+versions:
 
-We're working to provide test suites that allow you to test against any or all
-python-gdata libraries from 2.0.1 through 2.0.17.
+# creates test_suite/gdata_tarballs with packed versions of
+# all the gdata files.
+ $ ./gdata_downloader.sh
+
+# creates test_suite/gdata_installs with unpacked gdata directories.
+ $ ./gdata_install_script.sh
+
+
+- Create a gmail account just for testing, since these tests add and remove
+files on various google services.
+
+- Log into the test account in your browser, visit blogger.com and create a
+blog.
+
+- Run ./test_blogger.sh <username> <blog name>
 
 To run the tests, first you have to download all the gdata versions. For this you have to run the gdata_downloader.sh script, and then the gdata_install_script.sh script. 
-
-This gdata_downloader.sh script should create directory test_suite/gdata_tarballs with packed versions of all the gdata files.
-
-The gdata_install_script.sh should create test_suite/gdata_installs with unpacked gdata directories.
 
 !!! WARNING !!!
 All the scripts delete some data. Don't run it on your account with important data. Just create a special Google account for that.
@@ -49,25 +60,12 @@ Contacts Tests
 
 Contacts tests are in the file test_contacts.sh.
 
-Sometimes the test contact is placed in 'Other Contacts' category, then the google service returns error that it cannot add another contact with the same name, however googlecl cannot list this contact and inform about the error.
+Known bug: sometimes the test contact is placed in 'Other Contacts' category, then the google service returns error that it cannot add another contact with the same name. But GoogleCL cannot list this contact and throws an error.
+
+Fix: Delete the contact manually using the web interface.
 
 
 Picasa Tests
 
 Picasa tests are in the file: test_picasa.sh.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
