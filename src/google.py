@@ -75,7 +75,7 @@ safe_decode = googlecl.safe_decode
 VERSION = '0.9.14'
 
 AVAILABLE_SERVICES = ['help', 'picasa', 'blogger', 'youtube', 'docs',
-                      'contacts', 'calendar', 'finance']
+                      'contacts', 'calendar', 'finance', 'sites']
 LOG = logging.getLogger(googlecl.LOGGER_NAME)
 
 discovery = None
@@ -891,6 +891,7 @@ def setup_parser(loading_usage):
   parser.add_option('--dest', dest='dest',
                     help=('Destination. Typically, where to save data being'
                           ' downloaded.'))
+  parser.add_option('--domain', dest='domain', help='Sites only - specify domain')
   parser.add_option('--draft', dest='access',
                     action='store_const', const='draft',
                     help=('Blogger only - post as a draft. Shorthand for '
@@ -900,16 +901,18 @@ def setup_parser(loading_usage):
   parser.add_option('--fields', dest='fields',
                     help='Fields to list with list task.')
   parser.add_option('-f', '--folder', dest='folder',
-                    help='Docs only - specify folder(s) to upload to '+
+                    help='Sites: sites page (folder) to upload under. Docs - specify folder(s) to upload to '+
                     '/ search in.')
   parser.add_option('--force-auth', dest='force_auth',
                     action='store_true',
                     help='Force validation step for re-used access tokens' +
                          ' (Overrides --skip-auth).')
   parser.add_option('--format', dest='format',
-                    help='Docs only - format to download documents as.')
+                    help='Sites - sites page type to upload as. Docs - format to download documents as.')
   parser.add_option('--hostid', dest='hostid',
                     help='Label the machine being used.')
+  parser.add_option('--max_results', dest='max_results',
+                    help='Sites: max results to return for list. Overrides config.')
   parser.add_option('-n', '--title', dest='title',
                     help='Title of the item')
   parser.add_option('--no-convert', dest='convert',
@@ -927,8 +930,8 @@ def setup_parser(loading_usage):
   parser.add_option('--price', dest='price',
                     help=("Finance only - specify price for transaction"))
   parser.add_option('-q', '--query', dest='query',
-                    help=('Full text query string for specifying items.'
-                          + ' Searches on titles, captions, and tags.'))
+                    help=('Sites, Picasa: full text search with this string.'
+                          + ' Picasa: searches on titles, captions, and tags.'))
   parser.add_option('--quiet', dest='quiet',
                     action='store_true',
                     help='Print only prompts and error messages')
@@ -938,6 +941,7 @@ def setup_parser(loading_usage):
   parser.add_option('--shares', dest='shares',
                     help=("Finance only - specify amount of shares " +
                           "for transaction"))
+  parser.add_option('--site', dest='site', help='Sites only - specify site')
   parser.add_option('--skip-auth', dest='skip_auth',
                     action='store_true',
                     help='Skip validation step for re-used access tokens.')

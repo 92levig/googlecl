@@ -24,7 +24,8 @@ Contents:
     2.1.3 Contacts
     2.1.4 Docs
     2.1.5 Picasa
-    2.1.6 YouTube
+    2.1.6 Sites
+    2.1.7 YouTube
   2.2 The 'list' task
 3. Options
   3.1 Tags
@@ -121,7 +122,19 @@ Tasks:
   * post: Add photos to an album. `post --title "Summer Vacation 2008" ~/old_photos/*.jpg`
   * tag: Tag photos. `tag --title "Album I forgot to tag" --tags oops`
 
-2.1.6 YouTube
+2.1.6 Sites
+All sites pages have a contentEntryID, a value that uniquely identifies it. Some commands use this value.
+Common options:
+  * domain: If your site has a domain, either specify it in config or with this option
+  * site: This is a particular site out of all the sites that you can access. Also can be in config.
+
+Tasks:
+  * sites: show all the sites that you can see/access (site feed).
+  * list: List site pages for the site (content feed). By default, lists 'first page' of results: option/config parameter max_queries can increase this. `list --site=mysite --max_results=50`. The --query option does a full text search, returning pages that match: `list --site=mysite --query="some text"`. Finally, other queries (path, kind, parent, ancestor) can be specified: `list --site=mysite path=/path/to/page`, `list --site=mysite parent=contentEntryID`, `list --site=mysite kind=webpage`.
+  * upload: Upload a page to sites, optionally as a subpage: `upload --site=mysite --src=file --title=page_name --folder=parent_path --format=webpage`. Default format is webpage, see https://developers.google.com/google-apps/sites/docs/1.0/reference#feed_Content for more. folder is the path to the parent; default is top-level of site.
+  * delete: delete a page from a site: `delete site=mysite --title=/path/to/page`. 
+
+2.1.7 YouTube
 Common options:
   * category: YouTube category to assign to the video. This is required, and a little tricky. Here's the mapping for YouTube categories to `--category` values (and capitalization counts!)
 || *YouTube category* || *Value for* `--category` ||
@@ -289,3 +302,4 @@ See the example scripts for examples on how to use this option.
 *Note:* the calendar delete task will interpret 'datetime,' and ',datetime' identically.
 
 *Note:* picasa create will only accept the "date" portion of possibilities for `--date`
+

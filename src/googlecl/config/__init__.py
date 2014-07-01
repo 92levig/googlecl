@@ -21,6 +21,7 @@ def _create_basic_options():
   import googlecl.docs
   import googlecl.contacts
   import googlecl.calendar
+  import googlecl.sites
   import googlecl.youtube
   import getpass
   import socket
@@ -31,6 +32,7 @@ def _create_basic_options():
   _youtube = {'max_results': '50'}
   _contacts = {'fields': 'name,email'}
   _calendar = {'fields': 'title,when'}
+  _sites = {'fields': 'title,page_name,id'}
   _general = {'max_retries': '2',
               'retry_delay': '0.5',
               'regex': 'True',
@@ -50,6 +52,7 @@ def _create_basic_options():
   return {googlecl.docs.SECTION_HEADER: _docs,
           googlecl.contacts.SECTION_HEADER: _contacts,
           googlecl.calendar.SECTION_HEADER: _calendar,
+          googlecl.sites.SECTION_HEADER: _sites,
           googlecl.youtube.SECTION_HEADER: _youtube,
           'GENERAL': _general}
 

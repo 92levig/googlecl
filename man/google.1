@@ -4,7 +4,7 @@
 google \- command-line access to (some) Google services
 .SH SYNOPSIS
 .B google
-[\fIhelp|picasa|blogger|youtube|docs|contacts|calendar|finance\fR] \fITASK \fR[\fIoptions\fR]
+[\fIhelp|picasa|blogger|youtube|docs|contacts|calendar|finance|sites\fR] \fITASK \fR[\fIoptions\fR]
 .SH DESCRIPTION
 This program provides command\-line access to
 (some) google services via their gdata APIs.
@@ -250,6 +250,9 @@ Specify a delimiter for the output of the list task.
 Destination. Typically, where to save data being
 downloaded.
 .TP
+\fB\-\-domain\fR=\fIDOMAIN\fR
+Sites only \- Specify domain for enterprise customers.
+.TP
 \fB\-\-draft\fR
 Blogger only \- post as a draft. Shorthand for
 \fB\-\-access\fR=\fIdraft\fR
@@ -261,7 +264,8 @@ Docs only \- editor to use on a file.
 Fields to list with list task.
 .TP
 \fB\-f\fR FOLDER, \fB\-\-folder\fR=\fIFOLDER\fR
-Docs only \- specify folder(s) to upload to / search
+Sites \-  sites page (folder) to upload under.
+Docs \- specify folder(s) to upload to / search
 in.
 .TP
 \fB\-\-force\-auth\fR
@@ -269,13 +273,17 @@ Force validation step for re\-used access tokens
 (Overrides \fB\-\-skip\-auth\fR).
 .TP
 \fB\-\-format\fR=\fIFORMAT\fR
-Docs only \- format to download documents as.
+Sites \- sites page type to upload as.
+Docs \- format to download documents as.
 .TP
 \fB\-\-hostid\fR=\fIHOSTID\fR
 Label the machine being used.
 .TP
 \fB\-n\fR TITLE, \fB\-\-title\fR=\fITITLE\fR
 Title of the item
+.TP
+\fB\-\-max_results\fR=\fIMAX_RESULTS\fR
+Sites: max results to return for list. Overrides config param.
 .TP
 \fB\-\-no\-convert\fR
 Google Apps Premier only \- do not convert the file on
@@ -296,8 +304,8 @@ Picasa only \- specify title or name of photo(s)
 Finance only \- specify price for transaction
 .TP
 \fB\-q\fR QUERY, \fB\-\-query\fR=\fIQUERY\fR
-Full text query string for specifying items. Searches
-on titles, captions, and tags.
+Sites, Picasa: Full text query string for specifying items.
+Picasa: Searches on titles, captions, and tags.
 .TP
 \fB\-\-quiet\fR
 Print only prompts and error messages
@@ -309,6 +317,9 @@ reminder, e.g. "10m", "3h", "1d"
 \fB\-\-shares\fR=\fISHARES\fR
 Finance only \- specify amount of shares for
 transaction
+.TP
+\fB\-\-site\fR=\fISITE\fR
+Sites only \- specify site to act on.
 .TP
 \fB\-\-skip\-auth\fR
 Skip validation step for re\-used access tokens.
@@ -356,5 +367,7 @@ google contacts list \-\-title '.*' \-\-fields name,email,phone > contacts.csv
 google docs edit \-\-title 'Shopping list'
 
 google picasa create \-\-title 'Cat Photos' ~/photos/cats/*.jpg
+
+google sites upload \-\-site mysite \-\-src myfile \-\-folder myparent
 
 google youtube post \-\-category Education killer_robots.avi
