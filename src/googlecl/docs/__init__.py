@@ -138,7 +138,8 @@ def _run_get(client, options, args):
                                    u'destination "' + options.dest +
                                    u'" is not a directory'))
     return
-  client.get_docs(options.dest, entries, file_ext=options.format)
+  client.get_docs(options.dest, entries, file_ext=options.format,
+                  grid_id=options.gid)
 
 
 def _run_list(client, options, args):

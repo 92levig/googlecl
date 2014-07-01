@@ -173,7 +173,7 @@ class DocsBaseCL(object):
 
   EditDoc = edit_doc
 
-  def get_docs(self, base_path, entries, file_ext=None):
+  def get_docs(self, base_path, entries, file_ext=None, grid_id=None):
     """Download documents.
 
     Keyword arguments:
@@ -230,7 +230,7 @@ class DocsBaseCL(object):
       LOG.info(safe_encode('Downloading ' + entry_title + ' to ' + path))
       try:
         if can_export(entry):
-          self.Export(entry, path)
+          self.Export(entry, path, grid_id)
         else:
           if hasattr(self, 'Download'):
             self.Download(entry, path)

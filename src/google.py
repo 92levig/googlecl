@@ -909,6 +909,9 @@ def setup_parser(loading_usage):
                          ' (Overrides --skip-auth).')
   parser.add_option('--format', dest='format',
                     help='Sites - sites page type to upload as. Docs - format to download documents as.')
+  parser.add_option('--gid', dest='gid',
+                    help=("Docs only - Spreadsheet Grid ID. Corresponds to a specific worksheet. Can be found in the browser URL when "+
+                          "viewing a worksheet. Note that GID's do not correspond to indexes, which are not available as worksheet identifiers."))
   parser.add_option('--hostid', dest='hostid',
                     help='Label the machine being used.')
   parser.add_option('--max_results', dest='max_results',
