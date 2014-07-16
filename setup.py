@@ -29,6 +29,7 @@ packages =['googlecl',
            'googlecl.picasa',
            'googlecl.youtube',
            'googlecl.finance',
+           'googlecl.sites',
            'googlecl.discovery']
 
 SCRIPT_TO_INSTALL = 'src/google'
